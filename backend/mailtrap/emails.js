@@ -1,4 +1,4 @@
-import { VERIFICATION_EMAIL_TEMPLATE } from "./emailTemplate.js";
+import { VERIFICATION_EMAIL_TEMPLATE, WELCOME_EMAIL_TEMPLATE, PASSWORD_RESET_REQUEST_TEMPLATE } from "./emailTemplate.js";
 import { mailtrapClient, sender } from "./mailtrap.config.js";
 
 export const sendVerificationEmail = async (email, verificationToken) => {
@@ -23,20 +23,34 @@ export const sendWelcomeEmail = async (email, name) => {
 	const recipient = [{ email }];
 
 	try {
-		const response = await mailtrapClient.send({
-			from: sender,
-			to: recipient,
-			template_uuid: "e65925d1-a9d1-4a40-ae7c-d92b37d593df",
-			template_variables: {
-				company_info_name: "RentFlow",
-				name: name,
-			},
-		});
+        const response = await mailtrapClient.send({
+            from: sender,
+            to: recipient,
+            subject: "Welcome to our app",
+            html: WELCOME_EMAIL_TEMPLATE.replace("{username}", name),
+            category: "Welcome Email"
+        });
+        console.log("Welcome email sent", response);
+    } catch (error) {
+        console.error("Error sending welcome email", error);
+        throw new Error(`Error sending welcome email: ${error}`);
+    }
+};
 
-		console.log("Welcome email sent successfully", response);
-	} catch (error) {
-		console.error(`Error sending welcome email`, error);
+export const sendPasswordResetEmail = async (email, resetURL) => {
+    const recipient = [{ email }];
 
-		throw new Error(`Error sending welcome email: ${error}`);
-	}
+    try {
+        const response = await mailtrapClient.send({
+            from: sender,
+            to: recipient,
+            subject: "Reset your password",
+            html: PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetURL),
+            category: "Password Reset",
+        });
+        console.log("Password reset email sent", response);
+    } catch (error) {
+        console.error(`Error sending password reset email`, error);
+        throw new Error(`Error sending password reset email: ${error}`);
+    }
 };
