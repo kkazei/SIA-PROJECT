@@ -6,24 +6,24 @@ import { Link, useNavigate } from "react-router-dom";
 import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 import { useAuthStore } from "../store/authStore";
 
-const SignUpPage = () => {
-    const [user_fullname, setUserFullname] = useState("");
-    const [user_email, setUserEmail] = useState("");
-    const [user_phone, setUserPhone] = useState("");
+const TenantSignUpPage = () => {
+    const [tenant_fullname, setUserFullname] = useState("");
+    const [tenant_email, setUserEmail] = useState("");
+    const [tenant_phone, setUserPhone] = useState("");
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const { signup, error, isLoading } = useAuthStore();
+    const { signupTenant, error, isLoading } = useAuthStore();
 
     const handleSignUp = async (e) => {
         e.preventDefault();
 
         try {
-            if (!user_fullname || !user_email || !password) {
+            if (!tenant_fullname || !tenant_email || !password) {
                 throw new Error("Please fill all required fields");
             }
 
-            await signup(user_email, password, user_fullname, user_phone);
+            await signupTenant(tenant_email, password, tenant_fullname, tenant_phone);
             navigate("/dashboard"); // Navigate to the dashboard or any other page after successful signup
         } catch (error) {
             console.log(error);
@@ -43,21 +43,21 @@ const SignUpPage = () => {
                     icon={User}
                     type='text'
                     placeholder='Full Name'
-                    value={user_fullname}
+                    value={tenant_fullname}
                     onChange={(e) => setUserFullname(e.target.value)}
                 />
                 <Input
                     icon={Mail}
                     type='email'
                     placeholder='Email Address'
-                    value={user_email}
+                    value={tenant_email}
                     onChange={(e) => setUserEmail(e.target.value)}
                 />
                 <Input
                     icon={Phone}
                     type='text'
                     placeholder='Phone Number'
-                    value={user_phone}
+                    value={tenant_phone}
                     onChange={(e) => setUserPhone(e.target.value)}
                 />
                 <Input
@@ -89,4 +89,4 @@ const SignUpPage = () => {
     );
 };
 
-export default SignUpPage;
+export default TenantSignUpPage;

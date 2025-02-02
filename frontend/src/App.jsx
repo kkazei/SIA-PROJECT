@@ -4,6 +4,7 @@ import SignUpPage from "./pages/SignUpPage";
 import LoadingSpinner from './components/LoadingSpinner'
 import FloatingShape from './components/FloatingShape'
 import DashboardPage from './pages/DashboardPage';
+import TenantSignUpPage from './pages/TenantSignUp';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
@@ -62,6 +63,14 @@ function App() {
 					element={
 						<RedirectAuthenticatedUser>
 							<SignUpPage />
+						</RedirectAuthenticatedUser>
+					}
+				/>
+				<Route
+					path='/tenant-signup'
+					element={
+						<RedirectAuthenticatedUser>
+							<TenantSignUpPage />
 						</RedirectAuthenticatedUser>
 					}
 				/>

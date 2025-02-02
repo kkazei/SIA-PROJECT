@@ -1,35 +1,34 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    email: {
+    user_email: {
         type: String,
         required: true,
         unique: true
+    },
+    user_fullname: {
+        type: String,
+        required: true
+    },
+    user_phone: {
+        type: String,
+        default: null
     },
     password: {
         type: String,
         required: true
     },
-    name: {
+    user_role: {
         type: String,
-        required: true
+        enum: ['tenant', 'landlord'],
+        default: 'tenant'
     },
-    lastLogin: {
+    created_at: {
         type: Date,
         default: Date.now
-    },
-    isVerified: {
-        type: Boolean,
-        default: false
-    },
-    resetPasswordToken: String,
-    resetPasswordExpiresAt: Date,
-    verificationToken: String,
-    verificationTokenExpiresAt: Date,
-
+    }
 }, { timestamps: true });
 
 export const User = mongoose.model("User", userSchema);
 
-// createat and updateat fields are automatically added to the schema
-
+// createdAt and updatedAt fields are automatically added to the schema
