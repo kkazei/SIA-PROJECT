@@ -1,9 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import SignUpPage from "./pages/SignUpPage";
-import EmailVerificationPage from './pages/EmailVerificationPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import FloatingShape from './components/FloatingShape'
 import DashboardPage from './pages/DashboardPage';
@@ -13,14 +10,10 @@ import { useEffect } from 'react';
 
 
 const ProtectedRoute = ({ children }) => {
-	const { isAuthenticated, user } = useAuthStore();
+	const { isAuthenticated } = useAuthStore();
 
 	if (!isAuthenticated) {
 		return <Navigate to='/login' replace />;
-	}
-
-	if (!user.isVerified) {
-		return <Navigate to='/verify-email' replace />;
 	}
 
 	return children;
@@ -28,9 +21,9 @@ const ProtectedRoute = ({ children }) => {
 
 // redirect authenticated users to the home page
 const RedirectAuthenticatedUser = ({ children }) => {
-	const { isAuthenticated, user } = useAuthStore();
+	const { isAuthenticated } = useAuthStore();
 
-	if (isAuthenticated && user.isVerified) {
+	if (isAuthenticated) {
 		return <Navigate to='/' replace />;
 	}
 
@@ -80,24 +73,9 @@ function App() {
 						</RedirectAuthenticatedUser>
 					}
 				/>
-				<Route path='/verify-email' element={<EmailVerificationPage />} />
-				<Route
-					path='/forgot-password'
-					element={
-						<RedirectAuthenticatedUser>
-							<ForgotPasswordPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
+				
 
-				<Route
-					path='/reset-password/:token'
-					element={
-						<RedirectAuthenticatedUser>
-							<ResetPasswordPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
+				
 				{/* catch all routes */}
 				<Route path='*' element={<Navigate to='/' replace />} />
 			</Routes>
