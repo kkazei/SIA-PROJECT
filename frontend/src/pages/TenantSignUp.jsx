@@ -24,7 +24,7 @@ const TenantSignUpPage = () => {
             }
 
             await signupTenant(tenant_email, password, tenant_fullname, tenant_phone);
-            navigate("/dashboard"); // Navigate to the dashboard or any other page after successful signup
+            navigate("/tenant-dashboard"); // Navigate to the dashboard or any other page after successful signup
         } catch (error) {
             console.log(error);
         }
@@ -38,7 +38,7 @@ const TenantSignUpPage = () => {
             className='max-w-md w-full bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden'
         >
             <form onSubmit={handleSignUp} className='p-8'>
-                <h2 className='text-2xl font-bold text-white mb-6'>Sign Up</h2>
+                <h2 className='text-2xl font-bold text-white mb-6'>Tenant Sign Up!</h2>
                 <Input
                     icon={User}
                     type='text'

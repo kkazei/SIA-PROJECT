@@ -5,6 +5,7 @@ import LoadingSpinner from './components/LoadingSpinner'
 import FloatingShape from './components/FloatingShape'
 import DashboardPage from './pages/DashboardPage';
 import TenantSignUpPage from './pages/TenantSignUp';
+import  TenantDashboard  from './pages/TenantDashboard';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
@@ -79,6 +80,14 @@ function App() {
 					element={
 						<RedirectAuthenticatedUser>
 							<LoginPage />
+						</RedirectAuthenticatedUser>
+					}
+				/>
+				<Route
+					path='/tenant-dashboard'
+					element={
+						<RedirectAuthenticatedUser>
+							<TenantDashboard />
 						</RedirectAuthenticatedUser>
 					}
 				/>
