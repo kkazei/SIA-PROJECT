@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "chart.js": "^4.4.7",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
@@ -24,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "mailtrap": "^3.4.0",
     "mongoose": "^8.9.6",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "react-chartjs-2": "^5.3.0"
   }
 }
