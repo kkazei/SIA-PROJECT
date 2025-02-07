@@ -5,6 +5,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import FloatingShape from './components/FloatingShape';
 import DashboardPage from './pages/DashboardPage';
 import TenantSignUpPage from './pages/TenantSignUp';
+import TenantPage from './pages/TenantPage';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useEffect, useState } from 'react';
@@ -208,57 +209,28 @@ function App() {
 
     if (isCheckingAuth) return <LoadingSpinner />;
 
-	return (
-		<div
-			className='min-h-screen bg-gradient-to-br
-    from-gray-900 via-green-900 to-emerald-900 flex items-center justify-center relative overflow-hidden'
-		>
-			<FloatingShape color='bg-green-500' size='w-64 h-64' top='-5%' left='10%' delay={0} />
-			<FloatingShape color='bg-emerald-500' size='w-48 h-48' top='70%' left='80%' delay={5} />
-			<FloatingShape color='bg-lime-500' size='w-32 h-32' top='40%' left='-10%' delay={2} />
-
-			<Routes>
-				<Route
-					path='/'
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path='/signup'
-					element={
-						<RedirectAuthenticatedUser>
-							<SignUpPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				<Route
-					path='/tenant-signup'
-					element={
-						<RedirectAuthenticatedUser>
-							<TenantSignUpPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				<Route
-					path='/login'
-					element={
-						<RedirectAuthenticatedUser>
-							<LoginPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				
-
-				
-				{/* catch all routes */}
-				<Route path='*' element={<Navigate to='/' replace />} />
-			</Routes>
-			<Toaster />
-		</div>
-	);
+    return (
+        <div className='min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex relative overflow-hidden'>
+            {isAuthenticated && <SideNavbar isMaximized={isMaximized} toggleSidebar={() => setIsMaximized(!isMaximized)} />}
+            <div className={`flex-grow flex items-center justify-center transition-all ${isAuthenticated ? (isMaximized ? 'ml-64' : 'ml-16') : 'ml-0'}`}>
+                <FloatingShape color='bg-green-500' size='w-64 h-64' top='-5%' left='10%' delay={0} />
+                <FloatingShape color='bg-emerald-500' size='w-48 h-48' top='70%' left='80%' delay={5} />
+                <FloatingShape color='bg-lime-500' size='w-32 h-32' top='40%' left='-10%' delay={2} />
+                <Routes>
+                    <Route path='/' element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                    <Route path='/signup' element={<RedirectAuthenticatedUser><SignUpPage /></RedirectAuthenticatedUser>} />
+                    <Route path='/tenant-signup' element={<RedirectAuthenticatedUser><TenantSignUpPage /></RedirectAuthenticatedUser>} />
+                    <Route path='/login' element={<RedirectAuthenticatedUser><LoginPage /></RedirectAuthenticatedUser>} />
+                    <Route path='/announcement' element={<ProtectedRoute><Anouncement /></ProtectedRoute>} />
+                    <Route path='/tenant-page' element={<ProtectedRoute><TenantPage /></ProtectedRoute>} />
+                    <Route path='/maintenance-page' element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
+                    <Route path='/archive-page' element={<ProtectedRoute><ArchivePage /></ProtectedRoute>} />
+                    <Route path='*' element={<Navigate to='/' replace />} />
+                </Routes>
+            </div>
+            <Toaster />
+        </div>
+    );
 }
 
 export default App;
