@@ -6,5 +6,5 @@ const router = express.Router();
 
 // Route to create a new apartment, protected by verifyToken middleware
 router.post('/apartments', verifyToken, createApartment);
-router.get('/apartments', getApartments);
+router.get('/apartments', verifyToken, getApartments);
 export default router;

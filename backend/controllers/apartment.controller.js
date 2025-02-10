@@ -32,10 +32,11 @@ export const createApartment = async (req, res) => {
     }
 };
 
-// Function to fetch all apartments
+// Function to fetch all apartments created by the authenticated landlord
 export const getApartments = async (req, res) => {
     try {
-        const apartments = await Apartment.find().populate('landlord_id', 'user_fullname user_email');
+        const landlord_id = req.userId; // Fetch the landlord_id from the authenticated user
+        const apartments = await Apartment.find({ landlord_id }).populate('landlord_id', 'user_fullname user_email');
         res.status(200).json(apartments);
     } catch (error) {
         res.status(500).json({ message: error.message });
