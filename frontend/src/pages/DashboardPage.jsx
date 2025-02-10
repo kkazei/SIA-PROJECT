@@ -1,32 +1,32 @@
 import { motion } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from "../store/authStore";
+import { useApartmentStore } from "../store/apartmentStore";
 import { formatDate } from "../utils/date";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import TenantModal from '../components/TenantModal';
 import RoomModal from '../components/RoomModal';
 import AnnouncementModal from '../components/AnnouncementModal';
 
-
-
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const DashboardPage = () => {
-    const { user, logout } = useAuthStore();
+    const { user } = useAuthStore();
+    const { apartments, fetchApartments, isLoading, error } = useApartmentStore();
     const [isTenantModalOpen, setTenantModalOpen] = useState(false);
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     const navigate = useNavigate();  
 
-    const handleLogout = () => {
-        logout();
-    };
+    useEffect(() => {
+        fetchApartments();
+    }, [fetchApartments]);
 
-    
+
+
     const navigateToConcernPage = () => navigate('/concern-page');
-    ;
 
     const data = {
         labels: [
@@ -97,12 +97,11 @@ const DashboardPage = () => {
                     <span className="mt-3 text-xl font-semibold">Tenants</span> 
                 </button>
                 <button 
-    onClick={() => setRoomModalOpen(true)}
-    className="p-11  bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
-    <img src="/image/rename.png" alt="menu icon" className="w-25 h-25"/> 
-    <span className="text-xl font-semibold">Rooms</span> 
-</button>
-
+                    onClick={() => setRoomModalOpen(true)}
+                    className="p-11  bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
+                    <img src="/image/rename.png" alt="menu icon" className="w-25 h-25"/> 
+                    <span className="text-xl font-semibold">Rooms</span> 
+                </button>
 
                 <button 
                     onClick={navigateToConcernPage}
@@ -111,16 +110,15 @@ const DashboardPage = () => {
                     <span className='mt-3 text-xl font-semibold'>Concerns</span> 
                 </button>
                 <button 
-    onClick={() => setAnnouncementModalOpen(true)}
-    className="p-12 bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
-    <img src="/image/announcement.png" alt="menu icon" className="w-25 h-25"/> 
-    <span className="mt-3 text-xl font-semibold">Announcements</span> 
-</button>
-
+                    onClick={() => setAnnouncementModalOpen(true)}
+                    className="p-12 bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
+                    <img src="/image/announcement.png" alt="menu icon" className="w-25 h-25"/> 
+                    <span className="mt-3 text-xl font-semibold">Announcements</span> 
+                </button>
             </div>
 
             <div className='bg-gray-900 shadow-md rounded-lg mb-5 p-6 w-100 ml-[555px] mt-[-420px]'>
-            <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
+                <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
                 <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
                     <p className='text-gray-700 text-center'>Income and Expenses Overview of 2024</p>
                     <div className='h-60'>
@@ -148,31 +146,33 @@ const DashboardPage = () => {
             </div>
 
             <div className='bg-gray-900 shadow-md rounded-lg p-6 ml-6 mt-0'>
-                <h3 className='text-xl font-bold text-white text-gray-800'>Apartment List</h3>
-                <table className='w-full mt-4 border border-gray-300'>
-                    <thead>
-                        <tr className='bg-white text-black'>
-                            <th className='p-2'>Apartment</th>
-                            <th className='p-2'>Rent</th>
-                            <th className='p-2'>Description</th>
-                            <th className='p-2'>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className='border-t '>
-                            <td className='p-2 text-white'>A</td>
-                            <td className='p-2 text-white'>₱15,000.00</td>
-                            <td className='p-2 text-white'>4 Rooms, 2 Cr</td>
-                            <td className='p-2 text-green-600'>Available</td>
-                        </tr>
-                        <tr className='border-t'>
-                            <td className='p-2 text-white'>B</td>
-                            <td className='p-2 text-white'>₱15,000.00</td>
-                            <td className='p-2 text-white'>4 Bedrooms, 2 Cr</td>
-                            <td className='p-2 text-green-600'>Available</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h3 className='text-xl font-bold text-white'>Apartment List</h3>
+                {isLoading ? (
+                    <p className='text-white'>Loading...</p>
+                ) : error ? (
+                    <p className='text-red-500'>{error}</p>
+                ) : (
+                    <table className='w-full mt-4 border border-gray-300'>
+                        <thead>
+                            <tr className='bg-white text-black'>
+                                <th className='p-2'>Apartment</th>
+                                <th className='p-2'>Rent</th>
+                                <th className='p-2'>Description</th>
+                                <th className='p-2'>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {apartments.map((apartment) => (
+                                <tr key={apartment._id} className='border-t'>
+                                    <td className='p-2 text-white'>{apartment.room}</td>
+                                    <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
+                                    <td className='p-2 text-white'>{apartment.description}</td>
+                                    <td className='p-2 text-green-600'>Available</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
             <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
             <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
