@@ -155,16 +155,16 @@ const DashboardPage = () => {
                     <table className='w-full mt-4 border border-gray-300'>
                         <thead>
                             <tr className='bg-white text-black'>
-                                <th className='p-2'>Apartment</th>
-                                <th className='p-2'>Rent</th>
-                                <th className='p-2'>Description</th>
-                                <th className='p-2'>Status</th>
+                                <th className='p-2 text-left'>Apartment</th>
+                                <th className='p-2 text-left'>Rent</th>
+                                <th className='p-2 text-left'>Description</th>
+                                <th className='p-2 text-left'>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {apartments.map((apartment) => (
                                 <tr key={apartment._id} className='border-t'>
-                                    <td className='p-2 text-white'>{apartment.room}</td>
+                                    <td className='p-2  text-white'>{apartment.room}</td>
                                     <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
                                     <td className='p-2 text-white'>{apartment.description}</td>
                                     <td className='p-2 text-green-600'>Available</td>
