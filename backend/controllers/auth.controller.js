@@ -115,6 +115,36 @@ export const login = async (req, res) => {
     }
 };
 
+export const Tenantlogin = async (req, res) => {
+    const { tenant_email, password } = req.body;
+    try {
+        const tenant = await Tenant.findOne({ tenant_email });
+        if (!tenant) {
+            return res.status(400).json({ success: false, message: "Invalid credentials" });
+        }
+
+        const isMatch = await bcrypt.compare(password, tenant.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: "Invalid credentials" });
+        }
+
+        // Generate JWT and set cookie
+        generateTokenAndSetCookie(res, tenant._id);
+
+        res.status(200).json({
+            success: true,
+            message: "Logged in successfully",
+            tenant: {
+                ...tenant._doc,
+                password: undefined,
+            },
+        });
+
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
 export const checkAuth = async (req, res) => {
     try {
         const user = await User.findById(req.userId)
