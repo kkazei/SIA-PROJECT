@@ -28,27 +28,28 @@ const DashboardPage = () => {
 
     const navigateToConcernPage = () => navigate('/concern-page');
 
+    const [visibleDataset, setVisibleDataset] = useState(null); 
+
     const data = {
-        labels: [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ],
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         datasets: [
             {
                 label: 'Income',
-                data: [10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000], // Replace with actual income data
-                backgroundColor: 'rgba(34, 197, 94, 0.8)', // Green color
+                data: [10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000],
+                backgroundColor: 'rgba(34, 197, 94, 0.8)', 
                 borderRadius: 5,
+                hidden: visibleDataset === 'Expenses', 
             },
             {
                 label: 'Expenses',
-                data: [5000, 7000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000, 24000, 26000], // Replace with actual expense data
-                backgroundColor: 'rgba(30, 41, 59, 0.9)', // Dark blue color
+                data: [5000, 7000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000, 24000, 26000],
+                backgroundColor: 'rgba(30, 41, 59, 0.9)', 
                 borderRadius: 5,
+                hidden: visibleDataset === 'Income', 
             }
         ]
     };
-    
+
     const options = {
         responsive: true,
         maintainAspectRatio: false,
@@ -57,21 +58,31 @@ const DashboardPage = () => {
                 display: true,
                 position: 'top',
                 labels: {
-                    color: '#333', 
-                    font: { size: 14 }
+                    color: '#333',
+                    font: { size: 14 },
+                    usePointStyle: true,
+                    
+                },
+                onClick: (e, legendItem, legend) => {
+                    const clickedLabel = legendItem.text;
+                    
+                    setVisibleDataset((prev) => {
+                        if (prev === clickedLabel) return null; // If clicked again, show both
+                        return clickedLabel; // Otherwise, show only the clicked one
+                    });
                 }
             },
             tooltip: { enabled: true }
         },
         scales: {
             x: {
-                grid: { display: true, color: 'rgba(200, 200, 200, 0.2)' }, // Grid lines on X-axis
-                ticks: { color: '#333' } 
+                grid: { display: true, color: 'rgba(200, 200, 200, 0.2)' },
+                ticks: { color: '#333' }
             },
             y: {
                 beginAtZero: true,
-                grid: { display: true, color: 'rgba(200, 200, 200, 0.5)' }, // Grid lines on Y-axis
-                ticks: { color: '#333' } 
+                grid: { display: true, color: 'rgba(200, 200, 200, 0.5)' },
+                ticks: { color: '#333' }
             }
         }
     };    
@@ -117,13 +128,13 @@ const DashboardPage = () => {
                 </button>
             </div>
 
-            <div className='bg-gray-900 shadow-md rounded-lg mb-5 p-6 w-100 ml-[555px] mt-[-420px]'>
-                <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
-                <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
-                    <p className='text-gray-700 text-center'>Income and Expenses Overview of 2024</p>
-                    <div className='h-60'>
-                        <Bar data={data} options={options} />
-                    </div>
+            <div className='p-6 bg-gray-900 shadow-md rounded-lg mb-5 w-[700px] ml-[555px] mt-[-420px]'>
+            <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
+            <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
+                <p className='text-gray-700 text-center'>Income and Expenses Overview of 2024</p>
+                <div className='h-60'>
+                    <Bar data={data} options={options} />
+                </div>
                 </div>
                 <div className='grid grid-cols-4 gap-4 mt-4'>
                     <div className='bg-blue-900 transition duration-200 text-white p-4 rounded-lg text-center shadow-md'>
