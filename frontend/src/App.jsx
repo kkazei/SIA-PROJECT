@@ -14,6 +14,7 @@ import Anouncement from "./pages/Announcement";
 import MaintenancePage from "./pages/MaintenancePage";
 import ArchivePage from "./pages/ArchivePage";
 import { RouteIcon } from "lucide-react";
+import TenantDashboard from "./pages/TenantDashboard";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
@@ -334,6 +335,14 @@ function App() {
               <RedirectAuthenticatedUser>
                 <TenantLoginPage />
               </RedirectAuthenticatedUser>
+            }
+            />
+          <Route
+            path="/tenant-dashboard"
+            element={
+              <ProtectedRoute>
+                <TenantDashboard />
+              </ProtectedRoute>
             }
             />
 
