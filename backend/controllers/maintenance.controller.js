@@ -1,59 +1,61 @@
 import { Maintenance } from "../models/maintenance.model.js";
 
-// Create a new maintenance task
+// Create a new maintenance request
 export const createMaintenance = async (req, res) => {
     try {
-        const newTask = new Maintenance({
-            ...req.body,
-            landlord_id: req.user.id,
-        });
-
-        await newTask.save();
-        res.status(201).json(newTask);
+        const maintenance = new Maintenance(req.body);
+        await maintenance.save();
+        res.status(201).json(maintenance);
     } catch (error) {
-        res.status(500).json({ message: "Error creating maintenance task", error });
+        res.status(500).json({ message: "Error creating maintenance request", error });
     }
 };
 
-// Get all maintenance tasks
-export const getMaintenance = async (req, res) => {
+// Get all maintenance requests
+export const getMaintenances = async (req, res) => {
     try {
-        const tasks = await Maintenance.find({ landlord_id: req.user.id, isVisible: true }).populate("apartment_id");
-        res.status(200).json(tasks);
+        const maintenances = await Maintenance.find().populate("apartment_id landlord_id");
+        res.status(200).json(maintenances);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching maintenance tasks", error });
+        res.status(500).json({ message: "Error fetching maintenance requests", error });
     }
 };
 
-// Update a maintenance task
+// Get a single maintenance request by ID
+export const getMaintenanceById = async (req, res) => {
+    try {
+        const maintenance = await Maintenance.findById(req.params.id).populate("apartment_id landlord_id");
+        if (!maintenance) {
+            return res.status(404).json({ message: "Maintenance request not found" });
+        }
+        res.status(200).json(maintenance);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching maintenance request", error });
+    }
+};
+
+// Update a maintenance request
 export const updateMaintenance = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updatedTask = await Maintenance.findByIdAndUpdate(id, req.body, { new: true });
-        res.status(200).json(updatedTask);
+        const maintenance = await Maintenance.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!maintenance) {
+            return res.status(404).json({ message: "Maintenance request not found" });
+        }
+        res.status(200).json(maintenance);
     } catch (error) {
-        res.status(500).json({ message: "Error updating maintenance task", error });
+        res.status(500).json({ message: "Error updating maintenance request", error });
     }
 };
 
-// Delete a maintenance task (Soft delete - Hide instead of remove)
+// Delete a maintenance request
 export const deleteMaintenance = async (req, res) => {
     try {
-        const { id } = req.params;
-        await Maintenance.findByIdAndUpdate(id, { isVisible: false });
-        res.status(200).json({ message: "Maintenance task hidden successfully" });
+        const maintenance = await Maintenance.findByIdAndDelete(req.params.id);
+        if (!maintenance) {
+            return res.status(404).json({ message: "Maintenance request not found" });
+        }
+        res.status(200).json({ message: "Maintenance request deleted successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Error deleting maintenance task", error });
-    }
-};
-
-// Archive a maintenance task
-export const archiveMaintenance = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Maintenance.findByIdAndUpdate(id, { status: "completed" });
-        res.status(200).json({ message: "Maintenance task archived" });
-    } catch (error) {
-        res.status(500).json({ message: "Error archiving maintenance task", error });
+        res.status(500).json({ message: "Error deleting maintenance request", error });
     }
 };
