@@ -24,8 +24,6 @@ const DashboardPage = () => {
         fetchApartments();
     }, [fetchApartments]);
 
-
-
     const navigateToConcernPage = () => navigate('/concern-page');
 
     const [visibleDataset, setVisibleDataset] = useState(null); 
