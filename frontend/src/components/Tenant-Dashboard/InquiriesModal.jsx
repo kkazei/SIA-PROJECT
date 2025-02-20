@@ -17,7 +17,7 @@ const InquiriesModal = ({
             <img
               src={fileUrl}
               alt="Preview"
-              className="max-w-[500px] h-auto rounded-lg mx-auto shadow-lg"
+              className="max-w-full h-auto rounded-lg mx-auto shadow-lg"
             />
             <button
               onClick={removeFile}
@@ -52,14 +52,14 @@ const InquiriesModal = ({
       onClick={closeModal}
     >
       <div
-        className={`bg-white p-6 rounded-lg w-[600px] max-h-[80%] overflow-y-auto shadow-xl transform transition-all duration-300 ${
+        className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[80%] overflow-y-auto shadow-xl transform transition-all duration-300 ${
           isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-2xl font-bold text-gray-900">Inquiries</h2>
 
-        <div className="flex justify-between items-center space-x-4 mt-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-4">
           <select className="w-full p-2 bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
             <option value="">Select Category</option>
             <option value="general">General Inquiry</option>
@@ -105,4 +105,5 @@ const InquiriesModal = ({
     </div>
   );
 };
+
 export default InquiriesModal;

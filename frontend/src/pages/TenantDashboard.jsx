@@ -84,7 +84,7 @@ const TenantDashboard = () => {
   const removeFile = () => setSelectedFile(null);
 
   return (
-    <div className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 mx-auto">
+    <div className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 mx-auto px-4">
       <div className="bg-green-100 p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
         <div className="mb-4 md:mb-0">
           <h1 className="text-2xl font-bold">JUAN DELA CRUZ</h1>
