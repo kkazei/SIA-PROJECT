@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const maintenanceSchema = new mongoose.Schema(
     {
+        room:{
+            type: String,
+            ref: "Apartment",
+            required: true,
+        },
         apartment_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Apartment",
