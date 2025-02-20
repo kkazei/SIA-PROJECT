@@ -16,10 +16,17 @@ import ArchivePage from "./pages/ArchivePage";
 import TenantDashboard from "./pages/TenantDashboard";
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, userRole } = useAuthStore();
+  const location = useLocation();
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  if (isAuthenticated && location.pathname === "/tenant-dashboard" && userRole !== "tenant") {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 };
 
@@ -31,7 +38,7 @@ const RedirectAuthenticatedUser = ({ children }) => {
   return children;
 };
 
-const SideNavbar = ({ isMaximized, toggleSidebar }) => {
+const SideNavbar = ({ isMaximized, setIsMaximized }) => {
   const { logout } = useAuthStore();
   const location = useLocation(); // Get current URL path
 
@@ -39,14 +46,14 @@ const SideNavbar = ({ isMaximized, toggleSidebar }) => {
     <div
       className={`fixed left-0 top-0 h-full ${
         isMaximized ? "w-64" : "w-16"
-      } bg-gray-800 text-white p-4 transition-all`}
+      } bg-gray-800 text-white p-4 transition-all duration-300`} // Added duration-300 for smooth transition
+      onMouseEnter={() => setIsMaximized(true)}
+      onMouseLeave={() => setIsMaximized(false)}
     >
-      <h2
-        className="text-3xl font-bold mb-6 cursor-pointer"
-        onClick={toggleSidebar}
-      >
-        {isMaximized ? "RentFlow" : ""}
-      </h2>
+      <div className="flex items-center mb-6">
+      <img src="/image/Menu.png" alt="Menu Icon" className="w-8 h-8" />
+        {isMaximized && <h2 className="text-3xl font-bold ml-2">RentFlow</h2>}
+      </div>
 
       <nav>
         <ul className="space-y-4 mt-20">
@@ -59,11 +66,7 @@ const SideNavbar = ({ isMaximized, toggleSidebar }) => {
                 location.pathname === "/" ? "bg-gray-700" : "hover:bg-black"
               }`}
             >
-              <img
-                src="/image/dashboard.png"
-                alt="Dashboard"
-                className="w-15 h-6"
-              />
+              <img src="/image/dashboard.png" alt="Dashboard" className="w-6 h-6" />
               {isMaximized && "Dashboard"}
             </Link>
           </li>
@@ -133,25 +136,12 @@ const SideNavbar = ({ isMaximized, toggleSidebar }) => {
               onClick={logout}
               className="w-fit text-left hover:bg-black absolute bottom-4 text-white p-3 rounded-lg flex items-center"
             >
-              <img
-                src="/image/logout.png"
-                alt="Logout"
-                className="w-5 h-6 mr-2"
-              />
+              <img src="/image/logout.png" alt="Logout" className="w-5 h-6 mr-2" />
               {isMaximized && "Logout"}
             </button>
           </li>
         </ul>
       </nav>
-
-      {!isMaximized && (
-        <button
-          onClick={toggleSidebar}
-          className="absolute top-4 right-3 bg-gray-700 text-white p-2 rounded-full focus:outline-none"
-        >
-          <img src="/image/Menu.png" alt="menu icon" className="w-6 h-6" />
-        </button>
-      )}
     </div>
   );
 };
@@ -172,13 +162,13 @@ function App() {
       {isAuthenticated && location.pathname !== "/tenant-dashboard" && (
         <SideNavbar
           isMaximized={isMaximized}
-          toggleSidebar={() => setIsMaximized(!isMaximized)}
+          setIsMaximized={setIsMaximized}
         />
       )}
       <div
-        className={`flex-grow flex items-center justify-center transition-all ${
+        className={`flex-grow flex items-center justify-center transition-all duration-300 ${
           isAuthenticated ? (isMaximized ? "ml-64" : "ml-16") : "ml-0"
-        }`}
+        }`} // Added duration-300 for smooth transition
       >
         <FloatingShape
           color="bg-green-500"

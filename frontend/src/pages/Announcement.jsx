@@ -67,8 +67,10 @@ const Announcement = () => {
     };
 
     return (
-        <div className="p-4">
-            <h2 className="text-2xl font-semibold mb-4">Announcements</h2>
+        <div className="p-5 ">
+            <h2 className="bg-white shadow-md rounded-lg p-6  ml-4 mt-auto text-2xl font-bold text-gray-800 mb-10">Announcements</h2>
+            
+        <div className="p-4 ">
             {successMessage && <div className="bg-green-500 text-white p-2 rounded mb-4">{successMessage}</div>}
             {loading && <p>Loading...</p>}
             {error && <p className="text-red-500">{error}</p>}
@@ -117,6 +119,7 @@ const Announcement = () => {
                 </div>
             )}
         </div>
+    </div>
     );
 };
 
