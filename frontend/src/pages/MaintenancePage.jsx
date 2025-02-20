@@ -36,6 +36,15 @@ const MaintenancePage = () => {
     }
   }, [user]);
 
+  const getApartmentName = (apartment_id) => {
+    if (!apartments || apartments.length === 0) return "Loading...";
+  
+    const apartment = apartments.find((apt) => apt._id?.toString() === apartment_id?.toString());
+    
+    return apartment ? apartment.room || `Apartment ${apartment_id}` : "Unknown Apartment";
+  };
+  
+
   const fetchMaintenanceTasks = async () => {
     try {
       const response = await axios.get(API_BASE_URL, { withCredentials: true });
@@ -45,15 +54,7 @@ const MaintenancePage = () => {
     }
   };
 
-  const getApartmentName = (apartment_id) => {
-    if (!apartments.length) return "Loading...";
-    console.log("Apartment ID:", apartment_id, typeof apartment_id);
-    
-    const apartment = apartments.find((apt) => apt._id.toString() === apartment_id.toString());
-    console.log("Matching apartment:", apartment);
-    
-    return apartment ? apartment.room || `Apartment ${apartment_id}` : "Unknown Apartment";
-  };
+  
   
 
   const handleChange = (e) => {
