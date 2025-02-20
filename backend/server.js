@@ -9,6 +9,7 @@ import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
+import tenantRoutes from "./routes/tenant.route.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.use("/api/auth", authRoutes);
+app.use("/api", tenantRoutes);
 app.use("/api", apartmentRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/uploads", express.static("uploads"));

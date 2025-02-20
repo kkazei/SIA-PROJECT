@@ -1,19 +1,31 @@
-import React, { useState } from "react";
-
-const tenantsData = [
-  { room: "C-1", tenant: "Michael Tabor" },
-  { room: "I", tenant: "May Batara" },
-  { room: "H", tenant: "Cecilio Montealegre" },
-  { room: "G", tenant: "Darvy Grace" },
-  { room: "F", tenant: "Luisa Roberts" },
-  { room: "Room", tenant: "Carl Cosedo" },
-];
+import React, { useState, useEffect } from "react";
 
 const TenantPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState("");
+  const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Fetch tenants from API
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/tenants");
+        if (!response.ok) throw new Error("Failed to fetch tenants");
+        const data = await response.json();
+        setTenants(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenants();
+  }, []);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -30,9 +42,9 @@ const TenantPage = () => {
     setShowModal(false);
   };
 
-  const filteredTenants = tenantsData.filter(
+  const filteredTenants = tenants.filter(
     (tenant) =>
-      tenant.tenant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tenant.tenant_fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tenant.room.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -58,24 +70,41 @@ const TenantPage = () => {
 
       {/* Tenant Cards */}
       <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-7xl">
-        <div className="flex flex-wrap justify-center gap-4">
-          {filteredTenants.length > 0 ? (
-            filteredTenants.map((tenant, index) => (
-              <div
-                key={index}
-                className="bg-gray-900 text-white p-4 rounded-lg flex flex-col items-center w-40 shadow-md"
-              >
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-blue-900 w-12 h-12 flex items-center justify-center rounded-full mb-2">
-                  👤
+        {loading ? (
+          <p className="text-gray-500 text-center">Loading tenants...</p>
+        ) : error ? (
+          <p className="text-red-500 text-center">{error}</p>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-4">
+            {filteredTenants.length > 0 ? (
+              filteredTenants.map((tenant) => (
+                <div
+                  key={tenant._id}
+                  className="bg-gray-900 text-white p-4 rounded-lg flex flex-col items-center w-40 shadow-md"
+                >
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-blue-900 w-12 h-12 flex items-center justify-center rounded-full mb-2">
+                    👤
+                  </div>
+                  <p className="font-bold">Room: {tenant.room}</p>
+                  <p className="text-sm">{tenant.tenant_fullname}</p>
+                  <p
+                    className={`text-xs mt-1 px-2 py-1 rounded ${
+                      tenant.status === "paid"
+                        ? "bg-green-500"
+                        : tenant.status === "overdue"
+                        ? "bg-red-500"
+                        : "bg-yellow-500"
+                    } text-white`}
+                  >
+                    {tenant.status}
+                  </p>
                 </div>
-                <p className="font-bold">Room: {tenant.room}</p>
-                <p className="text-sm">{tenant.tenant}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No tenants found.</p>
-          )}
-        </div>
+              ))
+            ) : (
+              <p className="text-gray-500">No tenants found.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Payment QR Modal */}

@@ -1,34 +1,81 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-const TenantModal = ({ isOpen, onClose }) => {
+const TenantModal = ({ isOpen, onClose, userId }) => {
   if (!isOpen) return null;
 
+  const [apartments, setApartments] = useState([]);
   const [selectedApartment, setSelectedApartment] = useState("");
   const [selectedTenant, setSelectedTenant] = useState("");
   const [isTenantEnabled, setIsTenantEnabled] = useState(false);
+  const [tenants, setTenants] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Sample data (replace with API data)
-  const apartments = [
-    { id: "apt1", name: "Apartment 101" },
-    { id: "apt2", name: "Apartment 202" },
-    { id: "apt3", name: "Apartment 303" },
-  ];
+  // Fetch apartments with tenants
+  useEffect(() => {
+    const fetchApartments = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/apartments-with-tenants?userId=${userId}`,
+          { withCredentials: true }
+        );
+        setApartments(response.data);
+      } catch (error) {
+        console.error("Error fetching apartments:", error);
+      }
+    };
 
-  const tenants = {
-    apt1: ["John Doe", "Jane Smith"],
-    apt2: ["Alice Johnson", "Bob Brown"],
-    apt3: ["Charlie White", "Diana Green"],
-  };
+    fetchApartments();
+  }, [userId]);
+
+  // Fetch tenants
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/tenants?userId=${userId}`);
+        if (!response.ok) throw new Error("Failed to fetch tenants");
+        const data = await response.json();
+        setTenants(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenants();
+  }, [userId]);
 
   const handleApartmentChange = (event) => {
-    const apt = event.target.value;
-    setSelectedApartment(apt);
-    setSelectedTenant(""); 
-    setIsTenantEnabled(!!apt);
+    const aptId = event.target.value;
+    setSelectedApartment(aptId);
+    setSelectedTenant("");
+    setIsTenantEnabled(!!aptId);
   };
 
   const handleTenantChange = (event) => {
     setSelectedTenant(event.target.value);
+  };
+
+  const handleAssignTenant = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/assign-tenant",
+        {
+          apartmentId: selectedApartment,
+          tenantId: selectedTenant,
+        },
+        { withCredentials: true }
+      );
+      if (response.status === 200) {
+        alert("Tenant assigned successfully");
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error assigning tenant:", error);
+      alert("Failed to assign tenant");
+    }
   };
 
   return (
@@ -36,21 +83,23 @@ const TenantModal = ({ isOpen, onClose }) => {
       <div className="bg-gray-900 rounded-lg shadow-lg p-6 w-[500px]">
         <div className="flex justify-between items-center border-b pb-2">
           <h2 className="text-xl text-white font-bold">Assign Tenant to a Room</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✖</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            ✖
+          </button>
         </div>
 
         <div className="mt-4">
           {/* Select Apartment */}
           <label className="block text-white font-medium">Select Apartment</label>
           <select
-            className="w-full  p-2 border rounded mt-1"
+            className="w-full p-2 border rounded mt-1"
             value={selectedApartment}
             onChange={handleApartmentChange}
           >
             <option value="">Select an Apartment</option>
             {apartments.map((apt) => (
-              <option key={apt.id} value={apt.id}>
-                {apt.name}
+              <option key={apt._id} value={apt._id}>
+                {apt.room}
               </option>
             ))}
           </select>
@@ -64,25 +113,30 @@ const TenantModal = ({ isOpen, onClose }) => {
             disabled={!isTenantEnabled}
           >
             <option value="">Select a Tenant</option>
-            {selectedApartment &&
-              tenants[selectedApartment]?.map((tenant, index) => (
-                <option key={index} value={tenant}>
-                  {tenant}
+            {loading ? (
+              <option>Loading tenants...</option>
+            ) : error ? (
+              <option>{error}</option>
+            ) : (
+              tenants.map((tenant) => (
+                <option key={tenant._id} value={tenant._id}>
+                  {tenant.tenant_fullname}
                 </option>
-              ))}
+              ))
+            )}
           </select>
 
           {/* Buttons */}
           <div className="flex justify-end mt-4">
             <button
-              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2
-               transition-all duration-300 group hover:bg-black hover:bg-none px-4 rounded mr-2"
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-4 rounded mr-2"
               disabled={!selectedApartment || !selectedTenant}
+              onClick={handleAssignTenant}
             >
               Assign Tenant
             </button>
-            <button className="bg-red-700 hover:bg-black text-white px-4 py-2 rounded">
-              Remove
+            <button className="bg-red-700 hover:bg-black text-white px-4 py-2 rounded" onClick={onClose}>
+              Cancel
             </button>
           </div>
         </div>
