@@ -87,4 +87,5 @@ const TenantLoginPage = () => {
     </motion.div>
   );
 };
+
 export default TenantLoginPage;

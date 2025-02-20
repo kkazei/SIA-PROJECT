@@ -16,10 +16,17 @@ import ArchivePage from "./pages/ArchivePage";
 import TenantDashboard from "./pages/TenantDashboard";
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, userRole } = useAuthStore();
+  const location = useLocation();
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  if (isAuthenticated && location.pathname === "/tenant-dashboard" && userRole !== "tenant") {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 };
 
