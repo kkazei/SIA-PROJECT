@@ -93,7 +93,7 @@ const DashboardPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.5 }}
-            className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full max-w-7xl ml-0 mt-0'
+            className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full max-w-auto ml-0 mt-0'
         >
             <div className='bg-white shadow-md rounded-lg p-6 ml-6 mt-0'>
                 <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user.user_fullname}</h2>
@@ -128,7 +128,7 @@ const DashboardPage = () => {
                 </button>
             </div>
 
-            <div className='p-6 bg-gray-900 shadow-md rounded-lg mb-5 w-[700px] ml-[555px] mt-[-420px]'>
+            <div className='p-6 bg-gray-900 shadow-md rounded-lg mb-5 w-auto ml-[555px] mt-[-420px]'>
             <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
             <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
                 <p className='text-gray-700 text-center'>Income and Expenses Overview of 2024</p>

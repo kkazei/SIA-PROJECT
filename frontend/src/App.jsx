@@ -13,7 +13,6 @@ import { useEffect, useState } from "react";
 import Anouncement from "./pages/Announcement";
 import MaintenancePage from "./pages/MaintenancePage";
 import ArchivePage from "./pages/ArchivePage";
-import { RouteIcon } from "lucide-react";
 import TenantDashboard from "./pages/TenantDashboard";
 
 const ProtectedRoute = ({ children }) => {
@@ -35,69 +34,6 @@ const RedirectAuthenticatedUser = ({ children }) => {
 const SideNavbar = ({ isMaximized, toggleSidebar }) => {
   const { logout } = useAuthStore();
   const location = useLocation(); // Get current URL path
-
-  //     return (
-  //         <div className={`fixed left-0 top-0 h-full ${isMaximized ? 'w-64' : 'w-16'} bg-gray-800 text-white p-4 transition-all`}>
-  //             <h2
-  //                 className={`text-3xl font-bold mb-6 cursor-pointer`}
-  //                 onClick={toggleSidebar}
-  //             >
-  //                 {isMaximized ? "RentFlow" : ""}
-  //             </h2>
-  //             <nav>
-  //                 <ul className="space-y-4">
-  //                     <li>
-  //                         <Link to="/" className="flex items-center mt-20">
-  //                             <img src="/image/dashboard.png" alt="menu icon" className="w-6 h-6 mr-2" />
-  //                             {isMaximized && 'Dashboard'}
-  //                         </Link>
-  //                     </li>
-  //                     <li>
-  //                         <Link to="/announcement" className="flex items-center">
-  //                             <img src="/image/announcement.png" alt="Announcements" className="w-6 h-6 mr-2" />
-  //                             {isMaximized && 'Announcements'}
-  //                         </Link>
-  //                     </li>
-  //                     <li>
-  //                         <Link to="/tenant-page" className="flex items-center">
-  //                             <img src="/image/person.png" alt="Tenant" className="w-6 h-6 mr-2" />
-  //                             {isMaximized && 'Tenant'}
-  //                         </Link>
-  //                     </li>
-  //                     <li>
-  //                         <Link to="/maintenance-page" className="flex items-center">
-  //                             <img src="/image/maintenance.png" alt="Maintenance" className="w-6 h-6 mr-2" />
-  //                             {isMaximized && 'Maintenance'}
-  //                         </Link>
-  //                     </li>
-  //                     <li>
-  //                         <Link to="/archive-page" className="flex items-center">
-  //                             <img src="/image/archive.png" alt="Archive" className="w-6 h-6 mr-2" />
-  //                             {isMaximized && 'Archive'}
-  //                         </Link>
-  //                     </li>
-
-  //                     {/* ✅ Updated Logout Button */}
-  //                     <li>
-  //                         <button onClick={logout} className="w-fit text-left hover:bg-black absolute bottom-4 text-white p-2 rounded-full flex items-center">
-  //                             <img src="/image/logout.png" alt="Logout" className="w-5 h-6 mr-2" />
-  //                             {isMaximized && 'Logout'}
-  //                         </button>
-  //                     </li>
-  //                 </ul>
-  //             </nav>
-
-  //             {!isMaximized && (
-  //                 <button
-  //                     onClick={toggleSidebar}
-  //                     className="absolute top-4 right-4 bg-gray-700 text-white p-2 rounded-full focus:outline-none"
-  //                 >
-  //                     <img src="/image/Menu.png" alt="menu icon" className="w-6 h-6"/>
-  //                 </button>
-  //             )}
-  //         </div>
-  //     );
-  // };
 
   return (
     <div
@@ -223,6 +159,7 @@ const SideNavbar = ({ isMaximized, toggleSidebar }) => {
 function App() {
   const { isCheckingAuth, checkAuth, isAuthenticated } = useAuthStore();
   const [isMaximized, setIsMaximized] = useState(false);
+  const location = useLocation(); // Get current URL path
 
   useEffect(() => {
     checkAuth();
@@ -232,7 +169,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-emerald-900 flex relative overflow-hidden">
-      {isAuthenticated && (
+      {isAuthenticated && location.pathname !== "/tenant-dashboard" && (
         <SideNavbar
           isMaximized={isMaximized}
           toggleSidebar={() => setIsMaximized(!isMaximized)}
@@ -337,14 +274,14 @@ function App() {
               </RedirectAuthenticatedUser>
             }
             />
-          <Route
+            <Route
             path="/tenant-dashboard"
             element={
               <ProtectedRoute>
                 <TenantDashboard />
               </ProtectedRoute>
             }
-            />
+          />
 
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -356,3 +293,4 @@ function App() {
 }
 
 export default App;
+
