@@ -31,7 +31,7 @@ const TenantLoginPage = () => {
     >
       <div className="p-8">
         <h2 className="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text">
-          Welcome Back
+          Welcome Back Tenant!
         </h2>
 
         <form onSubmit={handleLogin}>

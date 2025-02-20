@@ -80,7 +80,7 @@ const TenantSignUpPage = () => {
                 </motion.button>
                 <p className='text-sm text-gray-400 mt-4'>
                     Already have an account?{" "}
-                    <Link to='/login' className='text-green-400 hover:underline'>
+                    <Link to='/tenant-login' className='text-green-400 hover:underline'>
                         Log in
                     </Link>
                 </p>
