@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useAuthStore } from "../store/authStore"; // Ensure landlord ID is accessible
 
-const TenantModal = ({ isOpen, onClose, userId }) => {
+const TenantModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
+
+  const { user } = useAuthStore(); // Get logged-in landlord info
+  const landlordId = user?._id; // Extract landlord ID
 
   const [apartments, setApartments] = useState([]);
   const [selectedApartment, setSelectedApartment] = useState("");
@@ -12,12 +16,14 @@ const TenantModal = ({ isOpen, onClose, userId }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Fetch apartments with tenants
+  // Fetch apartments linked to the landlord
   useEffect(() => {
+    if (!landlordId) return;
+
     const fetchApartments = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/apartments-with-tenants?userId=${userId}`,
+          `http://localhost:5000/api/apartments-with-tenants?userId=${landlordId}`,
           { withCredentials: true }
         );
         setApartments(response.data);
@@ -27,13 +33,15 @@ const TenantModal = ({ isOpen, onClose, userId }) => {
     };
 
     fetchApartments();
-  }, [userId]);
+  }, [landlordId]);
 
-  // Fetch tenants
+  // Fetch tenants linked to the landlord
   useEffect(() => {
+    if (!landlordId) return;
+
     const fetchTenants = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/tenants?userId=${userId}`);
+        const response = await fetch(`http://localhost:5000/api/tenants?userId=${landlordId}`);
         if (!response.ok) throw new Error("Failed to fetch tenants");
         const data = await response.json();
         setTenants(data);
@@ -45,7 +53,7 @@ const TenantModal = ({ isOpen, onClose, userId }) => {
     };
 
     fetchTenants();
-  }, [userId]);
+  }, [landlordId]);
 
   const handleApartmentChange = (event) => {
     const aptId = event.target.value;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAuthStore } from "../store/authStore"; // Ensure you have access to landlord ID
 
 const TenantPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -9,11 +10,16 @@ const TenantPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const { user } = useAuthStore(); // Get logged-in landlord's info
+  const landlordId = user?._id; // Extract landlord ID
+
   // Fetch tenants from API
   useEffect(() => {
+    if (!landlordId) return; // Prevent fetching if landlordId is missing
+
     const fetchTenants = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/tenants");
+        const response = await fetch(`http://localhost:5000/api/tenants/${landlordId}`);
         if (!response.ok) throw new Error("Failed to fetch tenants");
         const data = await response.json();
         setTenants(data);
@@ -25,8 +31,8 @@ const TenantPage = () => {
     };
 
     fetchTenants();
-  }, []);
-
+  }, [landlordId]);
+  
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);

@@ -1,5 +1,6 @@
 import { User } from "../models/user.model.js";
 import { Tenant } from "../models/tenant.model.js"; // Import the Tenant model
+import { Apartment } from "../models/apartment.model.js"; // Import Apartment model
 import bcrypt from "bcryptjs";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 
@@ -44,15 +45,21 @@ export const signup = async (req, res) => {
 };
 
 export const signupTenant = async (req, res) => {
-    const { tenant_email, password, tenant_fullname, tenant_phone, room = "Not Assigned", rent = 0, due_date = null } = req.body;
+    const { tenant_email, password, tenant_fullname, tenant_phone, landlord_id, room = "Not Assigned", rent = 0, due_date = null } = req.body;
+
     try {
-        if (!tenant_email || !password || !tenant_fullname) {
-            throw new Error("Please fill all required fields");
+        if (!tenant_email || !password || !tenant_fullname || !landlord_id) {
+            throw new Error("Please fill all required fields including landlord");
         }
 
         const tenantAlreadyExists = await Tenant.findOne({ tenant_email });
         if (tenantAlreadyExists) {
             return res.status(400).json({ success: false, message: "Tenant already exists" });
+        }
+
+        const landlord = await User.findById(landlord_id);
+        if (!landlord || landlord.user_role !== 'landlord') {
+            return res.status(400).json({ success: false, message: "Invalid landlord selected" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -61,30 +68,27 @@ export const signupTenant = async (req, res) => {
             password: hashedPassword,
             tenant_fullname,
             tenant_phone,
+            landlord_id, // Link tenant to landlord
             room,
             rent,
-            status: 'pending', // Automatically set status to 'pending'
-            due_date // Set due_date to provided value or null
+            status: 'pending',
+            due_date
         });
 
         await tenant.save();
-
-        // Generate JWT and set cookie
         generateTokenAndSetCookie(res, tenant._id);
 
         res.status(201).json({
             success: true,
             message: "Tenant created successfully",
-            tenant: {
-                ...tenant._doc,
-                password: undefined,
-            },
+            tenant: { ...tenant._doc, password: undefined },
         });
 
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
     }
 };
+
 export const login = async (req, res) => {
     const { user_email, password } = req.body;
     try {

@@ -34,7 +34,12 @@ const tenantSchema = new mongoose.Schema({
     apartment_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Apartment',
-        default: null
+        default: null // Ensure an apartment is selected
+    },
+    landlord_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User', // Reference to the landlord
+        required: true // Ensure a landlord is selected
     },
     tenant_phone: {
         type: String,
