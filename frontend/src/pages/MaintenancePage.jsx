@@ -1,61 +1,38 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
-import { useApartmentStore } from "../store/apartmentStore";
 
 const API_BASE_URL = "http://localhost:5000/api/maintenance";
 
 const MaintenancePage = () => {
   const [maintenanceTasks, setMaintenanceTasks] = useState([]);
-  const { apartments, fetchApartments } = useApartmentStore();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    apartment_id: "",
     start_date: "",
     end_date: "",
     description: "",
     expenses: 0,
     status: "pending",
-    landlord_id: user?._id || "",
   });
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await fetchApartments(); // Ensure apartments are fetched first
-      await fetchMaintenanceTasks();
-      setLoading(false);
-    };
-    fetchData();
-  
-    if (user) {
-      setFormData((prev) => ({ ...prev, landlord_id: user._id }));
-    }
-  }, [user]);
-
-  const getApartmentName = (apartment_id) => {
-    if (!apartments || apartments.length === 0) return "Loading...";
-  
-    const apartment = apartments.find((apt) => apt._id?.toString() === apartment_id?.toString());
-    
-    return apartment ? apartment.room || `Apartment ${apartment_id}` : "Unknown Apartment";
-  };
-  
+    fetchMaintenanceTasks();
+  }, []);
 
   const fetchMaintenanceTasks = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(API_BASE_URL, { withCredentials: true });
       setMaintenanceTasks(response.data);
     } catch (error) {
       console.error("Error fetching maintenance tasks", error);
+    } finally {
+      setLoading(false);
     }
   };
-
-  
-  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,10 +41,6 @@ const MaintenancePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.apartment_id) {
-      alert("Please select an apartment.");
-      return;
-    }
     setSubmitting(true);
     try {
       if (editId) {
@@ -77,13 +50,11 @@ const MaintenancePage = () => {
         await axios.post(API_BASE_URL, formData, { withCredentials: true });
       }
       setFormData({
-        apartment_id: "",
         start_date: "",
         end_date: "",
         description: "",
         expenses: 0,
         status: "pending",
-        landlord_id: user?._id || "",
       });
       await fetchMaintenanceTasks();
     } catch (error) {
@@ -118,41 +89,26 @@ const MaintenancePage = () => {
 
   return (
     <div className="p-6 flex flex-col md:flex-row gap-10">
+      {/* Form Section */}
       <div className="bg-gray-900 p-6 rounded-lg shadow-md w-full md:w-1/3">
         <h2 className="text-white font-bold mb-4">{editId ? "Edit Maintenance Task" : "Add Maintenance Task"}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-white font-semibold">Apartment:</label>
-            <select name="apartment_id" value={formData.apartment_id} onChange={handleChange} className="w-full p-3 border rounded-md" required>
-              <option value="">Select Apartment</option>
-              {apartments.map((apartment) => (
-                <option key={apartment._id} value={apartment._id}>
-                  {apartment.room || `Apartment ${apartment._id}`}
-                </option>
-              ))}
-            </select>
+            <label className="block text-white font-semibold">Description:</label>
+            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full p-3 border rounded-md" required />
           </div>
-
           <div>
             <label className="block text-white font-semibold">Start Date:</label>
             <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} className="w-full p-3 border rounded-md" required />
           </div>
-
           <div>
             <label className="block text-white font-semibold">End Date (optional):</label>
             <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} className="w-full p-3 border rounded-md" />
           </div>
-
-          <div>
-            <label className="block text-white font-semibold">Description:</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full p-3 border rounded-md" required />
-          </div>
-
           <div>
             <label className="block text-white font-semibold">Expenses:</label>
             <input type="number" name="expenses" value={formData.expenses} onChange={handleChange} className="w-full p-3 border rounded-md" min="0" />
           </div>
-
           <div>
             <label className="block text-white font-semibold">Status:</label>
             <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 border rounded-md">
@@ -161,40 +117,36 @@ const MaintenancePage = () => {
               <option value="completed">Completed</option>
             </select>
           </div>
-
           <button type="submit" className="bg-green-500 text-white py-3 rounded-md w-full hover:bg-green-600 transition" disabled={submitting}>
             {submitting ? "Processing..." : editId ? "Update Task" : "Add Task"}
           </button>
         </form>
       </div>
 
+      {/* Maintenance List Section */}
       <div className="bg-gray-900 p-6 rounded-lg shadow-md w-full md:w-2/3">
         <h2 className="text-xl text-white font-bold mb-4">Maintenance Tasks</h2>
         {maintenanceTasks.length === 0 ? (
           <p className="text-gray-500">No maintenance tasks found.</p>
         ) : (
           <ul className="space-y-4">
-            {maintenanceTasks.map((task) => {
-              const apartmentName = getApartmentName(task.apartment_id);
-              return (
-                <li key={task._id} className="p-4 border rounded-md shadow-sm text-white bg-gray-800">
-                  <p><strong>Apartment:</strong> {apartmentName}</p>
-                  <p><strong>Start Date:</strong> {task.start_date.split("T")[0]}</p>
-                  {task.end_date && <p><strong>End Date:</strong> {task.end_date.split("T")[0]}</p>}
-                  <p><strong>Description:</strong> {task.description}</p>
-                  <p><strong>Expenses:</strong> ${task.expenses}</p>
-                  <p><strong>Status:</strong> 
-                    <span className={`px-2 py-1 rounded ${task.status === "pending" ? "bg-yellow-500" : task.status === "ongoing" ? "bg-blue-500" : "bg-green-500"}`}>
-                      {task.status}
-                    </span>
-                  </p>
-                  <div className="mt-3">
-                    <button onClick={() => handleEdit(task._id)} className="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition">Edit</button>
-                    <button onClick={() => handleArchive(task._id)} className="ml-2 bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-500 transition">Archive</button>
-                  </div>
-                </li>
-              );
-            })}
+            {maintenanceTasks.map((task) => (
+              <li key={task._id} className="p-4 border rounded-md shadow-sm text-white bg-gray-800">
+                <p><strong>Description:</strong> {task.description}</p>
+                <p><strong>Start Date:</strong> {task.start_date.split("T")[0]}</p>
+                {task.end_date && <p><strong>End Date:</strong> {task.end_date.split("T")[0]}</p>}
+                <p><strong>Expenses:</strong> ${task.expenses}</p>
+                <p><strong>Status:</strong> 
+                  <span className={`px-2 py-1 rounded ${task.status === "pending" ? "bg-yellow-500" : task.status === "ongoing" ? "bg-blue-500" : "bg-green-500"}`}>
+                    {task.status}
+                  </span>
+                </p>
+                <div className="mt-3">
+                  <button onClick={() => handleEdit(task._id)} className="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition">Edit</button>
+                  <button onClick={() => handleArchive(task._id)} className="ml-2 bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-500 transition">Archive</button>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </div>

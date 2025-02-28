@@ -1,6 +1,5 @@
 import { User } from "../models/user.model.js";
 import { Tenant } from "../models/tenant.model.js"; // Import the Tenant model
-import { Apartment } from "../models/apartment.model.js"; // Import Apartment model
 import bcrypt from "bcryptjs";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 
