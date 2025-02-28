@@ -11,7 +11,7 @@ router.post("/signup-tenant", signupTenant); // Add this line for tenant signup
 
 router.post("/login", login);
 
-router.post("/Tenantlogin", Tenantlogin);
+router.post("/tenant-login", Tenantlogin);
 
 router.post("/logout", logout);
 

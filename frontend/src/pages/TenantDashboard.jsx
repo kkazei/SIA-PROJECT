@@ -4,6 +4,8 @@ import LeaseAgreementModal from "../components/Tenant-Dashboard/LeaseAgreementMo
 import LandlordAnnouncementModal from "../components/Tenant-Dashboard/LandlordAnnouncementModal";
 import PaymentHistoryModal from "../components/Tenant-Dashboard/PaymentHistoryModal";
 import PaymentProofModal from "../components/Tenant-Dashboard/PaymentProofModal";
+import { useAuthStore } from "../store/authStore";
+import { useApartmentStore } from "../store/apartmentStore";
 
 // Main Dashboard Component
 const TenantDashboard = () => {
@@ -17,6 +19,8 @@ const TenantDashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null); // Declare once
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
+  const { user } = useAuthStore();
+  
 
   const openInquiriesModal = () => {
     setIsInquiriesModalOpen(true);
@@ -87,7 +91,7 @@ const TenantDashboard = () => {
     <div className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 mx-auto px-4">
       <div className="bg-green-100 p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
         <div className="mb-4 md:mb-0">
-          <h1 className="text-2xl font-bold">JUAN DELA CRUZ</h1>
+          <h1 className="text-2xl font-bold">{user.tenant_fullname}</h1>
           <p className="text-gray-600">1-A</p>
           <p className="text-sm text-gray-500 mt-1">
             As of{" "}

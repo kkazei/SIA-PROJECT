@@ -63,10 +63,11 @@ export const useAuthStore = create((set) => ({
     tenantLogin: async (tenant_email, password) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await axios.post(`${API_URL}/tenant-login`, { tenant_email, password }); // Fixed API route name
+            const response = await axios.post(`${API_URL}/tenant-login`, { tenant_email, password });
+    
             set({
                 isAuthenticated: true,
-                user: response.data.user,
+                user: response.data.tenant,  // Fix: store `tenant` instead of `user`
                 isLoading: false,
                 userRole: "tenant",
             });
@@ -75,6 +76,7 @@ export const useAuthStore = create((set) => ({
             throw error;
         }
     },
+    
 
     verifyEmail: async (code) => {
         set({ isLoading: true, error: null });

@@ -10,12 +10,12 @@ const TenantLoginPage = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const { TenantLogin, isLoading, error } = useAuthStore();
+  const { tenantLogin, isLoading, error } = useAuthStore();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await TenantLogin(tenant_email, password);
+      await tenantLogin(tenant_email, password);
       navigate("/tenant-dashboard");
     } catch (err) {
       console.error("Login failed:", err);
