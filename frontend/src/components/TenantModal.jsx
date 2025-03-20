@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuthStore } from "../store/authStore"; // Ensure landlord ID is accessible
+import { useApartmentStore } from "../store/apartmentStore"; // Import the apartment store
 
 const TenantModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
   const { user } = useAuthStore(); // Get logged-in landlord info
   const landlordId = user?._id; // Extract landlord ID
+  
+  // Get the assignTenantToApartment function from the store
+  const { assignTenantToApartment } = useApartmentStore();
 
   const [apartments, setApartments] = useState([]);
   const [selectedApartment, setSelectedApartment] = useState("");
@@ -18,7 +20,7 @@ const TenantModal = ({ isOpen, onClose }) => {
 
   // Fetch apartments linked to the landlord
   useEffect(() => {
-    if (!landlordId) return;
+    if (!isOpen || !landlordId) return;
 
     const fetchApartments = async () => {
       try {
@@ -33,11 +35,11 @@ const TenantModal = ({ isOpen, onClose }) => {
     };
 
     fetchApartments();
-  }, [landlordId]);
+  }, [landlordId, isOpen]);
 
   // Fetch tenants linked to the landlord
   useEffect(() => {
-    if (!landlordId) return;
+    if (!isOpen || !landlordId) return;
 
     const fetchTenants = async () => {
       try {
@@ -53,7 +55,7 @@ const TenantModal = ({ isOpen, onClose }) => {
     };
 
     fetchTenants();
-  }, [landlordId]);
+  }, [landlordId, isOpen]);
 
   const handleApartmentChange = (event) => {
     const aptId = event.target.value;
@@ -68,23 +70,17 @@ const TenantModal = ({ isOpen, onClose }) => {
 
   const handleAssignTenant = async () => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/assign-tenant",
-        {
-          apartmentId: selectedApartment,
-          tenantId: selectedTenant,
-        },
-        { withCredentials: true }
-      );
-      if (response.status === 200) {
-        alert("Tenant assigned successfully");
-        onClose();
-      }
+      // Use the store function instead of making a direct API call
+      await assignTenantToApartment(selectedApartment, selectedTenant);
+      alert("Tenant assigned successfully");
+      onClose();
     } catch (error) {
       console.error("Error assigning tenant:", error);
-      alert("Failed to assign tenant");
+      alert("Failed to assign tenant: " + (error.response?.data?.message || "Unknown error"));
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
@@ -125,6 +121,8 @@ const TenantModal = ({ isOpen, onClose }) => {
               <option>Loading tenants...</option>
             ) : error ? (
               <option>{error}</option>
+            ) : tenants.length === 0 ? (
+              <option>No tenants available</option>
             ) : (
               tenants.map((tenant) => (
                 <option key={tenant._id} value={tenant._id}>

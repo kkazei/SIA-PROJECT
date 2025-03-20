@@ -136,15 +136,24 @@ const DashboardPage = () => {
                 </div>
                 <div className='grid grid-cols-4 gap-4 mt-4'>
                     <div className='bg-blue-900 transition duration-200 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>8</h4>
+                        <h4 className='text-lg font-bold'>
+                            {apartments.filter(apt => !apt.tenant_id).length}
+                        </h4>
                         <p>Vacant</p>
                     </div>
                     <div className='bg-green-600 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>5</h4>
-                        <p>Acquired</p>
+                        <h4 className='text-lg font-bold'>
+                            {apartments.filter(apt => apt.tenant_id).length}
+                        </h4>
+                        <p>Occupied</p>
                     </div>
                     <div className='bg-green-500 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>₱0</h4>
+                        <h4 className='text-lg font-bold'>
+                            ₱{apartments
+                                .filter(apt => apt.tenant_id)
+                                .reduce((total, apt) => total + apt.rent, 0)
+                                .toLocaleString()}
+                        </h4>
                         <p>Total Income</p>
                     </div>
                     <div className='bg-blue-900 text-white p-4 rounded-lg text-center shadow-md'>
@@ -173,10 +182,12 @@ const DashboardPage = () => {
                         <tbody>
                             {apartments.map((apartment) => (
                                 <tr key={apartment._id} className='border-t'>
-                                    <td className='p-2  text-white'>{apartment.room}</td>
+                                    <td className='p-2 text-white'>{apartment.room}</td>
                                     <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
                                     <td className='p-2 text-white'>{apartment.description}</td>
-                                    <td className='p-2 text-green-600'>Available</td>
+                                    <td className={`p-2 ${apartment.tenant_id ? 'text-yellow-500' : 'text-green-600'}`}>
+                                        {apartment.tenant_id ? 'Occupied' : 'Available'}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
