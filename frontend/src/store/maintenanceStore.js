@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import axios from "axios";
 
-// Fix: The API_URL should be the base URL without trailing slash
+
 const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
 
 export const useMaintenanceStore = create((set, get) => ({
