@@ -5,13 +5,14 @@ import apartmentRoutes from "./routes/apartment.route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
-import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
-import tenantRoutes from "./routes/tenant.route.js";
-import { fileURLToPath } from "url";
 import tenantAnnouncementsRoutes from "./routes/tenant-announcements.route.js";
+import tenantRoutes from "./routes/tenant.route.js";
+import { connectDb } from "./db/connectDb.js";
+import { fileURLToPath } from "url";
+
 
 dotenv.config();
 
