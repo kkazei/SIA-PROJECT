@@ -10,12 +10,15 @@ import multer from "multer";
 import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
 import tenantRoutes from "./routes/tenant.route.js";
+import { fileURLToPath } from "url";
+import tenantAnnouncementsRoutes from "./routes/tenant-announcements.route.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const __dirname = path.resolve();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
@@ -33,10 +36,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.use("/api/auth", authRoutes);
-app.use("/api", tenantRoutes);
+app.use("/api", tenantRoutes); // Assuming your tenant routes are not prefixed with /tenant
 app.use("/api", apartmentRoutes);
+app.use("/api/tenant-announcements", tenantAnnouncementsRoutes);
 app.use("/api/posts", postRoutes);
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/maintenance", maintenanceRoutes);
 
 if (process.env.NODE_ENV === "production") {

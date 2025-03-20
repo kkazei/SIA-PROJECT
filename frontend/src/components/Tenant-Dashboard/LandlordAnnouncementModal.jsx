@@ -1,40 +1,61 @@
-import React, { useState } from "react";
+import React from "react";
 
-// Landlord Announcement Modal Component
-const LandlordAnnouncementModal = ({ isOpen, closeModal, announcement }) => {
+const LandlordAnnouncementModal = ({ isOpen, closeModal, announcements }) => {
+  if (!isOpen) return null;
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not available';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity ${
-        isOpen ? "opacity-100 visible" : "opacity-0 invisible"
-      }`}
-      onClick={closeModal}
-    >
-      <div
-        className={`bg-white p-6 rounded-lg w-[700px] max-h-[80%] overflow-y-auto shadow-xl transform transition-all duration-300 ${
-          isOpen ? "scale-100 opacity-100" : "scale-90 opacity-0"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-2xl font-bold text-gray-900 text-left">
-          Landlord Announcement
-        </h2>
-        {announcement?.image ? (
-          <div className="mt-4 text-center">
-            <img
-              src={announcement.image}
-              alt="Announcement"
-              className="max-w-full rounded-lg mx-auto shadow-lg"
-            />
-          </div>
-        ) : (
-          <p className="text-center mt-4 text-gray-500">
-            No announcement available
-          </p>
-        )}
-        <div className="flex justify-end mt-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold">Landlord Announcements</h2>
+          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+            ✖
+          </button>
+        </div>
+        
+        <div className="overflow-y-auto p-4 flex-grow">
+          {announcements && announcements.length > 0 ? (
+            <div className="space-y-6">
+              {announcements.map((announcement) => (
+                <div key={announcement._id} className="border rounded-lg overflow-hidden shadow-sm">
+                  {announcement.image_path && (
+                    <img
+                      src={announcement.image_path}
+                      alt="Announcement"
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold">{announcement.title}</h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {formatDate(announcement.createdAt)}
+                    </p>
+                    <p className="text-gray-700 whitespace-pre-line">{announcement.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No announcements available.</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4 border-t">
           <button
             onClick={closeModal}
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-200"
+            className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
           >
             Close
           </button>
@@ -43,4 +64,5 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal, announcement }) => {
     </div>
   );
 };
+
 export default LandlordAnnouncementModal;

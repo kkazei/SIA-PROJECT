@@ -1,59 +1,89 @@
 import React, { useState, useEffect } from "react";
-import { useAuthStore } from "../store/authStore"; // Ensure you have access to landlord ID
+import { useAuthStore } from "../store/authStore";
+import { useTenantStore } from "../store/tenantStore";
 
 const TenantPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState("");
-  const [tenants, setTenants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  const { user } = useAuthStore(); // Get logged-in landlord's info
-  const landlordId = user?._id; // Extract landlord ID
+  const { user } = useAuthStore();
+  const { 
+    tenants, 
+    selectedTenant,
+    loading, 
+    error, 
+    fetchTenants, 
+    getTenantById, 
+    updateTenantStatus,
+    uploadPaymentQR
+  } = useTenantStore();
 
-  // Fetch tenants from API
+  // Fetch tenants when the component mounts
   useEffect(() => {
-    if (!landlordId) return; // Prevent fetching if landlordId is missing
-
-    const fetchTenants = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/tenants/${landlordId}`);
-        if (!response.ok) throw new Error("Failed to fetch tenants");
-        const data = await response.json();
-        setTenants(data);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTenants();
-  }, [landlordId]);
+  }, [fetchTenants]);
   
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) {
       alert("Please select a file first.");
       return;
     }
-    console.log("Uploading:", selectedFile, "Details:", paymentDetails);
-    alert("Payment QR uploaded successfully!");
-    setShowModal(false);
+
+    try {
+      await uploadPaymentQR(selectedFile, paymentDetails);
+      alert("Payment QR uploaded successfully!");
+      setShowModal(false);
+      setSelectedFile(null);
+      setPaymentDetails("");
+    } catch (error) {
+      alert("Failed to upload QR code: " + error.message);
+    }
+  };
+
+  const handleTenantClick = async (tenant) => {
+    try {
+      await getTenantById(tenant._id);
+      setShowProfileModal(true);
+    } catch (error) {
+      alert("Failed to fetch tenant details: " + error.message);
+    }
+  };
+
+  const handleStatusChange = async (tenantId, newStatus) => {
+    try {
+      await updateTenantStatus(tenantId, newStatus);
+      alert(`Tenant status updated to ${newStatus}`);
+    } catch (error) {
+      alert("Failed to update status: " + error.message);
+    }
   };
 
   const filteredTenants = tenants.filter(
     (tenant) =>
-      tenant.tenant_fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tenant.room.toLowerCase().includes(searchTerm.toLowerCase())
+      tenant.tenant_fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tenant.room?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "paid":
+        return "bg-green-500";
+      case "overdue":
+        return "bg-red-500";
+      default:
+        return "bg-yellow-500";
+    }
+  };
+
+  // Rest of the component stays the same...
   return (
     <div className="p-10 flex flex-col w-full items-center min-h-screen bg-gray-900">
       {/* Title and Search Bar */}
@@ -86,23 +116,19 @@ const TenantPage = () => {
               filteredTenants.map((tenant) => (
                 <div
                   key={tenant._id}
-                  className="bg-gray-900 text-white p-4 rounded-lg flex flex-col items-center w-40 shadow-md"
+                  className="bg-gray-900 text-white p-4 rounded-lg flex flex-col items-center w-48 shadow-md hover:shadow-lg cursor-pointer transform transition hover:scale-105"
+                  onClick={() => handleTenantClick(tenant)}
                 >
-                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-blue-900 w-12 h-12 flex items-center justify-center rounded-full mb-2">
-                    👤
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white w-14 h-14 flex items-center justify-center rounded-full mb-2 text-xl">
+                    {tenant.tenant_fullname?.charAt(0).toUpperCase() || "T"}
                   </div>
-                  <p className="font-bold">Room: {tenant.room}</p>
-                  <p className="text-sm">{tenant.tenant_fullname}</p>
+                  <p className="font-bold text-center">{tenant.tenant_fullname}</p>
+                  <p className="text-sm mt-1">Room: {tenant.room || "Not Assigned"}</p>
+                  <p className="text-sm">Rent: ₱{tenant.rent?.toLocaleString() || 0}</p>
                   <p
-                    className={`text-xs mt-1 px-2 py-1 rounded ${
-                      tenant.status === "paid"
-                        ? "bg-green-500"
-                        : tenant.status === "overdue"
-                        ? "bg-red-500"
-                        : "bg-yellow-500"
-                    } text-white`}
+                    className={`text-xs mt-2 px-2 py-1 rounded ${getStatusClass(tenant.status)} text-white`}
                   >
-                    {tenant.status}
+                    {tenant.status || "pending"}
                   </p>
                 </div>
               ))
@@ -115,10 +141,10 @@ const TenantPage = () => {
 
       {/* Payment QR Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-gray-900 rounded-lg shadow-lg p-6 w-100 relative">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-gray-900 rounded-lg shadow-lg p-6 w-96 relative">
             <button
-              className="absolute top-2 right-2 text-gray-600 text-lg"
+              className="absolute top-2 right-2 text-gray-400 hover:text-white text-lg"
               onClick={() => setShowModal(false)}
             >
               ✕
@@ -137,7 +163,7 @@ const TenantPage = () => {
               />
               <label
                 htmlFor="fileInput"
-                className="bg-gray-500 text-white px-4 py-2 rounded-md mb-4 cursor-pointer"
+                className="bg-gray-500 text-white px-4 py-2 rounded-md mb-4 cursor-pointer hover:bg-gray-600"
               >
                 {selectedFile ? selectedFile.name : "Select File"}
               </label>
@@ -159,6 +185,102 @@ const TenantPage = () => {
               >
                 Upload
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tenant Profile Modal */}
+      {showProfileModal && selectedTenant && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-gray-900 rounded-lg shadow-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto relative">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-white text-lg"
+              onClick={() => setShowProfileModal(false)}
+            >
+              ✕
+            </button>
+            
+            <div className="flex flex-col md:flex-row items-center md:items-start">
+              {/* Tenant Avatar */}
+              <div className="flex flex-col items-center mb-4 md:mb-0 md:mr-6">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white w-24 h-24 flex items-center justify-center rounded-full mb-2 text-4xl">
+                  {selectedTenant.tenant_fullname?.charAt(0).toUpperCase() || "T"}
+                </div>
+                <p className="text-white font-bold text-lg">{selectedTenant.tenant_fullname}</p>
+                <div className={`mt-2 px-3 py-1 rounded ${getStatusClass(selectedTenant.status)} text-white`}>
+                  {selectedTenant.status || "pending"}
+                </div>
+                
+                {/* Status Change Buttons */}
+                <div className="mt-4 flex flex-col space-y-2">
+                  <button 
+                    className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600"
+                    onClick={() => handleStatusChange(selectedTenant._id, "paid")}
+                  >
+                    Mark as Paid
+                  </button>
+                  <button 
+                    className="bg-yellow-500 text-white px-4 py-1 rounded hover:bg-yellow-600"
+                    onClick={() => handleStatusChange(selectedTenant._id, "pending")}
+                  >
+                    Mark as Pending
+                  </button>
+                  <button 
+                    className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+                    onClick={() => handleStatusChange(selectedTenant._id, "overdue")}
+                  >
+                    Mark as Overdue
+                  </button>
+                </div>
+              </div>
+              
+              {/* Tenant Details */}
+              <div className="flex-1 text-white">
+                <h3 className="text-xl font-bold border-b pb-2 mb-4">Tenant Details</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-gray-400">Email</p>
+                    <p>{selectedTenant.tenant_email}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-gray-400">Phone</p>
+                    <p>{selectedTenant.tenant_phone || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-gray-400">Room</p>
+                    <p>{selectedTenant.room || "Not Assigned"}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-gray-400">Rent</p>
+                    <p>₱{selectedTenant.rent?.toLocaleString() || 0}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-gray-400">Due Date</p>
+                    <p>
+                      {selectedTenant.due_date 
+                        ? new Date(selectedTenant.due_date).toLocaleDateString() 
+                        : "Not set"}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-gray-400">Joined</p>
+                    <p>{new Date(selectedTenant.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                
+                {/* Payment History (placeholder for future implementation) */}
+                <div className="mt-6">
+                  <h4 className="font-bold border-b pb-2 mb-2">Payment History</h4>
+                  <p className="text-sm text-gray-400">Payment history will be shown here in future updates.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

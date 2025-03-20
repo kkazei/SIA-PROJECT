@@ -89,6 +89,16 @@ const TenantSignUpPage = () => {
                 >
                     {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Sign Up"}
                 </motion.button>
+
+                {/* Add this section for "Already have an account" */}
+                <div className="mt-4 text-center text-white">
+                    <p>
+                        Already have an account?{" "}
+                        <Link to="/tenant-login" className="text-green-400 hover:underline">
+                            Login here
+                        </Link>
+                    </p>
+                </div>
             </form>
         </motion.div>
     );

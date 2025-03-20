@@ -45,12 +45,7 @@ const LoginPage = () => {
 						onChange={(e) => setPassword(e.target.value)}
 					/>
 
-					<div className='flex items-center mb-6'>
-						<Link to='/forgot-password' className='text-sm text-green-400 hover:underline'>
-							Forgot password?
-						</Link>
-					</div>
-					{error && <p className='text-red-500 font-semibold mb-2'>{error}</p>}
+
 
 					<motion.button
 						whileHover={{ scale: 1.02 }}
