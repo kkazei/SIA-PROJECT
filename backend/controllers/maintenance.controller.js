@@ -42,36 +42,106 @@ export const getMaintenanceById = async (req, res) => {
     }
 };
 
-// Update a maintenance request (restricted to landlord's account)
+// Update a maintenance request (landlord's account)
 export const updateMaintenance = async (req, res) => {
     try {
+        // Log incoming request data for debugging
+        console.log("Update maintenance request:", {
+            id: req.params.id,
+            userId: req.userId,
+            requestBody: req.body
+        });
+
+        // Validate MongoDB ID format
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: "Invalid maintenance ID format" });
+        }
+
+        // Find the maintenance record first to check if it exists
+        const existingMaintenance = await Maintenance.findById(req.params.id);
+        if (!existingMaintenance) {
+            return res.status(404).json({ message: "Maintenance request not found" });
+        }
+
+        // For debugging - log ownership check results
+        console.log("Ownership check:", {
+            maintenanceLandlordId: existingMaintenance.landlord_id,
+            requestUserId: req.userId,
+            isMatch: existingMaintenance.landlord_id.toString() === req.userId
+        });
+
+        // Perform the update with ownership check
         const maintenance = await Maintenance.findOneAndUpdate(
-            { _id: req.params.id, landlord_id: req.userId }, // Ensure ownership
+            { _id: req.params.id, landlord_id: req.userId },
             req.body,
-            { new: true }
+            { new: true, runValidators: true }
         ).populate("landlord_id", "name email");
 
         if (!maintenance) {
-            return res.status(404).json({ message: "Maintenance request not found or unauthorized" });
+            return res.status(403).json({ 
+                message: "Not authorized to update this maintenance request" 
+            });
         }
+
+        console.log("Maintenance updated successfully:", maintenance);
         res.status(200).json(maintenance);
     } catch (error) {
         console.error("Error updating maintenance request:", error);
-        res.status(500).json({ message: "Error updating maintenance request", error: error.message });
+        res.status(500).json({ 
+            message: "Error updating maintenance request", 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
-// Delete a maintenance request (restricted to landlord's account)
+// Delete a maintenance request (landlord's account)
 export const deleteMaintenance = async (req, res) => {
     try {
-        const maintenance = await Maintenance.findOneAndDelete({ _id: req.params.id, landlord_id: req.userId });
+        // Log incoming request data for debugging
+        console.log("Delete maintenance request:", {
+            id: req.params.id,
+            userId: req.userId
+        });
+
+        // Validate MongoDB ID format
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: "Invalid maintenance ID format" });
+        }
+
+        // Find the maintenance record first to check if it exists
+        const existingMaintenance = await Maintenance.findById(req.params.id);
+        if (!existingMaintenance) {
+            return res.status(404).json({ message: "Maintenance request not found" });
+        }
+
+        // For debugging - log ownership check results
+        console.log("Ownership check:", {
+            maintenanceLandlordId: existingMaintenance.landlord_id,
+            requestUserId: req.userId,
+            isMatch: existingMaintenance.landlord_id.toString() === req.userId
+        });
+
+        // Perform the delete with ownership check
+        const maintenance = await Maintenance.findOneAndDelete({ 
+            _id: req.params.id, 
+            landlord_id: req.userId 
+        });
 
         if (!maintenance) {
-            return res.status(404).json({ message: "Maintenance request not found or unauthorized" });
+            return res.status(403).json({ 
+                message: "Not authorized to delete this maintenance request" 
+            });
         }
+
+        console.log("Maintenance deleted successfully");
         res.status(200).json({ message: "Maintenance request deleted successfully" });
     } catch (error) {
         console.error("Error deleting maintenance request:", error);
-        res.status(500).json({ message: "Error deleting maintenance request", error: error.message });
+        res.status(500).json({ 
+            message: "Error deleting maintenance request", 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
