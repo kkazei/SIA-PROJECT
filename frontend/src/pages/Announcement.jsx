@@ -114,7 +114,7 @@ const Announcement = () => {
                             <div key={post._id} className="relative bg-white shadow-md rounded-lg overflow-hidden">
                                 {post.image_path && (
                                     <img 
-                                        src={`http://localhost:5000${post.image_path}`} 
+                                        src={post.image_path} 
                                         alt="Announcement" 
                                         className="w-full h-48 object-cover"
                                     />
@@ -203,7 +203,7 @@ const Announcement = () => {
                                 <div className="mt-2">
                                     <p className="text-sm text-gray-500 mb-1">Current image:</p>
                                     <img 
-                                        src={`http://localhost:5000${currentPost.image_path}`} 
+                                        src={currentPost.image_path} 
                                         alt="Current" 
                                         className="h-20 object-cover rounded" 
                                     />
