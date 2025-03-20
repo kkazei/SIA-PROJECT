@@ -10,12 +10,12 @@ const TenantLoginPage = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const { TenantLogin, isLoading, error } = useAuthStore();
+  const { tenantLogin, isLoading, error } = useAuthStore();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await TenantLogin(tenant_email, password);
+      await tenantLogin(tenant_email, password);
       navigate("/tenant-dashboard");
     } catch (err) {
       console.error("Login failed:", err);
@@ -31,7 +31,7 @@ const TenantLoginPage = () => {
     >
       <div className="p-8">
         <h2 className="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text">
-          Welcome Back
+          Welcome Back Tenant!
         </h2>
 
         <form onSubmit={handleLogin}>
@@ -51,15 +51,7 @@ const TenantLoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <div className="flex items-center mb-6">
-            <Link
-              to="/forgot-password"
-              className="text-sm text-green-400 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-          {error && <p className="text-red-500 font-semibold mb-2">{error}</p>}
+
 
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -87,4 +79,5 @@ const TenantLoginPage = () => {
     </motion.div>
   );
 };
+
 export default TenantLoginPage;

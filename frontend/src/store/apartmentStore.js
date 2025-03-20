@@ -37,4 +37,33 @@ export const useApartmentStore = create((set) => ({
             throw error;
         }
     },
+    
+    assignTenantToApartment: async (apartmentId, tenantId) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await axios.post(`${API_URL}/assign-tenant`, {
+                apartmentId,
+                tenantId
+            });
+            
+            // Update the apartments state to reflect the assigned tenant
+            set((state) => ({
+                apartments: state.apartments.map(apartment => 
+                    apartment._id === apartmentId 
+                        ? { ...apartment, tenant_id: tenantId }
+                        : apartment
+                ),
+                message: "Tenant assigned successfully",
+                isLoading: false
+            }));
+            
+            return response.data;
+        } catch (error) {
+            set({ 
+                error: error.response?.data?.message || "Error assigning tenant to apartment", 
+                isLoading: false 
+            });
+            throw error;
+        }
+    }
 }));

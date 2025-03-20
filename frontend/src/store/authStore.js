@@ -12,6 +12,7 @@ export const useAuthStore = create((set) => ({
     isLoading: false,
     isCheckingAuth: true,
     message: null,
+    userRole: null,
 
     signup: async (user_email, password, user_fullname, user_phone) => {
         set({ isLoading: true, error: null });
@@ -19,16 +20,23 @@ export const useAuthStore = create((set) => ({
             const response = await axios.post(`${API_URL}/signup`, { user_email, password, user_fullname, user_phone });
             set({ user: response.data.user, isAuthenticated: true, isLoading: false });
         } catch (error) {
-            set({ error: error.response.data.message || "Error signing up", isLoading: false });
+            set({ error: error.response?.data?.message || "Error signing up", isLoading: false });
             throw error;
         }
     },
 
-    signupTenant: async (tenant_email, password, tenant_fullname, tenant_phone) => {
+    // Updated signupTenant to include landlord_id
+    signupTenant: async (tenant_email, password, tenant_fullname, tenant_phone, landlord_id) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await axios.post(`${API_URL}/signup-tenant`, { tenant_email, password, tenant_fullname, tenant_phone });
-            set({ user: response.data.tenant, isAuthenticated: true, isLoading: false });
+            const response = await axios.post(`${API_URL}/signup-tenant`, { 
+                tenant_email, 
+                password, 
+                tenant_fullname, 
+                tenant_phone, 
+                landlord_id  // Added landlord_id
+            });
+            set({ user: response.data.tenant, isAuthenticated: true, isLoading: false, userRole: "tenant" });
         } catch (error) {
             set({ error: error.response?.data?.message || "Error signing up tenant", isLoading: false });
             throw error;
@@ -43,6 +51,7 @@ export const useAuthStore = create((set) => ({
                 isAuthenticated: true,
                 user: response.data.user,
                 isLoading: false,
+                userRole: response.data.user.user_role || null, // Store user role
             });
         } catch (error) {
             set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
@@ -50,20 +59,24 @@ export const useAuthStore = create((set) => ({
         }
     },
 
-    TenantLogin: async (tenant_email, password) => {
+    // Fixed endpoint name to match backend route
+    tenantLogin: async (tenant_email, password) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await axios.post(`${API_URL}/TenantLogin`, { tenant_email, password });
+            const response = await axios.post(`${API_URL}/tenant-login`, { tenant_email, password });
+    
             set({
                 isAuthenticated: true,
-                user: response.data.user,
+                user: response.data.tenant,  // Fix: store `tenant` instead of `user`
                 isLoading: false,
+                userRole: "tenant",
             });
         } catch (error) {
             set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
             throw error;
         }
     },
+    
 
     verifyEmail: async (code) => {
         set({ isLoading: true, error: null });
@@ -85,7 +98,12 @@ export const useAuthStore = create((set) => ({
             
             if (response.data.user) {
                 console.log("User authenticated:", response.data.user);
-                set({ user: response.data.user, isAuthenticated: true, isCheckingAuth: false });
+                set({ 
+                    user: response.data.user, 
+                    isAuthenticated: true, 
+                    isCheckingAuth: false,
+                    userRole: response.data.user.user_role || null // Store user role
+                });
             } else {
                 console.log("No user logged in.");
                 set({ isAuthenticated: false, isCheckingAuth: false });
@@ -122,7 +140,7 @@ export const useAuthStore = create((set) => ({
         set({ isLoading: true, error: null });
         try {
             await axios.post(`${API_URL}/logout`);
-            set({ user: null, isAuthenticated: false, isLoading: false });
+            set({ user: null, isAuthenticated: false, isLoading: false, userRole: null });
         } catch (error) {
             set({ error: error.response?.data?.message || "Error logging out", isLoading: false });
             throw error;
