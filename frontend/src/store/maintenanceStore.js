@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import axios from "axios";
 
-const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/" : "";
+// Fix: The API_URL should be the base URL without trailing slash
+const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
 
 export const useMaintenanceStore = create((set, get) => ({
   maintenanceRequests: [],
@@ -14,7 +15,8 @@ export const useMaintenanceStore = create((set, get) => ({
   fetchMaintenance: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}api/maintenance`, { withCredentials: true });
+      // Fix: Add leading slash to API path
+      const response = await axios.get(`${API_URL}/api/maintenance`, { withCredentials: true });
       set({ 
         maintenanceRequests: response.data, 
         isLoading: false 
@@ -34,7 +36,8 @@ export const useMaintenanceStore = create((set, get) => ({
   getMaintenanceById: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}api/maintenance/${id}`, { withCredentials: true });
+      // Fix: Add leading slash to API path
+      const response = await axios.get(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
       set({ 
         selectedRequest: response.data, 
         isLoading: false 
@@ -54,7 +57,8 @@ export const useMaintenanceStore = create((set, get) => ({
   createMaintenance: async (maintenanceData) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      const response = await axios.post(`${API_URL}api/maintenance`, maintenanceData, { 
+      // Fix: Add leading slash to API path
+      const response = await axios.post(`${API_URL}/api/maintenance`, maintenanceData, { 
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
@@ -85,7 +89,8 @@ export const useMaintenanceStore = create((set, get) => ({
   updateMaintenance: async (id, updateData) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      const response = await axios.put(`${API_URL}api/maintenance/${id}`, updateData, { 
+      // Fix: Add leading slash to API path
+      const response = await axios.put(`${API_URL}/api/maintenance/${id}`, updateData, { 
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
@@ -119,7 +124,8 @@ export const useMaintenanceStore = create((set, get) => ({
   deleteMaintenance: async (id) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      await axios.delete(`${API_URL}api/maintenance/${id}`, { withCredentials: true });
+      // Fix: Add leading slash to API path
+      await axios.delete(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
       
       // Remove the deleted request from the state
       const updatedRequests = get().maintenanceRequests.filter(request => request._id !== id);
