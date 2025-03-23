@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendResetSuccessEmail } from "../mailtrap/emails.js";
+import jwt from 'jsonwebtoken';
 
 
 
@@ -175,4 +176,110 @@ export const checkAuth = async (req, res) => {
 export const logout = async (req, res) => {
     res.clearCookie("token");
     res.status(200).json({success:true, message: "Logged out successfully"});
+};
+
+export const googleCallback = async (req, res) => {
+  try {
+    // User is already authenticated by passport at this point
+    const token = jwt.sign(
+      { id: req.user._id, role: req.user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // For new users who haven't selected their role yet
+    const isNewUser = req.user.createdAt && 
+                     ((new Date() - new Date(req.user.createdAt)) < 1000 * 60); // Created in the last minute
+    
+    // Set cookies
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    // Redirect based on whether user is new (needs to select role) or existing
+    if (isNewUser) {
+      res.redirect(`${process.env.CLIENT_URL}/role-selection`);
+    } else {
+      res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+    }
+  } catch (error) {
+    console.error('Google callback error:', error);
+    res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`);
+  }
+};
+
+export const setRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    if (!['tenant', 'landlord'].includes(role)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid role. Role must be either "tenant" or "landlord"' 
+      });
+    }
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    // Generate new token with updated role
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Role set successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Set role error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };

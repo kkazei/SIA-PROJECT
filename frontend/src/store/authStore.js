@@ -40,6 +40,50 @@ export const useAuthStore = create((set) => ({
 		}
 	},
 
+	// Add Google OAuth methods
+	initiateGoogleLogin: () => {
+		// This will redirect to Google OAuth page
+		window.location.href = `${API_URL}/google`;
+	},
+
+	// Handle role selection after OAuth signup
+	setRole: async (role) => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.post(`${API_URL}/set-role`, { role });
+			set({
+				isAuthenticated: true,
+				user: response.data.user,
+				error: null,
+				isLoading: false,
+			});
+			return response.data;
+		} catch (error) {
+			set({ error: error.response?.data?.message || "Error setting role", isLoading: false });
+			throw error;
+		}
+	},
+
+	// Process OAuth callback/success
+	processOAuthCallback: async () => {
+		set({ isLoading: true, error: null });
+		try {
+			// This assumes the token is already set in cookies by the backend
+			// We just need to get the current user info
+			const response = await axios.get(`${API_URL}/check-auth`);
+			set({
+				isAuthenticated: true,
+				user: response.data.user,
+				error: null,
+				isLoading: false,
+			});
+			return response.data.user;
+		} catch (error) {
+			set({ error: error.response?.data?.message || "OAuth authentication failed", isLoading: false });
+			throw error;
+		}
+	},
+
 	logout: async () => {
 		set({ isLoading: true, error: null });
 		try {

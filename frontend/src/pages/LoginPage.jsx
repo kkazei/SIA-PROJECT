@@ -4,6 +4,7 @@ import { Mail, Lock, Loader } from "lucide-react";
 import { Link } from "react-router-dom";
 import Input from "../components/Input";
 import { useAuthStore } from "../store/authStore";
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -62,6 +63,21 @@ const LoginPage = () => {
 						{isLoading ? <Loader className='w-6 h-6 animate-spin  mx-auto' /> : "Login"}
 					</motion.button>
 				</form>
+
+				<div className="mt-6">
+					<div className="relative">
+						<div className="absolute inset-0 flex items-center">
+							<div className="w-full border-t border-gray-300"></div>
+						</div>
+						<div className="relative flex justify-center text-sm">
+							<span className="px-2 bg-white text-gray-500">Or continue with</span>
+						</div>
+					</div>
+
+					<div className="mt-6">
+						<GoogleLoginButton />
+					</div>
+				</div>
 			</div>
 			<div className='px-8 py-4 bg-gray-900 bg-opacity-50 flex justify-center'>
 				<p className='text-sm text-gray-400'>

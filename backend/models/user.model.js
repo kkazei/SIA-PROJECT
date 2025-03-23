@@ -8,7 +8,10 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        required: function() {
+            // Password is not required if using Google OAuth
+            return !this.googleId;
+        }
     },
     name: {
         type: String,
@@ -26,10 +29,19 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpiresAt: Date,
     verificationToken: String,
     verificationTokenExpiresAt: Date,
-
+    role: {
+        type: String,
+        enum: ['tenant', 'landlord', 'admin'],
+        default: 'tenant'
+    },
+    googleId: {
+        type: String,
+        sparse: true
+    },
+    avatar: {
+        type: String
+    }
 }, { timestamps: true });
 
 export const User = mongoose.model("User", userSchema);
-
-// createat and updateat fields are automatically added to the schema
 
