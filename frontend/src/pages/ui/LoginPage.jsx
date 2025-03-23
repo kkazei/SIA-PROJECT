@@ -2,9 +2,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock, Loader } from "lucide-react";
 import { Link } from "react-router-dom";
-import Input from "../components/Input";
-import { useAuthStore } from "../store/authStore";
-import GoogleLoginButton from '../components/GoogleLoginButton';
+import Input from "../../components/ui/Input";
+import { useAuthStore } from "../../store/authStore";
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuthStore } from '../../store/authStore';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 const OAuthSuccess = () => {
   const [isProcessing, setIsProcessing] = useState(true);

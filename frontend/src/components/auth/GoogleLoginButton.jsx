@@ -1,4 +1,4 @@
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../../store/authStore';
 import { FcGoogle } from 'react-icons/fc';
 import { useState } from 'react';
 

@@ -1,14 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import LoginPage from './pages/LoginPage'
-import SignUpPage from "./pages/SignUpPage";
-import EmailVerificationPage from './pages/EmailVerificationPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import LoadingSpinner from './components/LoadingSpinner'
-
-import DashboardPage from './pages/DashboardPage';
-import OAuthSuccess from './pages/OAuthSuccess';
-import RoleSelection from './pages/RoleSelection';
+import LoginPage from './pages/ui/LoginPage'
+import SignUpPage from "./pages/ui/SignUpPage";
+import EmailVerificationPage from './pages/auth/EmailVerificationPage'
+import ResetPasswordPage from './pages/ui/ResetPasswordPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import LoadingSpinner from './components/ui/LoadingSpinner'
+import DashboardPage from './pages/ui/DashboardPage';
+import OAuthSuccess from './pages/auth/OAuthSuccess';
+import RoleSelection from './pages/auth/RoleSelection';
 
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
