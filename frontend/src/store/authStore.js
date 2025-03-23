@@ -69,17 +69,23 @@ export const useAuthStore = create((set) => ({
 		set({ isLoading: true, error: null });
 		try {
 			// This assumes the token is already set in cookies by the backend
-			// We just need to get the current user info
 			const response = await axios.get(`${API_URL}/check-auth`);
+			
+			// Make sure this is returning ALL user data including role
 			set({
 				isAuthenticated: true,
 				user: response.data.user,
 				error: null,
 				isLoading: false,
 			});
+			
+			// Return the complete user object for decision-making
 			return response.data.user;
 		} catch (error) {
-			set({ error: error.response?.data?.message || "OAuth authentication failed", isLoading: false });
+			set({ 
+				error: error.response?.data?.message || "OAuth authentication failed", 
+				isLoading: false 
+			});
 			throw error;
 		}
 	},

@@ -156,21 +156,43 @@ export const resetPassword = async (req, res) => {
     }
 };
 
+// In your auth.controller.js
 export const checkAuth = async (req, res) => {
-    try {
-        const user = await User.findById(req.userId)
-        if(!user){
-            return res.status(400).json({success:false, message: "User not found"})
-        }
-
-        res.status(200).json({success:true, user: {
-            ...user._doc,
-            password: undefined,
-        }});
-    } catch (error) {
-        console.log("Error in checkAuth ", error);
-        res.status(400).json({success:false, message: error.message});
-    }
+  try {
+      // Get the token from cookies or Authorization header
+      const token = req.cookies.jwt || req.header('Authorization')?.replace('Bearer ', '');
+      
+      if (!token) {
+          return res.status(401).json({ success: false, message: 'No token provided' });
+      }
+      
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Find user by ID
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+          return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      // Return user data
+      return res.status(200).json({
+          success: true,
+          user: {
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              isVerified: user.isVerified,
+              googleId: user.googleId,
+              avatar: user.avatar
+          }
+      });
+  } catch (error) {
+      console.error('Auth check error:', error);
+      return res.status(401).json({ success: false, message: 'Authentication failed' });
+  }
 };
 
 export const logout = async (req, res) => {

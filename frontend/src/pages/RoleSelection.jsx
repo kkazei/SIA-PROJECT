@@ -1,23 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { FaUserAlt, FaHome } from 'react-icons/fa';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const RoleSelection = () => {
   const [selectedRole, setSelectedRole] = useState('');
-  const { setRole, isLoading, error } = useAuthStore();
+  const { setRole, isLoading, error, user } = useAuthStore();
   const navigate = useNavigate();
+
+  // If user already has a role, redirect to dashboard
+  useEffect(() => {
+    if (user && user.role && user.role !== 'unset') {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleRoleSelection = async () => {
     if (!selectedRole) return;
     
     try {
       await setRole(selectedRole);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       console.error('Error setting role:', err);
     }
   };
+
+  if (!user) {
+    return <LoadingSpinner />;
+  }
+
+  // If user already has a role, don't show this page
+  if (user.role && user.role !== 'unset') {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
