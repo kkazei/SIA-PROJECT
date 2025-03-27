@@ -1,11 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import LoginPage from './pages/ui/LoginPage'
-import SignUpPage from "./pages/ui/SignUpPage";
+import LoginPage from './pages/auth/LoginPage'
+import SignUpPage from "./pages/auth/SignUpPage";
 import EmailVerificationPage from './pages/auth/EmailVerificationPage'
-import ResetPasswordPage from './pages/ui/ResetPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import LoadingSpinner from './components/ui/LoadingSpinner'
-import DashboardPage from './pages/ui/DashboardPage';
+import HomePage from './pages/ui/HomePage';
 import OAuthSuccess from './pages/auth/OAuthSuccess';
 import RoleSelection from './pages/auth/RoleSelection';
 
@@ -13,20 +13,29 @@ import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
 
 
+// Update the ProtectedRoute component
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, user } = useAuthStore();
-
-    if (!isAuthenticated) {
-        return <Navigate to='/login' replace />;
-    }
-
-    // Skip verification check for Google OAuth users
-    if (!user.isVerified && !user.googleId) {
-        return <Navigate to='/verify-email' replace />;
-    }
-
-    return children;
-};
+	const { isAuthenticated, user } = useAuthStore();
+  
+	// Check if the user is authenticated at all
+	if (!isAuthenticated) {
+	  return <Navigate to='/login' replace />;
+	}
+  
+	// Get and immediately clear the bypass flag to prevent it from persisting
+	const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
+	if (bypassVerification) {
+	  localStorage.removeItem('bypassVerification');
+	}
+  
+	// Check verification status, skipping for Google users and when bypass flag is set
+	const skipVerification = user.googleId || bypassVerification || user.isVerified;
+	if (!skipVerification) {
+	  return <Navigate to='/verify-email' replace />;
+	}
+  
+	return children;
+  };
 
 // redirect authenticated users to the home page
 const RedirectAuthenticatedUser = ({ children }) => {
@@ -54,7 +63,7 @@ function App() {
 					path='/'
 					element={
 						<ProtectedRoute>
-							<DashboardPage />
+							<HomePage />
 						</ProtectedRoute>
 					}
 				/>

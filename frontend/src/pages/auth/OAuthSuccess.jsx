@@ -1,29 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Loader } from 'lucide-react';
 
 const OAuthSuccess = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState(null);
-  const { processOAuthCallback } = useAuthStore();
+  const { processOAuthCallback} = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        const user = await processOAuthCallback();
+        // Updated to properly handle the return object from processOAuthCallback
+        const result = await processOAuthCallback();
         
-        // Only redirect to role selection if role is not set
-        // or if this is a brand new user (created in the last hour)
-        const isNewUser = !user.role || user.role === 'unset' || 
-                         (user.createdAt && 
-                         ((new Date() - new Date(user.createdAt)) < 3600000)); // 1 hour
-        
-        if (isNewUser) {
+        // The updated processOAuthCallback should return {needsRole, user}
+        if (result?.needsRole || !result?.user?.role) {
+          console.log("User needs to select a role, redirecting to role selection");
           navigate('/role-selection');
         } else {
-          // User already has a role, go to dashboard
+          console.log("User already has a role, redirecting to home");
           navigate('/');
         }
       } catch (err) {
@@ -38,19 +35,24 @@ const OAuthSuccess = () => {
   }, [processOAuthCallback, navigate]);
 
   if (isProcessing) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <Loader className="h-10 w-10 text-green-400 animate-spin mb-4" />
+        <h2 className="text-xl font-medium text-green-400">Completing login...</h2>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 text-center bg-gray-800 bg-opacity-60 backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-gray-700">
+          <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-400 px-4 py-3 rounded-lg">
             {error}
           </div>
           <button
             onClick={() => navigate('/login')}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200"
           >
             Return to Login
           </button>

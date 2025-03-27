@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { FaUserAlt, FaHome } from 'react-icons/fa';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { motion } from 'framer-motion';
+import { Loader } from 'lucide-react';
 
 const RoleSelection = () => {
   const [selectedRole, setSelectedRole] = useState('');
@@ -20,84 +21,134 @@ const RoleSelection = () => {
     if (!selectedRole) return;
     
     try {
-      await setRole(selectedRole);
-      navigate('/');
+      // Call the setRole function from auth store
+      const result = await setRole(selectedRole);
+      
+      // Always set bypass flag to ensure verification is skipped after role selection
+      localStorage.setItem('bypassVerification', 'true');
+      
+      // Wait a moment to ensure all state updates are processed
+      setTimeout(() => {
+        // After setting role, directly navigate to home with replace to prevent back navigation
+        navigate('/', { replace: true });
+      }, 300);
     } catch (err) {
       console.error('Error setting role:', err);
     }
   };
 
   if (!user) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <Loader className="w-8 h-8 text-green-400 animate-spin" />
+      </div>
+    );
   }
 
   // If user already has a role, don't show this page
   if (user.role && user.role !== 'unset') {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+        <Loader className="w-8 h-8 text-green-400 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 to-gray-800">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className='max-w-md w-full bg-gray-800 bg-opacity-60 backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-700'
+      >
+        <div className="p-8 pb-4">
+          <h2 className="text-3xl font-bold mb-1 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text">
             Select Your Role
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Please select whether you are a tenant or a landlord
+          <p className="text-gray-400 text-center mb-6">
+            Choose how you'll use the apartment system
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
-
-        <div className="mt-8 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div 
-              className={`cursor-pointer p-4 border rounded-lg flex flex-col items-center ${
-                selectedRole === 'tenant' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-              }`}
-              onClick={() => setSelectedRole('tenant')}
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg"
             >
-              <FaUserAlt className="text-4xl mb-3 text-blue-500" />
-              <h3 className="text-lg font-medium">Tenant</h3>
-              <p className="text-sm text-gray-500 text-center mt-2">
-                I want to rent a property
-              </p>
+              <p className="text-red-400 text-sm font-medium">{error}</p>
+            </motion.div>
+          )}
+
+          <div className="mt-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <motion.div 
+                className={`cursor-pointer p-4 rounded-lg flex flex-col items-center ${
+                  selectedRole === 'tenant' 
+                    ? 'bg-green-600 bg-opacity-20 border-2 border-green-500' 
+                    : 'bg-gray-700 bg-opacity-50 border border-gray-600 hover:bg-gray-700'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedRole('tenant')}
+              >
+                <FaUserAlt className={`text-4xl mb-3 ${selectedRole === 'tenant' ? 'text-green-400' : 'text-gray-300'}`} />
+                <h3 className={`text-lg font-medium ${selectedRole === 'tenant' ? 'text-green-400' : 'text-gray-200'}`}>
+                  Tenant
+                </h3>
+                <p className="text-sm text-gray-400 text-center mt-2">
+                  I want to rent a property
+                </p>
+              </motion.div>
+              
+              <motion.div 
+                className={`cursor-pointer p-4 rounded-lg flex flex-col items-center ${
+                  selectedRole === 'landlord' 
+                    ? 'bg-green-600 bg-opacity-20 border-2 border-green-500' 
+                    : 'bg-gray-700 bg-opacity-50 border border-gray-600 hover:bg-gray-700'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedRole('landlord')}
+              >
+                <FaHome className={`text-4xl mb-3 ${selectedRole === 'landlord' ? 'text-green-400' : 'text-gray-300'}`} />
+                <h3 className={`text-lg font-medium ${selectedRole === 'landlord' ? 'text-green-400' : 'text-gray-200'}`}>
+                  Landlord
+                </h3>
+                <p className="text-sm text-gray-400 text-center mt-2">
+                  I own properties to rent
+                </p>
+              </motion.div>
             </div>
             
-            <div 
-              className={`cursor-pointer p-4 border rounded-lg flex flex-col items-center ${
-                selectedRole === 'landlord' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-              }`}
-              onClick={() => setSelectedRole('landlord')}
-            >
-              <FaHome className="text-4xl mb-3 text-blue-500" />
-              <h3 className="text-lg font-medium">Landlord</h3>
-              <p className="text-sm text-gray-500 text-center mt-2">
-                I own properties to rent
-              </p>
+            <div className="pt-4">
+              <motion.button
+                onClick={handleRoleSelection}
+                disabled={!selectedRole || isLoading}
+                whileHover={selectedRole ? { scale: 1.02 } : {}}
+                whileTap={selectedRole ? { scale: 0.98 } : {}}
+                className={`w-full py-3 px-4 font-bold rounded-lg shadow-lg transition-all duration-200 ${
+                  !selectedRole 
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900'
+                }`}
+              >
+                {isLoading ? (
+                  <Loader className='w-5 h-5 animate-spin mx-auto' />
+                ) : (
+                  'Continue'
+                )}
+              </motion.button>
             </div>
           </div>
-          
-          <div>
-            <button
-              onClick={handleRoleSelection}
-              disabled={!selectedRole || isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                !selectedRole 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-              }`}
-            >
-              {isLoading ? 'Processing...' : 'Continue'}
-            </button>
-          </div>
         </div>
-      </div>
+        
+        <div className="px-8 py-4 bg-gray-900 bg-opacity-70 mt-6">
+          <p className="text-xs text-center text-gray-500">
+            You can change your role later in account settings if needed
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 };

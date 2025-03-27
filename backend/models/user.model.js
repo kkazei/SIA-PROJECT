@@ -32,7 +32,6 @@ const userSchema = new mongoose.Schema({
     role: {
         type: String,
         enum: ['tenant', 'landlord', 'admin'],
-        default: 'tenant'
     },
     googleId: {
         type: String,

@@ -24,21 +24,36 @@ export const useAuthStore = create((set) => ({
 		}
 	},
     
-	login: async (email, password) => {
-		set({ isLoading: true, error: null });
-		try {
-			const response = await axios.post(`${API_URL}/login`, { email, password });
-			set({
-				isAuthenticated: true,
-				user: response.data.user,
-				error: null,
-				isLoading: false,
-			});
-		} catch (error) {
-			set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
-			throw error;
-		}
-	},
+// Update this in your auth store
+login: async (email, password) => {
+	set({ isLoading: true, error: null });
+	try {
+	  const response = await axios.post(`${API_URL}/login`, { email, password });
+	  const { user, needsEmailVerification } = response.data;
+	  
+	  set({
+		isAuthenticated: true,
+		user: user,
+		error: null,
+		isLoading: false,
+	  });
+	  
+	  // Check if user needs email verification
+	  if (needsEmailVerification || !user.isVerified) {
+		return { needsEmailVerification: true };
+	  }
+	  
+	  // Check if user needs to select a role
+	  if (!user.role || user.role === 'unset') {
+		return { needsRoleSelection: true };
+	  }
+	  
+	  return { success: true };
+	} catch (error) {
+	  set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
+	  throw error;
+	}
+  },
 
 	// Add Google OAuth methods
 	initiateGoogleLogin: () => {
@@ -47,22 +62,35 @@ export const useAuthStore = create((set) => ({
 	},
 
 	// Handle role selection after OAuth signup
-	setRole: async (role) => {
-		set({ isLoading: true, error: null });
-		try {
-			const response = await axios.post(`${API_URL}/set-role`, { role });
-			set({
-				isAuthenticated: true,
-				user: response.data.user,
-				error: null,
-				isLoading: false,
-			});
-			return response.data;
-		} catch (error) {
-			set({ error: error.response?.data?.message || "Error setting role", isLoading: false });
-			throw error;
-		}
-	},
+	// Update in your authStore.js
+setRole: async (role) => {
+	set({ isLoading: true, error: null });
+	try {
+	  const response = await axios.post(`${API_URL}/set-role`, { role });
+	  
+	  // Explicitly ensure isVerified is true in the local user object
+	  const updatedUser = {
+		...response.data.user,
+		isVerified: true
+	  };
+	  
+	  // Update the store with the updated user
+	  set({
+		isAuthenticated: true,
+		user: updatedUser,
+		error: null,
+		isLoading: false,
+	  });
+	  
+	  return updatedUser;
+	} catch (error) {
+	  set({ 
+		error: error.response?.data?.message || "Error setting role", 
+		isLoading: false 
+	  });
+	  throw error;
+	}
+  },
 
 	// Process OAuth callback/success
 	processOAuthCallback: async () => {
