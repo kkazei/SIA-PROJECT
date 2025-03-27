@@ -215,8 +215,8 @@ export const checkAuth = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-    res.clearCookie("token");
-    res.status(200).json({success:true, message: "Logged out successfully"});
+  res.clearCookie("jwt"); 
+  res.status(200).json({success:true, message: "Logged out successfully"});
 };
 
 export const googleCallback = async (req, res) => {

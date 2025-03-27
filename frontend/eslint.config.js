@@ -32,6 +32,12 @@ export default [
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'off',
       'react/jsx-no-target-blank': 'off',
+      'no-unused-vars': ['warn', { 
+        'vars': 'all', 
+        'args': 'after-used',
+        'ignoreRestSiblings': true,
+        'argsIgnorePattern': '^_'
+      }],
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

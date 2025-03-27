@@ -5,14 +5,15 @@ import EmailVerificationPage from './pages/auth/EmailVerificationPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import LoadingSpinner from './components/ui/LoadingSpinner'
-import HomePage from './pages/ui/HomePage';
+import LandingPage from './pages/LandingPage'
 import OAuthSuccess from './pages/auth/OAuthSuccess';
 import RoleSelection from './pages/auth/RoleSelection';
 import LandlordDashboard from './pages/landlord/landlordDashboard';
+import TenantDashboard from './pages/tenant/tenantDashboard';
+
 
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
-
 
 // Update the ProtectedRoute component
 const ProtectedRoute = ({ children }) => {
@@ -45,9 +46,11 @@ const RoleBasedRoute = ({ children }) => {
     // If user is a landlord, redirect to landlord dashboard
     if (user.role === 'landlord') {
         return <Navigate to='/landlord/dashboard' replace />;
+    } else if (user.role === 'tenant') {
+        return <Navigate to='/tenant/dashboard' replace />;
     }
     
-    // For tenants or users without a specific role, show the regular home page
+    // For users without a specific role, show the regular home page
     return children;
 };
 
@@ -63,7 +66,19 @@ const LandlordRoute = ({ children }) => {
     return children;
 };
 
-// redirect authenticated users to the home page
+// For tenant routes, ensure only tenants can access
+const TenantRoute = ({ children }) => {
+    const { user } = useAuthStore();
+    
+    // If not a tenant, redirect to home
+    if (user.role !== 'tenant') {
+        return <Navigate to='/' replace />;
+    }
+    
+    return children;
+};
+
+// redirect authenticated users to the appropriate dashboard
 const RedirectAuthenticatedUser = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
 
@@ -71,6 +86,10 @@ const RedirectAuthenticatedUser = ({ children }) => {
         // If user is landlord, redirect to landlord dashboard
         if (user.role === 'landlord') {
             return <Navigate to='/landlord/dashboard' replace />;
+        }
+        // If user is tenant, redirect to tenant dashboard
+        else if (user.role === 'tenant') {
+            return <Navigate to='/tenant/dashboard' replace />;
         }
         // Otherwise redirect to home
         return <Navigate to='/' replace />;
@@ -92,10 +111,15 @@ function App() {
             <Routes>
                 <Route
                     path='/'
+                    element={<LandingPage />}
+                />
+                {/* Dashboard for authenticated users */}
+                <Route
+                    path='/dashboard'
                     element={
                         <ProtectedRoute>
                             <RoleBasedRoute>
-                                <HomePage />
+                                <LandingPage />
                             </RoleBasedRoute>
                         </ProtectedRoute>
                     }
@@ -108,6 +132,17 @@ function App() {
                             <LandlordRoute>
                                 <LandlordDashboard />
                             </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                {/* Tenant Routes */}
+                <Route
+                    path='/tenant/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <TenantRoute>
+                                <TenantDashboard />
+                            </TenantRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -136,7 +171,6 @@ function App() {
                         </RedirectAuthenticatedUser>
                     }
                 />
-
                 <Route
                     path='/reset-password/:token'
                     element={
