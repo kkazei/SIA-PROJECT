@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.route.js";
+import propertyRoutes from './routes/property.route.js';
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
@@ -36,6 +37,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use('/api/properties', propertyRoutes);
 
 if(process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '/frontend/dist')));

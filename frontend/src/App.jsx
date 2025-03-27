@@ -8,6 +8,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner'
 import HomePage from './pages/ui/HomePage';
 import OAuthSuccess from './pages/auth/OAuthSuccess';
 import RoleSelection from './pages/auth/RoleSelection';
+import LandlordDashboard from './pages/landlord/landlordDashboard';
 
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
@@ -15,33 +16,63 @@ import { useEffect } from 'react';
 
 // Update the ProtectedRoute component
 const ProtectedRoute = ({ children }) => {
-	const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user } = useAuthStore();
   
-	// Check if the user is authenticated at all
-	if (!isAuthenticated) {
-	  return <Navigate to='/login' replace />;
-	}
+    // Check if the user is authenticated at all
+    if (!isAuthenticated) {
+      return <Navigate to='/login' replace />;
+    }
   
-	// Get and immediately clear the bypass flag to prevent it from persisting
-	const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
-	if (bypassVerification) {
-	  localStorage.removeItem('bypassVerification');
-	}
+    // Get and immediately clear the bypass flag to prevent it from persisting
+    const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
+    if (bypassVerification) {
+      localStorage.removeItem('bypassVerification');
+    }
   
-	// Check verification status, skipping for Google users and when bypass flag is set
-	const skipVerification = user.googleId || bypassVerification || user.isVerified;
-	if (!skipVerification) {
-	  return <Navigate to='/verify-email' replace />;
-	}
+    // Check verification status, skipping for Google users and when bypass flag is set
+    const skipVerification = user.googleId || bypassVerification || user.isVerified;
+    if (!skipVerification) {
+      return <Navigate to='/verify-email' replace />;
+    }
   
-	return children;
-  };
+    return children;
+};
+
+// Route component that checks user role and redirects accordingly
+const RoleBasedRoute = ({ children }) => {
+    const { user } = useAuthStore();
+    
+    // If user is a landlord, redirect to landlord dashboard
+    if (user.role === 'landlord') {
+        return <Navigate to='/landlord/dashboard' replace />;
+    }
+    
+    // For tenants or users without a specific role, show the regular home page
+    return children;
+};
+
+// For landlord routes, ensure only landlords can access
+const LandlordRoute = ({ children }) => {
+    const { user } = useAuthStore();
+    
+    // If not a landlord, redirect to home
+    if (user.role !== 'landlord') {
+        return <Navigate to='/' replace />;
+    }
+    
+    return children;
+};
 
 // redirect authenticated users to the home page
 const RedirectAuthenticatedUser = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
 
     if (isAuthenticated && (user.isVerified || user.googleId)) {
+        // If user is landlord, redirect to landlord dashboard
+        if (user.role === 'landlord') {
+            return <Navigate to='/landlord/dashboard' replace />;
+        }
+        // Otherwise redirect to home
         return <Navigate to='/' replace />;
     }
 
@@ -49,65 +80,78 @@ const RedirectAuthenticatedUser = ({ children }) => {
 };
 
 function App() {
-	const { isCheckingAuth, checkAuth } = useAuthStore();
+    const { isCheckingAuth, checkAuth } = useAuthStore();
 
-	useEffect(() => {
-		checkAuth();
-	}, [checkAuth]);
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
 
-	if (isCheckingAuth) return <LoadingSpinner />;
+    if (isCheckingAuth) return <LoadingSpinner />;
 
-	return (
-			<Routes>
-				<Route
-					path='/'
-					element={
-						<ProtectedRoute>
-							<HomePage />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path='/signup'
-					element={
-						<RedirectAuthenticatedUser>
-							<SignUpPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				<Route
-					path='/login'
-					element={
-						<RedirectAuthenticatedUser>
-							<LoginPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				<Route path='/verify-email' element={<EmailVerificationPage />} />
-				<Route
-					path='/forgot-password'
-					element={
-						<RedirectAuthenticatedUser>
-							<ForgotPasswordPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
+    return (
+            <Routes>
+                <Route
+                    path='/'
+                    element={
+                        <ProtectedRoute>
+                            <RoleBasedRoute>
+                                <HomePage />
+                            </RoleBasedRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                {/* Landlord Routes */}
+                <Route
+                    path='/landlord/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordDashboard />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/signup'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <SignUpPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                <Route
+                    path='/login'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <LoginPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                <Route path='/verify-email' element={<EmailVerificationPage />} />
+                <Route
+                    path='/forgot-password'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <ForgotPasswordPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
 
-				<Route
-					path='/reset-password/:token'
-					element={
-						<RedirectAuthenticatedUser>
-							<ResetPasswordPage />
-						</RedirectAuthenticatedUser>
-					}
-				/>
-				{/* OAuth routes */}
-				<Route path="/oauth-success" element={<OAuthSuccess />} />
-				<Route path="/role-selection" element={<RoleSelection />} />
-				{/* catch all routes */}
-				<Route path='*' element={<Navigate to='/' replace />} />
-			</Routes>
-	);
+                <Route
+                    path='/reset-password/:token'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <ResetPasswordPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                {/* OAuth routes */}
+                <Route path="/oauth-success" element={<OAuthSuccess />} />
+                <Route path="/role-selection" element={<RoleSelection />} />
+                {/* catch all routes */}
+                <Route path='*' element={<Navigate to='/' replace />} />
+            </Routes>
+    );
 }
 
 export default App;
