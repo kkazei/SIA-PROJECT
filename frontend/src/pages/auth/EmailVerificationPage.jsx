@@ -50,9 +50,16 @@ const EmailVerificationPage = () => {
         e.preventDefault();
         const verificationCode = code.join("");
         try {
-            await verifyEmail(verificationCode);
-            navigate("/");
-            toast.success("Email verified successfully");
+            const response = await verifyEmail(verificationCode);
+            
+            // Check if user needs to select a role
+            if (response.needsRoleSelection) {
+                navigate("/role-selection");
+                toast.success("Email verified successfully. Please select your role.");
+            } else {
+                navigate("/");
+                toast.success("Email verified successfully");
+            }
         } catch (error) {
             console.log(error);
         }
