@@ -4,26 +4,71 @@ import { useApartmentStore } from "../store/apartmentStore";
 import { useTenantStore } from "../store/tenantStore";
 
 const TenantModal = ({ isOpen, onClose }) => {
-  const { user } = useAuthStore(); // Get logged-in landlord info
-  const landlordId = user?._id; // Extract landlord ID
+  const { user } = useAuthStore();
   
-  // Get functions from stores
-  const { assignTenantToApartment, apartments, fetchApartments, loading: apartmentsLoading } = useApartmentStore();
-  const { tenants, fetchTenants, loading: tenantsLoading, error: tenantsError } = useTenantStore();
+  // Get functions from apartment store
+  const { 
+    apartments, 
+    getApartments, 
+    assignTenant, 
+    isLoading: apartmentsLoading,
+    error: apartmentError,
+    message: apartmentMessage,
+    clearMessages
+  } = useApartmentStore();
+
+  // Get functions from tenant store
+  const { 
+    tenants, 
+    fetchTenants, 
+    loading: tenantsLoading, 
+    error: tenantsError 
+  } = useTenantStore();
 
   const [selectedApartment, setSelectedApartment] = useState("");
   const [selectedTenant, setSelectedTenant] = useState("");
   const [isTenantEnabled, setIsTenantEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
 
   // Fetch apartments and tenants when modal opens
   useEffect(() => {
-    if (!isOpen || !landlordId) return;
+    if (!isOpen) return;
 
-    // Use store functions instead of direct API calls
-    fetchApartments(landlordId);
+    clearMessages();
+    setStatusMessage("");
+    
+    // Fetch available apartments
+    getApartments('available');
+    
+    // Fetch tenants
     fetchTenants();
-  }, [landlordId, isOpen, fetchApartments, fetchTenants]);
+
+    return () => {
+      // Clean up form state when modal closes
+      setSelectedApartment("");
+      setSelectedTenant("");
+      setIsTenantEnabled(false);
+    };
+  }, [isOpen, getApartments, fetchTenants, clearMessages]);
+
+  // Display success or error message
+  useEffect(() => {
+    if (apartmentMessage) {
+      setStatusMessage(apartmentMessage);
+      
+      // Auto close on success after delay
+      if (apartmentMessage.includes('success')) {
+        const timer = setTimeout(() => {
+          onClose();
+        }, 1500);
+        
+        return () => clearTimeout(timer);
+      }
+    } else if (apartmentError) {
+      setStatusMessage(apartmentError);
+    }
+  }, [apartmentMessage, apartmentError, onClose]);
 
   const handleApartmentChange = (event) => {
     const aptId = event.target.value;
@@ -40,23 +85,24 @@ const TenantModal = ({ isOpen, onClose }) => {
     if (!selectedApartment || !selectedTenant) return;
     
     setSubmitting(true);
+    setStatusMessage("");
+    
     try {
       // Use the store function for assigning tenant
-      await assignTenantToApartment(selectedApartment, selectedTenant);
-      // Refresh apartment data after assignment
-      fetchApartments(landlordId);
-      // Show success message and close modal
-      alert("Tenant assigned successfully");
-      onClose();
+      await assignTenant(selectedApartment, selectedTenant);
+      // Form will auto-close on success via useEffect
     } catch (error) {
       console.error("Error assigning tenant:", error);
-      alert("Failed to assign tenant: " + (error.message || "Unknown error"));
+      // Error is handled by the store and displayed via the useEffect
     } finally {
       setSubmitting(false);
     }
   };
 
   if (!isOpen) return null;
+
+  // Filter apartments to show only available ones
+  const availableApartments = apartments.filter(apt => apt.status === 'available');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -82,17 +128,17 @@ const TenantModal = ({ isOpen, onClose }) => {
                 className="w-full p-2 border border-gray-700 bg-gray-800 text-white rounded focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
                 value={selectedApartment}
                 onChange={handleApartmentChange}
-                disabled={apartmentsLoading}
+                disabled={apartmentsLoading || submitting}
               >
                 <option value="">Select an Apartment</option>
                 {apartmentsLoading ? (
                   <option disabled>Loading apartments...</option>
-                ) : apartments.length === 0 ? (
-                  <option disabled>No apartments available</option>
+                ) : availableApartments.length === 0 ? (
+                  <option disabled>No available apartments</option>
                 ) : (
-                  apartments.map((apt) => (
+                  availableApartments.map((apt) => (
                     <option key={apt._id} value={apt._id}>
-                      {apt.room}
+                      {apt.room} - ₱{apt.rent.toLocaleString()}
                     </option>
                   ))
                 )}
@@ -115,21 +161,21 @@ const TenantModal = ({ isOpen, onClose }) => {
                 }`}
                 value={selectedTenant}
                 onChange={handleTenantChange}
-                disabled={!isTenantEnabled || tenantsLoading}
+                disabled={!isTenantEnabled || tenantsLoading || submitting}
               >
                 <option value="">Select a Tenant</option>
                 {tenantsLoading ? (
                   <option disabled>Loading tenants...</option>
                 ) : tenantsError ? (
-                  <option disabled>{tenantsError}</option>
+                  <option disabled>Error loading tenants</option>
                 ) : tenants.length === 0 ? (
                   <option disabled>No tenants available</option>
                 ) : (
                   tenants
-                    .filter(tenant => !tenant.apartmentId) // Only show unassigned tenants
+                    .filter(tenant => tenant.role === 'tenant')
                     .map((tenant) => (
                       <option key={tenant._id} value={tenant._id}>
-                        {tenant.tenant_fullname}
+                        {tenant.name} ({tenant.email})
                       </option>
                     ))
                 )}
@@ -142,10 +188,14 @@ const TenantModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Display error if any */}
-          {tenantsError && (
-            <div className="mb-4 p-2 bg-red-500 bg-opacity-20 border border-red-500 rounded text-red-300 text-sm">
-              {tenantsError}
+          {/* Status message (error or success) */}
+          {statusMessage && (
+            <div className={`mb-4 p-3 rounded text-sm ${
+              statusMessage.includes('success')
+                ? 'bg-green-900 bg-opacity-30 border border-green-500 text-green-300'
+                : 'bg-red-900 bg-opacity-30 border border-red-500 text-red-300'
+            }`}>
+              {statusMessage}
             </div>
           )}
 
@@ -154,6 +204,7 @@ const TenantModal = ({ isOpen, onClose }) => {
             <button
               className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
               onClick={onClose}
+              disabled={submitting}
             >
               Cancel
             </button>

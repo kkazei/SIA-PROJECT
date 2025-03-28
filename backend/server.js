@@ -9,8 +9,8 @@ import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
+import userRoutes from "./routes/user.route.js";
 import { fileURLToPath } from "url";
-import tenantAnnouncementsRoutes from "./routes/tenant-announcements.route.js";
 import session from "express-session";
 import passport from "./config/passport.js";
 
@@ -60,10 +60,9 @@ setupUploadDirectories();
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/apartments", apartmentRoutes);
-app.use("/api/announcements", tenantAnnouncementsRoutes); // Changed for a more RESTful naming
 app.use("/api/posts", postRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
-
+app.use("/api/users", userRoutes);
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

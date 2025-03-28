@@ -8,20 +8,27 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 import TenantModal from '../../components/TenantModal';
 import RoomModal from '../../components/RoomModal';
 import AnnouncementModal from '../../components/AnnouncementModal';
+import { formatDate } from "../../components/utils/date";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const DashboardPage = () => {
     const { user } = useAuthStore();
-    const { apartments, fetchApartments, isLoading, error } = useApartmentStore();
+    const { 
+        apartments, 
+        getApartments, 
+        isLoading, 
+        error 
+    } = useApartmentStore();
     const [isTenantModalOpen, setTenantModalOpen] = useState(false);
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     const navigate = useNavigate();  
 
     useEffect(() => {
-        fetchApartments();
-    }, [fetchApartments]);
+        // Fetch apartments when component mounts
+        getApartments();
+    }, [getApartments]);
 
     const navigateToConcernPage = () => navigate('/concern-page');
 
@@ -93,7 +100,7 @@ const DashboardPage = () => {
             className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full max-w-auto ml-0 mt-0'
         >
             <div className='bg-white shadow-md rounded-lg p-6 ml-6 mt-0'>
-                <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user.user_fullname}</h2>
+                <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
                 <p className='text-gray-600'>{formatDate(new Date())}</p>
             </div>
 
@@ -136,20 +143,20 @@ const DashboardPage = () => {
                 <div className='grid grid-cols-4 gap-4 mt-4'>
                     <div className='bg-blue-900 transition duration-200 text-white p-4 rounded-lg text-center shadow-md'>
                         <h4 className='text-lg font-bold'>
-                            {apartments.filter(apt => !apt.tenant_id).length}
+                            {apartments.filter(apt => apt.status === 'available').length}
                         </h4>
                         <p>Vacant</p>
                     </div>
                     <div className='bg-green-600 text-white p-4 rounded-lg text-center shadow-md'>
                         <h4 className='text-lg font-bold'>
-                            {apartments.filter(apt => apt.tenant_id).length}
+                            {apartments.filter(apt => apt.status === 'occupied').length}
                         </h4>
                         <p>Occupied</p>
                     </div>
                     <div className='bg-green-500 text-white p-4 rounded-lg text-center shadow-md'>
                         <h4 className='text-lg font-bold'>
                             ₱{apartments
-                                .filter(apt => apt.tenant_id)
+                                .filter(apt => apt.status === 'occupied')
                                 .reduce((total, apt) => total + apt.rent, 0)
                                 .toLocaleString()}
                         </h4>
@@ -184,8 +191,8 @@ const DashboardPage = () => {
                                     <td className='p-2 text-white'>{apartment.room}</td>
                                     <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
                                     <td className='p-2 text-white'>{apartment.description}</td>
-                                    <td className={`p-2 ${apartment.tenant_id ? 'text-yellow-500' : 'text-green-600'}`}>
-                                        {apartment.tenant_id ? 'Occupied' : 'Available'}
+                                    <td className={`p-2 ${apartment.status === 'occupied' ? 'text-yellow-500' : 'text-green-600'}`}>
+                                        {apartment.status.charAt(0).toUpperCase() + apartment.status.slice(1)}
                                     </td>
                                 </tr>
                             ))}
