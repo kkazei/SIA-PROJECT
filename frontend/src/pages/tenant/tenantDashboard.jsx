@@ -27,6 +27,18 @@ const TenantDashboard = () => {
     // Local state for active tab
     const [activeTab, setActiveTab] = useState("dashboard");
     
+    // Search and filtering state
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filters, setFilters] = useState({
+        minPrice: "",
+        maxPrice: "",
+        bedrooms: "",
+        bathrooms: "",
+        propertyType: ""
+    });
+    const [filteredProperties, setFilteredProperties] = useState([]);
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+    
     // Fetch data on component mount
     useEffect(() => {
         const fetchData = async () => {
@@ -46,12 +58,72 @@ const TenantDashboard = () => {
         getMyRentals();
     }, [getMyRentals]);
 
+    // Filter properties based on search and filter criteria
+    useEffect(() => {
+        if (!properties) return;
+        
+        let results = [...properties];
+        
+        // Apply search term
+        if (searchTerm.trim() !== "") {
+            const term = searchTerm.toLowerCase();
+            results = results.filter(property => 
+                property.title.toLowerCase().includes(term) || 
+                property.address.toLowerCase().includes(term) || 
+                property.city.toLowerCase().includes(term) ||
+                property.description.toLowerCase().includes(term)
+            );
+        }
+        
+        // Apply filters
+        if (filters.minPrice && !isNaN(filters.minPrice)) {
+            results = results.filter(property => property.rentAmount >= Number(filters.minPrice));
+        }
+        
+        if (filters.maxPrice && !isNaN(filters.maxPrice)) {
+            results = results.filter(property => property.rentAmount <= Number(filters.maxPrice));
+        }
+        
+        if (filters.bedrooms) {
+            results = results.filter(property => property.bedrooms >= Number(filters.bedrooms));
+        }
+        
+        if (filters.bathrooms) {
+            results = results.filter(property => property.bathrooms >= Number(filters.bathrooms));
+        }
+        
+        if (filters.propertyType && filters.propertyType !== "all") {
+            results = results.filter(property => property.propertyType === filters.propertyType);
+        }
+        
+        setFilteredProperties(results);
+    }, [properties, searchTerm, filters]);
+
     const handleLogout = () => {
         logout();
     };
     
     const handleApplyForProperty = (propertyId) => {
         navigate(`/tenant/apply/${propertyId}`);
+    };
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const clearFilters = () => {
+        setSearchTerm("");
+        setFilters({
+            minPrice: "",
+            maxPrice: "",
+            bedrooms: "",
+            bathrooms: "",
+            propertyType: ""
+        });
     };
     
     return (
@@ -306,13 +378,166 @@ const TenantDashboard = () => {
                             Browse available properties and submit applications
                         </p>
                         
+                        {/* Search and Filter UI */}
+                        <div className="mb-6">
+                            <div className="flex flex-col md:flex-row gap-3 mb-3">
+                                <div className="relative flex-grow">
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, address, or city..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-green-500 pl-10"
+                                    />
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <button 
+                                    onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                                    className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 flex items-center justify-center min-w-[120px]"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                    </svg>
+                                    Filters {Object.values(filters).some(v => v !== "") && "•"}
+                                </button>
+                            </div>
+                            
+                            {/* Filter options */}
+                            {isFilterMenuOpen && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="bg-gray-800 p-4 rounded-md mb-4 border border-gray-700"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">Price Range</label>
+                                            <div className="flex space-x-2">
+                                                <input
+                                                    type="number"
+                                                    name="minPrice"
+                                                    placeholder="Min $"
+                                                    value={filters.minPrice}
+                                                    onChange={handleFilterChange}
+                                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                                                />
+                                                <input
+                                                    type="number"
+                                                    name="maxPrice"
+                                                    placeholder="Max $"
+                                                    value={filters.maxPrice}
+                                                    onChange={handleFilterChange}
+                                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">Bedrooms</label>
+                                            <select
+                                                name="bedrooms"
+                                                value={filters.bedrooms}
+                                                onChange={handleFilterChange}
+                                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                                            >
+                                                <option value="">Any</option>
+                                                <option value="1">1+</option>
+                                                <option value="2">2+</option>
+                                                <option value="3">3+</option>
+                                                <option value="4">4+</option>
+                                                <option value="5">5+</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">Bathrooms</label>
+                                            <select
+                                                name="bathrooms"
+                                                value={filters.bathrooms}
+                                                onChange={handleFilterChange}
+                                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                                            >
+                                                <option value="">Any</option>
+                                                <option value="1">1+</option>
+                                                <option value="2">2+</option>
+                                                <option value="3">3+</option>
+                                                <option value="4">4+</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Property Type</label>
+                                        <select
+                                            name="propertyType"
+                                            value={filters.propertyType}
+                                            onChange={handleFilterChange}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                                        >
+                                            <option value="all">All Types</option>
+                                            <option value="apartment">Apartment</option>
+                                            <option value="house">House</option>
+                                            <option value="condo">Condo</option>
+                                            <option value="townhouse">Townhouse</option>
+                                            <option value="studio">Studio</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={clearFilters}
+                                            className="px-4 py-2 text-gray-300 hover:text-white mr-2"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                        
+                        {/* Results summary */}
+                        {!propertiesLoading && (
+                            <div className="mb-4 flex justify-between items-center">
+                                <p className="text-gray-400">
+                                    Found {filteredProperties.length} properties
+                                </p>
+                                <div className="flex items-center">
+                                    <span className="text-gray-400 text-sm mr-2">Sort by:</span>
+                                    <select 
+                                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setFilteredProperties(prev => {
+                                                const sorted = [...prev];
+                                                if (value === "price_low") {
+                                                    sorted.sort((a, b) => a.rentAmount - b.rentAmount);
+                                                } else if (value === "price_high") {
+                                                    sorted.sort((a, b) => b.rentAmount - a.rentAmount);
+                                                }
+                                                return sorted;
+                                            });
+                                        }}
+                                    >
+                                        <option value="price_low">Price (Low to High)</option>
+                                        <option value="price_high">Price (High to Low)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Properties grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                             {propertiesLoading ? (
                                 <div className="col-span-full flex justify-center py-10">
                                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
                                 </div>
-                            ) : properties.length > 0 ? (
-                                properties.map(property => (
+                            ) : filteredProperties.length > 0 ? (
+                                filteredProperties.map(property => (
                                     <PropertyCard 
                                         key={property._id} 
                                         property={property} 
@@ -320,8 +545,17 @@ const TenantDashboard = () => {
                                     />
                                 ))
                             ) : (
-                                <div className="col-span-full text-center py-10">
-                                    <p className="text-gray-400">No properties available</p>
+                                <div className="col-span-full text-center py-10 bg-gray-800 rounded-lg border border-gray-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p className="text-gray-400 mb-2">No properties match your criteria</p>
+                                    <button 
+                                        onClick={clearFilters}
+                                        className="text-green-400 hover:text-green-300 font-medium"
+                                    >
+                                        Clear filters and try again
+                                    </button>
                                 </div>
                             )}
                         </div>
