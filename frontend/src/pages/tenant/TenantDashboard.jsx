@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useTenantDashboardStore } from "../../store/tenantuserStore";
 import { useAuthStore } from "../../store/authStore";
 import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
 import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreementModal";
@@ -16,35 +15,65 @@ const TenantDashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   
-  // Get data and functions from tenantDashboardStore
-  const { 
-    tenantDetails, 
-    announcements, 
-    paymentQR,
-    loading, 
-    error,
-    success,
-    fetchTenantDetails, 
-    fetchAnnouncements,
-    clearError,
-    clearSuccess
-  } = useTenantDashboardStore();
+  // Static data for tenant dashboard
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [tenantDetails, setTenantDetails] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [paymentQR, setPaymentQR] = useState("https://example.com/payment-qr.png");
 
-  // Fetch tenant details including apartment information
+  // Simulate data loading
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await fetchTenantDetails();
-        await fetchAnnouncements();
-      } catch (err) {
-        // Error handling is done within the store
-      }
-    };
+    // Simulate API call with timeout
+    const timer = setTimeout(() => {
+      setTenantDetails({
+        tenant_fullname: user?.name || "John Doe",
+        room: "Room 101",
+        rent: 5000,
+        status: "pending",
+        due_date: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+        daysRemaining: 7,
+        landlord: {
+          _id: "landlord123",
+          name: "Jane Smith",
+          email: "landlord@example.com",
+          phone: "123-456-7890"
+        }
+      });
+      
+      setAnnouncements([
+        {
+          _id: "ann1",
+          title: "Building Maintenance",
+          content: "Water will be shut off for maintenance on Saturday from 10am-2pm.",
+          createdAt: new Date().toISOString(),
+          important: true
+        },
+        {
+          _id: "ann2",
+          title: "Rent Increase Notice",
+          content: "Please be advised that rent will increase by 5% starting next month due to increased utility costs.",
+          createdAt: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
+          important: true
+        },
+        {
+          _id: "ann3",
+          title: "Holiday Schedule",
+          content: "The management office will be closed during the holidays from Dec 24-26.",
+          createdAt: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
+          important: false
+        }
+      ]);
+
+      setPaymentQR("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PaymentDetails12345");
+      setLoading(false);
+    }, 1000);
     
-    fetchData();
-  }, [fetchTenantDetails, fetchAnnouncements]);
+    return () => clearTimeout(timer);
+  }, [user]);
 
   // Modal control functions
   const openInquiriesModal = () => {
@@ -105,14 +134,54 @@ const TenantDashboard = () => {
     document.body.classList.remove("overflow-hidden");
   };
 
-  const logout = () => {
-    // Reset the tenant dashboard store on logout
-    useTenantDashboardStore.getState().resetStore();
-    localStorage.removeItem("token");
-    window.location.href = "/tenant-login";
+  const handleLogout = () => {
+    logout();
   };
 
   const removeFile = () => setSelectedFile(null);
+
+  // Mock functions for actions
+  const submitInquiry = async (data) => {
+    console.log("Submitting inquiry:", data);
+    setSuccess("Inquiry submitted successfully!");
+    return { success: true };
+  };
+
+  const fetchPaymentHistory = async () => {
+    return [
+      {
+        _id: "payment1",
+        amount: 5000,
+        date: new Date().toISOString(),
+        status: "paid",
+        referenceNumber: "REF123456"
+      },
+      {
+        _id: "payment2",
+        amount: 5000,
+        date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
+        status: "paid",
+        referenceNumber: "REF789012"
+      },
+      {
+        _id: "payment3",
+        amount: 5000,
+        date: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString(),
+        status: "paid",
+        referenceNumber: "REF345678"
+      }
+    ];
+  };
+
+  const submitPayment = async (data) => {
+    console.log("Submitting payment:", data);
+    setSuccess("Payment proof submitted successfully!");
+    closePaymentProofModal();
+    return { success: true };
+  };
+
+  const clearError = () => setError(null);
+  const clearSuccess = () => setSuccess(null);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -149,8 +218,8 @@ const TenantDashboard = () => {
         <button 
           onClick={() => {
             clearError();
-            fetchTenantDetails();
-            fetchAnnouncements();
+            setLoading(true);
+            setTimeout(() => setLoading(false), 1000);
           }}
           className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg"
         >
@@ -171,7 +240,7 @@ const TenantDashboard = () => {
       
       <div className="bg-green-100 p-6 rounded-lg flex flex-col md:flex-row justify-between items-center">
         <div className="mb-4 md:mb-0">
-          <h1 className="text-2xl font-bold">{tenantDetails?.tenant_fullname || user?.tenant_fullname}</h1>
+          <h1 className="text-2xl font-bold">{tenantDetails?.tenant_fullname || user?.name}</h1>
           <p className="text-gray-600">{tenantDetails?.room || "Room not assigned"}</p>
           <p className="text-sm text-gray-500 mt-1">
             As of{" "}
@@ -254,7 +323,7 @@ const TenantDashboard = () => {
         </div>
 
         <div
-          onClick={logout}
+          onClick={handleLogout}
           className="bg-red-500 text-white py-2 px-4 w-full sm:w-32 rounded-lg mt-2 hover:bg-red-600 transition duration-200 text-center"
         >
           <p>Logout</p>
@@ -292,7 +361,7 @@ const TenantDashboard = () => {
         selectedFile={selectedFile}
         removeFile={removeFile}
         landlordId={tenantDetails?.landlord?._id}
-        submitInquiry={useTenantDashboardStore.getState().submitInquiry}
+        submitInquiry={submitInquiry}
       />
 
       <LeaseAgreementModal
@@ -305,7 +374,7 @@ const TenantDashboard = () => {
         isOpen={isPaymentHistoryModalOpen}
         closeModal={closePaymentHistoryModal}
         tenantId={tenantDetails?._id}
-        fetchPaymentHistory={useTenantDashboardStore.getState().fetchPaymentHistory}
+        fetchPaymentHistory={fetchPaymentHistory}
       />
 
       <PaymentProofModal
@@ -317,7 +386,7 @@ const TenantDashboard = () => {
         setReferenceNumber={setReferenceNumber}
         paymentQR={paymentQR}
         tenantDetails={tenantDetails}
-        submitPayment={useTenantDashboardStore.getState().submitPayment}
+        submitPayment={submitPayment}
       />
     </div>
   );
