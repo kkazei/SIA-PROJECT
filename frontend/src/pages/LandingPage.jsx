@@ -5,187 +5,129 @@ import { useAuthStore } from "../store/authStore";
 const LandingPage = () => {
     const { isAuthenticated, user } = useAuthStore();
 
-    // Determine the dashboard URL based on user role
     const getDashboardUrl = () => {
         if (!user) return '/dashboard';
-        
-        if (user.role === 'landlord') {
-            return '/landlord/dashboard';
-        } else if (user.role === 'tenant') {
-            return '/tenant/dashboard';
-        } else {
-            return '/dashboard';
-        }
+        if (user.role === 'landlord') return '/landlord/dashboard';
+        if (user.role === 'tenant') return '/tenant/dashboard';
+        return '/dashboard';
     };
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
-            {/* Hero Section */}
-            <motion.div 
-                className="relative h-screen bg-gradient-to-b from-gray-900 to-gray-800"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1 }}
-            >
-                {/* Navigation */}
-                <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
+            {/* Header Section */}
+            <header className="bg-gray-800 py-4 shadow-md">
+                <div className="container mx-auto px-6 flex justify-between items-center">
                     <div className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
-                        ApartmentPro
+                        RENTFLOW
                     </div>
-                    <div className="flex items-center gap-4">
-                        {isAuthenticated ? (
-                            <Link 
-                                to={getDashboardUrl()}
-                                className="py-2 px-4 bg-green-500 hover:bg-green-600 rounded-lg transition-colors"
-                            >
-                                Go to Dashboard
-                            </Link>
-                        ) : (
-                            <>
-                                <Link 
-                                    to="/login" 
-                                    className="py-2 px-4 hover:text-green-400 transition-colors"
-                                >
-                                    Sign In
-                                </Link>
-                                <Link 
-                                    to="/signup" 
-                                    className="py-2 px-4 bg-green-500 hover:bg-green-600 rounded-lg transition-colors"
-                                >
-                                    Get Started
-                                </Link>
-                            </>
-                        )}
-                    </div>
-                </nav>
-
-                {/* Hero Content */}
-                <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between h-[calc(100vh-80px)]">
-                    <motion.div 
-                        className="w-full md:w-1/2 mb-16 md:mb-0"
-                        initial={{ x: -50, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.2, duration: 0.8 }}
-                    >
-                        <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                            Streamline Your <span className="bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">Property Management</span> Experience
-                        </h1>
-                        <p className="text-xl text-gray-300 mb-8">
-                            Simplify apartment management for landlords and tenants with our all-in-one platform
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <Link 
-                                to={isAuthenticated ? getDashboardUrl() : "/signup"}
-                                className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all text-center"
-                            >
-                                {isAuthenticated ? 'Go to Dashboard' : 'Sign Up Today'}
-                            </Link>
-                            <button className="py-3 px-8 border border-green-500 rounded-lg font-bold hover:bg-green-500/10 transition-colors">
-                                Learn More
-                            </button>
-                        </div>
-                    </motion.div>
-                    <motion.div 
-                        className="w-full md:w-1/2 flex justify-center"
-                        initial={{ x: 50, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.4, duration: 0.8 }}
-                    >
-                        <div className="w-full max-w-md h-96 bg-gradient-to-br from-green-400/20 to-emerald-600/20 rounded-2xl flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-32 w-32 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                        </div>
-                    </motion.div>
+        
                 </div>
-                
-                {/* Scroll indicator */}
-                <motion.div 
-                    className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </motion.div>
+            </header>
+
+            {/* Hero Section */}
+            <motion.section
+    className="relative h-screen bg-gray-900 flex items-center"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 1 }}
+>
+    <div className="container mx-auto px-6 flex flex-col md:flex-row-reverse items-center">
+        {/* Right Image */}
+        <div className="md:w-1/2 h-full flex justify-center relative">
+            <motion.div
+                className="relative w-full h-full"
+                initial={{ opacity: 0, scale: 0.9 }} // Initial animation
+                animate={{ opacity: 1, scale: 1 }} // Animation on load
+                whileHover={{ scale: 1.05 }} // Animation on hover
+                transition={{ duration: 1.5 }} // Transition duration
+            >
+                <img
+                    src="/landing.jpeg" 
+                    alt="Building"
+                    className="rounded-lg shadow-lg object-cover w-full h-full"
+                />
             </motion.div>
+        </div>
+
+        {/* Vertical Line */}
+<div className="hidden md:block w-1 h-80 bg-gray-500 mx-10 relative overflow-hidden">
+    {/* Glowing Light */}
+    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-vibrantGreen to-emeraldBright animate-glow"></div>
+</div>
+
+        {/* Left Content */}
+        <div className="text-center md:text-left md:w-1/2">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white">
+                FIND YOUR <span className="bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">HOME</span> IN THE CITY
+            </h1>
+            <p className="text-lg md:text-xl text-gray-300 mb-8">
+                Simplify apartment management for landlords and tenants with our all-in-one platform.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                {isAuthenticated ? (
+                    <Link
+                        to={getDashboardUrl()}
+                        className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all text-center"
+                    >
+                        Go to Dashboard
+                    </Link>
+                ) : (
+                    <>
+                        <Link
+                            to="/login"
+                            className="py-3 px-8 border border-green-500 rounded-lg font-bold hover:bg-green-500/10 transition-colors text-center"
+                        >
+                            Sign In
+                        </Link>
+                        <Link
+                            to="/signup"
+                            className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all text-center"
+                        >
+                            Get Started
+                        </Link>
+                    </>
+                )}
+            </div>
+        </div>
+    </div>
+</motion.section>
+
+
 
             {/* Features Section */}
-            <motion.section 
-                className="py-20 bg-gray-800"
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                viewport={{ once: true }}
-            >
-                <div className="container mx-auto px-6">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
-                        Powerful Features for Everyone
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                        {features.map((feature, index) => (
-                            <motion.div 
-                                key={index}
-                                className="bg-gray-900 p-8 rounded-xl border border-gray-700"
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1, duration: 0.5 }}
-                                viewport={{ once: true }}
-                            >
-                                <div className="bg-green-500/20 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                                    {feature.icon}
-                                </div>
-                                <h3 className="text-xl font-bold mb-3 text-green-400">{feature.title}</h3>
-                                <p className="text-gray-300">{feature.description}</p>
-                            </motion.div>
-                        ))}
+<section className="py-20 bg-gray-800">
+    <div className="container mx-auto px-6">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
+            Explore Our Features
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {features.map((feature, index) => (
+                <motion.div
+                    key={index}
+                    className="bg-gray-900 p-8 rounded-xl border border-gray-700 text-center"
+                    whileHover={{ scale: 1.05, boxShadow: "0px 4px 20px rgba(0, 255, 128, 0.3)" }} // Scale up and add shadow on hover
+                    transition={{ duration: 0.3 }} // Smooth transition
+                >
+                    <div className="bg-green-500/20 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+                        {feature.icon}
                     </div>
-                </div>
-            </motion.section>
-
-            {/* CTA Section */}
-            <motion.section 
-                className="py-20 bg-gray-900"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
-                viewport={{ once: true }}
-            >
-                <div className="container mx-auto px-6 text-center">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
-                        Ready to transform your property management?
-                    </h2>
-                    <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-                        Join thousands of property managers and tenants who are already using our platform to streamline their daily operations.
-                    </p>
-                    <Link 
-                        to="/signup"
-                        className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all inline-block"
-                    >
-                        Get Started Today
-                    </Link>
-                </div>
-            </motion.section>
+                    <h3 className="text-xl font-bold mb-3 text-green-400">{feature.title}</h3>
+                    <p className="text-gray-300">{feature.description}</p>
+                </motion.div>
+            ))}
+        </div>
+    </div>
+</section>
 
             {/* Footer */}
             <footer className="bg-gray-900 border-t border-gray-800 py-10">
-                <div className="container mx-auto px-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center">
-                        <div className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-4 md:mb-0">
-                            ApartmentPro
-                        </div>
-                        <div className="flex gap-6">
-                            <Link to="#" className="text-gray-400 hover:text-green-400 transition-colors">About</Link>
-                            <Link to="#" className="text-gray-400 hover:text-green-400 transition-colors">Features</Link>
-                            <Link to="#" className="text-gray-400 hover:text-green-400 transition-colors">Pricing</Link>
-                            <Link to="#" className="text-gray-400 hover:text-green-400 transition-colors">Contact</Link>
-                        </div>
+                <div className="container mx-auto px-6 text-center">
+                    <div className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-4">
+                        RentFlow
                     </div>
-                    <div className="mt-8 text-center text-gray-500 text-sm">
-                        &copy; {new Date().getFullYear()} ApartmentPro. All rights reserved.
-                    </div>
+                    <p className="text-gray-500 text-sm">
+                        &copy; {new Date().getFullYear()} RENTFLOW. All rights reserved.
+                    </p>
                 </div>
             </footer>
         </div>
