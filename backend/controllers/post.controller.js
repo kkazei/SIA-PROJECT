@@ -1,5 +1,5 @@
 import { Post } from "../models/post.model.js";
-import { Tenant } from "../models/tenant.model.js";
+import { User } from "../models/user.model.js"; // Changed from Tenant to User
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -84,6 +84,12 @@ export const createPost = async (req, res) => {
             return res.status(400).json({ success: false, message: "Title and content are required!" });
         }
 
+        // Verify user is actually a landlord
+        const landlord = await User.findById(landlord_id);
+        if (!landlord || landlord.role !== 'landlord') {
+            return res.status(403).json({ success: false, message: "Only landlords can create posts" });
+        }
+
         const newPost = new Post({ title, content, landlord_id, image_path });
         await newPost.save();
 
@@ -112,17 +118,24 @@ export const updatePost = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, content } = req.body;
+        const landlord_id = req.userId; // Get landlord ID from token
         const image_path = req.file ? `/uploads/${req.file.filename}` : req.body.image_path;
+
+        // Check if post exists and belongs to the landlord
+        const post = await Post.findById(id);
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found" });
+        }
+
+        if (post.landlord_id.toString() !== landlord_id) {
+            return res.status(403).json({ success: false, message: "Not authorized to update this post" });
+        }
 
         const updatedPost = await Post.findByIdAndUpdate(
             id,
             { title, content, image_path },
             { new: true, runValidators: true }
         );
-
-        if (!updatedPost) {
-            return res.status(404).json({ success: false, message: "Post not found" });
-        }
 
         res.json({ success: true, data: updatedPost });
     } catch (error) {
@@ -135,16 +148,30 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedPost = await Post.findByIdAndDelete(id);
+        const landlord_id = req.userId; // Get landlord ID from token
 
-        if (!deletedPost) {
+        // Check if post exists and belongs to the landlord
+        const post = await Post.findById(id);
+        if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
         }
 
+        if (post.landlord_id.toString() !== landlord_id) {
+            return res.status(403).json({ success: false, message: "Not authorized to delete this post" });
+        }
+
+        // If post has an image, delete it from the server
+        if (post.image_path) {
+            const imagePath = path.join(__dirname, '..', post.image_path);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath);
+            }
+        }
+
+        const deletedPost = await Post.findByIdAndDelete(id);
         res.json({ success: true, message: "Post deleted successfully" });
     } catch (error) {
         console.error("Error in Delete Post:", error.message);
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
-

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useTenantDashboardStore } from "../store/tenantuserStore";
-import { useAuthStore } from "../store/authStore";
-import InquiriesModal from "../components/Tenant-Dashboard/InquiriesModal";
-import LeaseAgreementModal from "../components/Tenant-Dashboard/LeaseAgreementModal";
-import LandlordAnnouncementModal from "../components/Tenant-Dashboard/LandlordAnnouncementModal";
-import PaymentHistoryModal from "../components/Tenant-Dashboard/PaymentHistoryModal";
-import PaymentProofModal from "../components/Tenant-Dashboard/PaymentProofModal";
+import { useTenantDashboardStore } from "../../store/tenantuserStore";
+import { useAuthStore } from "../../store/authStore";
+import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
+import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreementModal";
+import LandlordAnnouncementModal from "../../components/Tenant-Dashboard/LandlordAnnouncementModal";
+import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistoryModal";
+import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
 
 // Main Dashboard Component
 const TenantDashboard = () => {

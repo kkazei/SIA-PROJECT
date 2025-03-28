@@ -19,7 +19,10 @@ export const createMaintenance = async (req, res) => {
 // Get all maintenance requests (restricted to logged-in landlord)
 export const getMaintenances = async (req, res) => {
     try {
-        const maintenances = await Maintenance.find({ landlord_id: req.userId }).populate("landlord_id", "name email");
+        const maintenances = await Maintenance.find({ landlord_id: req.userId })
+            .populate("landlord_id", "name email")
+            .populate("apartment_id", "room"); // Added apartment population
+            
         res.status(200).json(maintenances);
     } catch (error) {
         console.error("Error fetching maintenance requests:", error);
@@ -30,7 +33,12 @@ export const getMaintenances = async (req, res) => {
 // Get a single maintenance request (restricted to landlord's account)
 export const getMaintenanceById = async (req, res) => {
     try {
-        const maintenance = await Maintenance.findOne({ _id: req.params.id, landlord_id: req.userId }).populate("landlord_id", "name email");
+        const maintenance = await Maintenance.findOne({ 
+            _id: req.params.id, 
+            landlord_id: req.userId 
+        })
+        .populate("landlord_id", "name email")
+        .populate("apartment_id", "room"); // Added apartment population
 
         if (!maintenance) {
             return res.status(404).json({ message: "Maintenance request not found" });
@@ -75,7 +83,9 @@ export const updateMaintenance = async (req, res) => {
             { _id: req.params.id, landlord_id: req.userId },
             req.body,
             { new: true, runValidators: true }
-        ).populate("landlord_id", "name email");
+        )
+        .populate("landlord_id", "name email")
+        .populate("apartment_id", "room"); // Added apartment population
 
         if (!maintenance) {
             return res.status(403).json({ 

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Post } from "../models/post.model.js";
-import { Tenant } from "../models/tenant.model.js";
+import { User } from "../models/user.model.js"; // Changed from Tenant to User
+import { Apartment } from "../models/apartment.model.js"; // Added to find tenant's landlord
 
 // Get announcements for a tenant
 export const getTenantAnnouncements = async (req, res) => {
@@ -18,22 +19,44 @@ export const getTenantAnnouncements = async (req, res) => {
         
         console.log("[getTenantAnnouncements] Looking for tenant with ID:", tenantId);
         
-        // Find tenant to get landlord_id
-        const tenant = await Tenant.findById(tenantId);
+        // Find tenant in User model
+        const tenant = await User.findById(tenantId);
         
         if (!tenant) {
             console.log("[getTenantAnnouncements] Tenant not found with ID:", tenantId);
             return res.status(404).json({
                 success: false,
-                message: "Tenant not found"
+                message: "User not found"
+            });
+        }
+
+        // Verify the user is a tenant
+        if (tenant.role !== 'tenant') {
+            console.log("[getTenantAnnouncements] User is not a tenant:", tenantId);
+            return res.status(403).json({
+                success: false,
+                message: "User is not a tenant"
             });
         }
         
-        console.log("[getTenantAnnouncements] Found tenant, landlord ID:", tenant.landlord_id);
+        // Find the apartment where this tenant is assigned to get the landlord_id
+        const apartment = await Apartment.findOne({ tenant_id: tenantId });
+        
+        if (!apartment) {
+            console.log("[getTenantAnnouncements] No apartment found for tenant:", tenantId);
+            return res.status(200).json({
+                success: true,
+                message: "No apartment assigned to tenant",
+                count: 0,
+                data: []
+            });
+        }
+        
+        console.log("[getTenantAnnouncements] Found apartment, landlord ID:", apartment.landlord_id);
         
         // Find all posts by this landlord
         const posts = await Post.find({ 
-            landlord_id: tenant.landlord_id 
+            landlord_id: apartment.landlord_id 
         }).sort({ createdAt: -1 });
         
         console.log(`[getTenantAnnouncements] Found ${posts.length} posts`);

@@ -20,13 +20,18 @@ const apartmentSchema = new mongoose.Schema({
     },
     tenant_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Tenant',
+        ref: 'User',  // Changed from 'Tenant' to 'User'
         default: null
     },
-    tenant_fullname: {
+    status: {
         type: String,
-        default: null
-    }
+        enum: ['available', 'occupied', 'maintenance'],
+        default: 'available'
+    },
 }, { timestamps: true });
+
+// Add an index for faster queries
+apartmentSchema.index({ landlord_id: 1 });
+apartmentSchema.index({ status: 1 });
 
 export const Apartment = mongoose.model("Apartment", apartmentSchema);

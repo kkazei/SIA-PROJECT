@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyToken } from "../middleware/verifyToken.js";
+import { verifyToken, authorize } from "../middleware/auth.middleware.js";
 import { 
     getTenantAnnouncements,
     getAllAnnouncementsForTenant 
@@ -8,9 +8,11 @@ import {
 const router = express.Router();
 
 // Main route to get tenant-specific announcements
-router.get("/", verifyToken, getTenantAnnouncements);
+// Add tenant role authorization
+router.get("/", verifyToken, authorize('tenant'), getTenantAnnouncements);
 
 // Fallback route if the main one fails
-router.get("/all", verifyToken, getAllAnnouncementsForTenant);
+// Add tenant role authorization
+router.get("/all", verifyToken, authorize('tenant'), getAllAnnouncementsForTenant);
 
 export default router;

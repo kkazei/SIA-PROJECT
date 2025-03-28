@@ -1,6 +1,6 @@
-import { Tenant } from "../models/tenant.model.js";
 import { User } from "../models/user.model.js";
 import { Apartment } from "../models/apartment.model.js";
+import { TenantDetails } from "../models/tenantDetails.model.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+export const upload = multer({ 
     storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req, file, cb) => {
@@ -39,7 +39,45 @@ const upload = multer({
 export const getAllTenants = async (req, res) => {
     try {
         const landlord_id = req.userId;
-        const tenants = await Tenant.find({ landlord_id });
+        
+        // First find all apartments belonging to this landlord that have tenants
+        const apartments = await Apartment.find({ 
+            landlord_id, 
+            tenant_id: { $ne: null } 
+        }).populate('tenant_id', 'name email');
+        
+        if (apartments.length === 0) {
+            return res.status(200).json([]);
+        }
+        
+        // Get the tenant details for each apartment tenant
+        const tenantIds = apartments.map(apt => apt.tenant_id);
+        
+        // Find tenant details
+        const tenantDetails = await TenantDetails.find({
+            tenant_id: { $in: tenantIds.map(id => id._id) }
+        });
+        
+        // Combine the data
+        const tenants = apartments.map(apartment => {
+            const details = tenantDetails.find(
+                td => td.tenant_id.toString() === apartment.tenant_id._id.toString()
+            ) || {};
+            
+            return {
+                tenant_id: apartment.tenant_id._id,
+                name: apartment.tenant_id.name,
+                email: apartment.tenant_id.email,
+                apartment_id: apartment._id,
+                room: apartment.room,
+                rent: apartment.rent,
+                payment_status: details.payment_status || 'pending',
+                due_date: details.due_date,
+                tenant_phone: details.tenant_phone,
+                landlord_id: landlord_id
+            };
+        });
+        
         res.status(200).json(tenants);
     } catch (error) {
         console.error("Error fetching tenants:", error);
@@ -50,15 +88,34 @@ export const getAllTenants = async (req, res) => {
 // Get a specific tenant by ID
 export const getTenantById = async (req, res) => {
     try {
-        const tenant = await Tenant.findById(req.params.id);
-        if (!tenant) {
-            return res.status(404).json({ message: "Tenant not found" });
+        const landlord_id = req.userId;
+        const tenant_id = req.params.id;
+        
+        // First check if the tenant is in one of the landlord's apartments
+        const apartment = await Apartment.findOne({ 
+            landlord_id,
+            tenant_id
+        }).populate('tenant_id', 'name email');
+        
+        if (!apartment) {
+            return res.status(404).json({ message: "Tenant not found or not associated with your apartments" });
         }
         
-        // Check if tenant belongs to the authenticated landlord
-        if (tenant.landlord_id.toString() !== req.userId) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        // Get tenant details
+        const details = await TenantDetails.findOne({ tenant_id });
+        
+        const tenant = {
+            tenant_id: apartment.tenant_id._id,
+            name: apartment.tenant_id.name,
+            email: apartment.tenant_id.email,
+            apartment_id: apartment._id,
+            room: apartment.room,
+            rent: apartment.rent,
+            payment_status: details ? details.payment_status : 'pending',
+            due_date: details ? details.due_date : null,
+            tenant_phone: details ? details.tenant_phone : null,
+            payment_history: details ? details.payment_history : []
+        };
         
         res.status(200).json(tenant);
     } catch (error) {
@@ -67,25 +124,52 @@ export const getTenantById = async (req, res) => {
     }
 };
 
-// Update tenant status
+// Update tenant payment status
 export const updateTenantStatus = async (req, res) => {
     try {
-        const { status } = req.body;
-        const tenant = await Tenant.findById(req.params.id);
+        const { payment_status } = req.body;
+        const landlord_id = req.userId;
+        const tenant_id = req.params.id;
         
-        if (!tenant) {
-            return res.status(404).json({ message: "Tenant not found" });
+        // First check if the tenant is in one of the landlord's apartments
+        const apartment = await Apartment.findOne({ 
+            landlord_id,
+            tenant_id
+        });
+        
+        if (!apartment) {
+            return res.status(404).json({ message: "Tenant not found or not associated with your apartments" });
         }
         
-        // Check if tenant belongs to the authenticated landlord
-        if (tenant.landlord_id.toString() !== req.userId) {
-            return res.status(403).json({ message: "Access denied" });
+        // Find or create tenant details
+        let tenantDetails = await TenantDetails.findOne({ tenant_id });
+        
+        if (!tenantDetails) {
+            tenantDetails = new TenantDetails({
+                tenant_id,
+                apartment_id: apartment._id,
+                landlord_id,
+                room: apartment.room,
+                rent: apartment.rent
+            });
         }
         
-        tenant.status = status;
-        await tenant.save();
+        // Update payment status and add to history
+        tenantDetails.payment_status = payment_status;
         
-        res.status(200).json({ message: "Status updated successfully", tenant });
+        // Add payment history entry if status changed
+        tenantDetails.payment_history.push({
+            amount: apartment.rent,
+            status: payment_status,
+            notes: req.body.notes || `Payment status updated to ${payment_status}`
+        });
+        
+        await tenantDetails.save();
+        
+        res.status(200).json({ 
+            message: "Payment status updated successfully", 
+            tenantDetails 
+        });
     } catch (error) {
         console.error("Error updating tenant status:", error);
         res.status(500).json({ message: "Server error" });
@@ -122,33 +206,43 @@ export const uploadPaymentQR = async (req, res) => {
     }
 };
 
-// Get tenant details with apartment information
+// Get tenant details with apartment information (for tenant accessing their own info)
 export const getTenantDetails = async (req, res) => {
     try {
         const tenantId = req.userId;
         console.log("Fetching details for tenant:", tenantId);
         
-        // Find the tenant
-        const tenant = await Tenant.findById(tenantId);
-        if (!tenant) {
+        // Find the user
+        const tenant = await User.findById(tenantId);
+        if (!tenant || tenant.role !== 'tenant') {
             return res.status(404).json({ success: false, message: "Tenant not found" });
         }
         
-        console.log("Found tenant:", tenant);
+        // Get apartment details
+        const apartment = await Apartment.findOne({ tenant_id: tenantId });
+        if (!apartment) {
+            return res.status(200).json({
+                success: true,
+                tenant: {
+                    _id: tenant._id,
+                    name: tenant.name,
+                    email: tenant.email,
+                    apartment: null,
+                    landlord: null
+                }
+            });
+        }
         
         // Get landlord details
-        const landlord = await User.findById(tenant.landlord_id, 'user_fullname user_email user_phone');
+        const landlord = await User.findById(apartment.landlord_id, 'name email');
         
-        // Get apartment details if assigned
-        let apartment = null;
-        if (tenant.apartment_id) {
-            apartment = await Apartment.findById(tenant.apartment_id);
-        }
+        // Get tenant details if they exist
+        const tenantDetails = await TenantDetails.findOne({ tenant_id: tenantId });
         
         // Calculate days remaining until due date
         let daysRemaining = null;
-        if (tenant.due_date) {
-            const dueDate = new Date(tenant.due_date);
+        if (tenantDetails && tenantDetails.due_date) {
+            const dueDate = new Date(tenantDetails.due_date);
             const today = new Date();
             const diffTime = dueDate - today;
             daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -159,7 +253,7 @@ export const getTenantDetails = async (req, res) => {
         try {
             // Import dynamically if PaymentQR model exists
             const { PaymentQR } = await import('../models/paymentQR.model.js');
-            paymentQR = await PaymentQR.findOne({ landlord_id: tenant.landlord_id });
+            paymentQR = await PaymentQR.findOne({ landlord_id: apartment.landlord_id });
         } catch (err) {
             console.log("PaymentQR model not available yet:", err.message);
         }
@@ -167,37 +261,36 @@ export const getTenantDetails = async (req, res) => {
         // Get announcements if available
         let announcements = [];
         try {
-            // Import dynamically if Announcement model exists
-            const { Announcement } = await import('../models/post.model.js');
-            announcements = await Announcement.find({ landlord_id: tenant.landlord_id })
+            // Import dynamically if Post model exists
+            const { Post } = await import('../models/post.model.js');
+            announcements = await Post.find({ landlord_id: apartment.landlord_id })
                 .sort({ createdAt: -1 });
         } catch (err) {
-            console.log("Announcement model not available yet:", err.message);
+            console.log("Post model not available yet:", err.message);
         }
         
         res.status(200).json({
             success: true,
             tenant: {
                 _id: tenant._id,
-                tenant_fullname: tenant.tenant_fullname,
-                tenant_email: tenant.tenant_email,
-                tenant_phone: tenant.tenant_phone,
-                room: tenant.room,
-                rent: tenant.rent,
-                status: tenant.status,
-                due_date: tenant.due_date,
+                name: tenant.name,
+                email: tenant.email,
+                phone: tenantDetails ? tenantDetails.tenant_phone : null,
+                room: apartment.room,
+                rent: apartment.rent,
+                payment_status: tenantDetails ? tenantDetails.payment_status : 'pending',
+                due_date: tenantDetails ? tenantDetails.due_date : null,
                 daysRemaining,
-                apartment: apartment ? {
+                apartment: {
                     _id: apartment._id,
                     room: apartment.room,
                     description: apartment.description,
                     rent: apartment.rent
-                } : null,
+                },
                 landlord: landlord ? {
                     _id: landlord._id,
-                    name: landlord.user_fullname,
-                    email: landlord.user_email,
-                    phone: landlord.user_phone
+                    name: landlord.name,
+                    email: landlord.email
                 } : null,
                 paymentQR: paymentQR ? {
                     _id: paymentQR._id,

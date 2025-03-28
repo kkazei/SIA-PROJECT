@@ -1,6 +1,6 @@
 import { Apartment } from '../models/apartment.model.js';
 import { User } from '../models/user.model.js';
-import { Tenant } from '../models/tenant.model.js';
+// Remove the Tenant import since we're using User model for both landlords and tenants
 
 // Function to create a new apartment
 export const createApartment = async (req, res) => {
@@ -10,8 +10,8 @@ export const createApartment = async (req, res) => {
 
         // Validate landlord_id
         const landlord = await User.findById(landlord_id);
-        if (!landlord || landlord.user_role !== 'landlord') {
-            return res.status(400).json({ message: 'Invalid landlord ID' });
+        if (!landlord || landlord.role !== 'landlord') { // Updated to match your User schema
+            return res.status(400).json({ message: 'Invalid landlord ID or user is not a landlord' });
         }
 
         // Create a new apartment instance
@@ -37,7 +37,7 @@ export const createApartment = async (req, res) => {
 export const getApartments = async (req, res) => {
     try {
         const landlord_id = req.userId; // Fetch the landlord_id from the authenticated user
-        const apartments = await Apartment.find({ landlord_id }).populate('landlord_id', 'user_fullname user_email');
+        const apartments = await Apartment.find({ landlord_id }).populate('landlord_id', 'name email'); // Updated field names
         res.status(200).json(apartments);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -49,8 +49,8 @@ export const getApartmentsWithTenants = async (req, res) => {
     try {
         const landlord_id = req.userId; // Fetch the landlord_id from the authenticated user
         const apartments = await Apartment.find({ landlord_id })
-            .populate('tenant_id', 'tenant_fullname tenant_email tenant_phone') // Fetch tenant details
-            .populate('landlord_id', 'user_fullname user_email'); // Fetch landlord details
+            .populate('tenant_id', 'name email') // Updated to fetch tenant details from User model
+            .populate('landlord_id', 'name email'); // Updated field names
 
         res.status(200).json(apartments);
     } catch (error) {
@@ -97,43 +97,33 @@ export const assignTenantToApartment = async (req, res) => {
             });
         }
 
-
-
-        // Find the tenant
-        const tenant = await Tenant.findById(tenantId);
+        // Find the tenant (now in the User model with role = tenant)
+        const tenant = await User.findById(tenantId);
         if (!tenant) {
             return res.status(404).json({ message: "Tenant not found" });
+        }
+        
+        // Check if the user is actually a tenant
+        if (tenant.role !== 'tenant') {
+            return res.status(400).json({ message: "Selected user is not a tenant" });
         }
 
         // Assign the tenant to the apartment
         apartment.tenant_id = tenantId;
+        apartment.status = 'occupied'; // Update apartment status to occupied
         await apartment.save();
 
-        // Set due date to the current date + 30 days (or your preferred duration)
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 30);
-
-        // Update all relevant tenant fields
-        tenant.apartment_id = apartmentId;
-        tenant.room = apartment.room;
-        tenant.rent = apartment.rent;
-        tenant.status = 'pending'; // or whichever initial status you prefer
-        tenant.due_date = dueDate;
-        
-        await tenant.save();
+        // Update the tenant with rental information 
+        // Note: You may want to create a separate TenantDetails collection for storing rent-specific information
+        // For now, we'll return the tenant data from the User model
 
         res.status(200).json({ 
             message: "Tenant assigned successfully", 
             apartment,
             tenant: {
                 _id: tenant._id,
-                tenant_fullname: tenant.tenant_fullname,
-                tenant_email: tenant.tenant_email,
-                room: tenant.room,
-                rent: tenant.rent,
-                status: tenant.status,
-                due_date: tenant.due_date,
-                apartment_id: tenant.apartment_id
+                name: tenant.name,
+                email: tenant.email
             }
         });
     } catch (error) {

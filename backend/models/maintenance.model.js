@@ -32,8 +32,18 @@ const maintenanceSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Adding apartment_id to match controller functionality 
+        // but keeping model minimal
+        apartment_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Apartment",
+            default: null,
+        }
     },
     { timestamps: true }
 );
+
+// Add index for faster queries
+maintenanceSchema.index({ landlord_id: 1 });
 
 export const Maintenance = mongoose.model("Maintenance", maintenanceSchema);

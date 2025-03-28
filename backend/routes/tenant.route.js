@@ -1,47 +1,91 @@
 import express from "express";
-import { Tenant } from "../models/tenant.model.js";
+import { User } from "../models/user.model.js";
 import { assignTenantToApartment } from "../controllers/apartment.controller.js";
-import { verifyToken } from "../middleware/verifyToken.js";
+import { verifyToken, authorize } from "../middleware/auth.middleware.js";
 import { 
     getAllTenants, 
     getTenantById, 
     updateTenantStatus,
     uploadPaymentQR,
-    getTenantDetails  // Add this import
-} from "../controllers/tenant.controller.js";
+    getTenantDetails
+} from "../controllers/tenantDetails.controller.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
-// GET all tenants by landlord ID
-router.get("/tenants", async (req, res) => {
-    try {
-        const { userId } = req.query;
-        if (!userId) return res.status(400).json({ message: "User ID is required" });
-
-        const tenants = await Tenant.find({ landlord_id: userId });
-        res.json(tenants);
-    } catch (error) {
-        console.error("Error fetching tenants:", error);
-        res.status(500).json({ message: "Server error" });
+// Set up storage for QR code images
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(process.cwd(), "uploads/qr-codes");
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `qr-${Date.now()}${path.extname(file.originalname)}`);
     }
 });
 
-// GET all tenants for the authenticated landlord
-router.get("/landlord/tenants", verifyToken, getAllTenants);
+const qrUpload = multer({ 
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error("Only image files are allowed"));
+        }
+    }
+}).single("qrImage");
 
-// GET a specific tenant by ID
-router.get("/tenants/:id", verifyToken, getTenantById);
+// Routes for landlords to manage tenants
+router.get("/landlord/tenants", verifyToken, authorize('landlord'), getAllTenants);
+router.get("/landlord/tenants/:id", verifyToken, authorize('landlord'), getTenantById);
+router.patch("/landlord/tenants/:id/status", verifyToken, authorize('landlord'), updateTenantStatus);
+router.post("/landlord/payment-qr", verifyToken, authorize('landlord'), qrUpload, uploadPaymentQR);
+router.post("/landlord/assign-tenant", verifyToken, authorize('landlord'), assignTenantToApartment);
 
-// Update tenant status (paid, pending, overdue)
-router.patch("/tenants/:id/status", verifyToken, updateTenantStatus);
+// Routes for tenants
+router.get("/tenant/details", verifyToken, authorize('tenant'), getTenantDetails);
 
-// Upload payment QR code
-router.post("/payment-qr", verifyToken, uploadPaymentQR);
-
-// Get tenant details with apartment info
-router.get("/tenant/details", verifyToken, getTenantDetails);
-
-// Assign a tenant to an apartment
-router.post("/assign-tenant", verifyToken, assignTenantToApartment);
+// Route to search for users with 'tenant' role (for landlord to assign to apartments)
+router.get("/search/tenants", verifyToken, authorize('landlord'), async (req, res) => {
+    try {
+        const { query } = req.query;
+        
+        if (!query || query.length < 2) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Search query must be at least 2 characters" 
+            });
+        }
+        
+        // Find users with tenant role matching the search query
+        const tenants = await User.find({
+            role: 'tenant',
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { email: { $regex: query, $options: 'i' } }
+            ]
+        }).select('_id name email')
+        .limit(10);
+        
+        res.status(200).json({
+            success: true,
+            count: tenants.length,
+            data: tenants
+        });
+    } catch (error) {
+        console.error("Error searching tenants:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
 
 export default router;
