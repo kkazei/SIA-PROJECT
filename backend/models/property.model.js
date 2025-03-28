@@ -41,9 +41,28 @@ const propertySchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  isAvailable: {
+  // Changed from isAvailable to more descriptive isOccupied
+  isOccupied: {
     type: Boolean,
-    default: true
+    default: false
+  },
+  // Added tenant fields
+  tenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  occupiedSince: {
+    type: Date,
+    default: null
+  },
+  leaseStart: {
+    type: Date,
+    default: null
+  },
+  leaseEnd: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

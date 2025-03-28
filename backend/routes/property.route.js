@@ -5,7 +5,8 @@ import {
   getPropertyById,
   getMyProperties,
   updateProperty, 
-  deleteProperty 
+  deleteProperty, 
+  getMyRentals
 } from '../controllers/property.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/auth.middleware.js';
@@ -20,6 +21,9 @@ router.get('/', getAllProperties);
 
 // IMPORTANT: Place specific routes before parameterized routes
 router.get('/landlord/my-properties', authorize('landlord'), getMyProperties);
+
+// Tenant Rentals - only tenants can access their rentals
+router.get('/tenant/my-rentals', verifyToken, authorize('tenant'), getMyRentals);
 
 // Create property - only landlords can create
 router.post('/', authorize('landlord'), createProperty);

@@ -10,6 +10,8 @@ import OAuthSuccess from './pages/auth/OAuthSuccess';
 import RoleSelection from './pages/auth/RoleSelection';
 import LandlordDashboard from './pages/landlord/landlordDashboard';
 import TenantDashboard from './pages/tenant/tenantDashboard';
+import ApplicationForm from './pages/tenant/ApplicationForm';
+import PropertyDetailPage from './pages/PropertyDetailPage'; // You'll need to create this component
 
 
 import { useAuthStore } from './store/authStore';
@@ -147,6 +149,21 @@ function App() {
                     }
                 />
                 <Route
+                    path='/tenant/apply/:propertyId'
+                    element={
+                        <ProtectedRoute>
+                            <TenantRoute>
+                                <ApplicationForm />
+                            </TenantRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                {/* Property Routes - Anyone can view property details */}
+                <Route
+                    path='/properties/:id'
+                    element={<PropertyDetailPage />}
+                />
+                <Route
                     path='/signup'
                     element={
                         <RedirectAuthenticatedUser>
@@ -179,6 +196,7 @@ function App() {
                         </RedirectAuthenticatedUser>
                     }
                 />
+                
                 {/* OAuth routes */}
                 <Route path="/oauth-success" element={<OAuthSuccess />} />
                 <Route path="/role-selection" element={<RoleSelection />} />
