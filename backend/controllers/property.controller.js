@@ -80,7 +80,8 @@ export const getAllProperties = async (req, res) => {
 export const getPropertyById = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id)
-      .populate('landlord', 'name email');
+      .populate('landlord', 'name email')
+      .populate('tenant', 'name email avatar'); // Add this line to populate tenant information
 
     if (!property) {
       return res.status(404).json({
@@ -114,7 +115,9 @@ export const getMyProperties = async (req, res) => {
       });
     }
 
-    const properties = await Property.find({ landlord: req.user.id });
+    const properties = await Property.find({ landlord: req.user.id })
+      .populate('landlord', 'name email')
+      .populate('tenant', 'name email avatar'); // Add this line to populate tenant information
 
     res.status(200).json({
       success: true,
@@ -126,6 +129,39 @@ export const getMyProperties = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching your properties',
+      error: error.message
+    });
+  }
+};
+
+// Get properties where the logged-in tenant is assigned
+export const getMyRentals = async (req, res) => {
+  try {
+    // Only tenants can access their rentals
+    if (req.user.role !== 'tenant') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    const properties = await Property.find({ 
+      tenant: req.user.id,
+      isOccupied: true
+    })
+      .populate('landlord', 'name email')
+      .sort({ occupiedSince: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: properties.length,
+      properties
+    });
+  } catch (error) {
+    console.error('Get my rentals error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching your rentals',
       error: error.message
     });
   }
@@ -155,7 +191,9 @@ export const updateProperty = async (req, res) => {
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    );
+    )
+    .populate('landlord', 'name email')
+    .populate('tenant', 'name email avatar'); // Add this line
 
     res.status(200).json({
       success: true,

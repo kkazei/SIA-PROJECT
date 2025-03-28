@@ -9,6 +9,7 @@ axios.defaults.withCredentials = true;
 export const usePropertyStore = create((set, get) => ({
   properties: [],
   myProperties: [],
+  myRentals: [],
   currentProperty: null,
   isLoading: false,
   error: null,
@@ -81,6 +82,26 @@ export const usePropertyStore = create((set, get) => ({
         isLoading: false 
       });
       throw error;
+    }
+  },
+
+  // Get properties where the current tenant is assigned
+  getMyRentals: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/tenant/my-rentals`);
+      
+      set({ 
+        myRentals: response.data.properties, 
+        isLoading: false 
+      });
+      
+      return response.data;
+    } catch (error) {
+      set({ 
+        error: error.response?.data?.message || "Error fetching your rentals", 
+        isLoading: false 
+      });
     }
   },
 
