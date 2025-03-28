@@ -32,6 +32,7 @@ const LandlordDashboard = () => {
     getLandlordApplications,
     getPropertyApplications,
     updateApplicationStatus,
+    updateLeaseTerm, // Add this missing import
     clearError: clearApplicationError,
     clearMessage: clearApplicationMessage
   } = useApplicationStore();
@@ -927,7 +928,11 @@ const PropertyLeaseInfo = ({ property, onUpdateLease }) => {
           <div className="text-sm">
             <p className="mb-1">
               <span className="text-gray-600">Tenant:</span>{' '}
-              <span className="font-medium">{property.tenant.name || 'Unknown'}</span>
+              <span className="font-medium">
+                {typeof property.tenant === 'object' ? 
+                  (property.tenant?.name || 'Unknown Tenant') : 
+                  'Tenant ID: ' + property.tenant}
+              </span>
             </p>
             <p className="mb-1">
               <span className="text-gray-600">Start Date:</span>{' '}

@@ -6,7 +6,8 @@ import {
   getLandlordApplications,
   updateApplicationStatus,
   cancelApplication,
-  getApplicationById
+  getApplicationById,
+  updateLeaseTerm
 } from '../controllers/application.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/auth.middleware.js';
@@ -25,6 +26,9 @@ router.put('/:id/cancel', authorize('tenant'), cancelApplication);
 router.get('/property/:propertyId', authorize('landlord'), getPropertyApplications);
 router.get('/landlord/all', authorize('landlord'), getLandlordApplications);
 router.put('/:applicationId/status', authorize('landlord'), updateApplicationStatus);
+
+router.put('/property/:propertyId/lease', authorize('landlord'), updateLeaseTerm);
+
 
 // Shared route - accessible to both tenants and landlords (permission check is in the controller)
 router.get('/:id', getApplicationById);

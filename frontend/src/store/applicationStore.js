@@ -154,10 +154,22 @@ export const useApplicationStore = create((set, get) => ({
   },
 
 
-updateLeaseTerm: async (propertyId, leaseData) => {
+  updateLeaseTerm: async (propertyId, leaseData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.put(`${API_URL}/property/${propertyId}/lease`, leaseData);
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      };
+      
+      const response = await axios.put(
+        `${API_URL}/property/${propertyId}/lease`, 
+        leaseData,
+        config
+      );
       
       set({ 
         isLoading: false,
@@ -166,6 +178,7 @@ updateLeaseTerm: async (propertyId, leaseData) => {
       
       return response.data;
     } catch (error) {
+      console.error("Update lease term error:", error);
       set({ 
         error: error.response?.data?.message || "Error updating lease terms", 
         isLoading: false 
