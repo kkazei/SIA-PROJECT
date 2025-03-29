@@ -86,9 +86,22 @@ const LandlordSideNav = () => {
       {!collapsed && user && (
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3">
+          {user.avatar ? (
+            <img
+          src={user.avatar}
+          alt="User Avatar"
+          className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover"
+          referrerPolicy="no-referrer"
+        />
+
+        
+          ) : (
             <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
               {user.name ? user.name[0].toUpperCase() : 'L'}
             </div>
+          )}
+        </div>
             <div>
               <p className="font-semibold">{user.name || 'Landlord'}</p>
               <p className="text-sm text-gray-400">{user.email || 'landlord@example.com'}</p>
