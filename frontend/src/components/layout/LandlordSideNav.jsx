@@ -83,10 +83,10 @@ const LandlordSideNav = ({ onToggle }) => {
       </button>
 
       {/* Sidebar Header */}
-      <div className={`flex justify-between items-center p-4 border-b border-gray-700 ${collapsed ? 'hidden' : 'block'} lg:flex`}>
+      <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <div className="flex items-center gap-3">
           <img src="/image/logo.png" alt="Logo" className="w-10 h-10" />
-          {!collapsed && <span className="text-xl font-bold hidden lg:block">RentFlow</span>}
+          {!collapsed && <span className="text-xl font-bold">RentFlow</span>}
         </div>
       </div>
 
