@@ -3,7 +3,7 @@ import { Apartment } from "../models/apartment.model.js";
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
-// Submit a new application (Tenant)
+
 export const submitApplication = async (req, res) => {
   try {
     const { apartmentId, moveInDate, phoneNumber, additionalComments } = req.body;
@@ -53,7 +53,7 @@ export const submitApplication = async (req, res) => {
       });
     }
     
-    // Create new application
+    // Create new application with both sets of fields
     const newApplication = new Application({
       tenant_id: tenantId,
       apartment_id: apartmentId,
@@ -62,7 +62,10 @@ export const submitApplication = async (req, res) => {
         moveInDate,
         phoneNumber,
         additionalComments: additionalComments || ""
-      }
+      },
+      // Add these fields to match the old index in your database
+      tenant: tenantId,
+      property: apartmentId
     });
     
     await newApplication.save();
@@ -75,6 +78,13 @@ export const submitApplication = async (req, res) => {
     
   } catch (error) {
     console.error("Error submitting application:", error);
+    // More detailed error response for duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have an application for this apartment"
+      });
+    }
     res.status(500).json({
       success: false,
       message: "Server error while submitting application"

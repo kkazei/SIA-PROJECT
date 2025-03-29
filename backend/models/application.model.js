@@ -22,6 +22,17 @@ const applicationSchema = new mongoose.Schema({
     required: true
   },
   
+  // Legacy fields to match existing database indexes
+  tenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+  
+  property: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Apartment"
+  },
+  
   // Application status
   status: {
     type: String,
@@ -58,5 +69,8 @@ const applicationSchema = new mongoose.Schema({
 
 // Create compound index to prevent duplicate applications
 applicationSchema.index({ tenant_id: 1, apartment_id: 1 }, { unique: true });
+
+// Add the legacy index to prevent conflicts
+applicationSchema.index({ tenant: 1, property: 1 }, { unique: true, sparse: true });
 
 export const Application = mongoose.model("Application", applicationSchema);
