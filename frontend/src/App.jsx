@@ -10,6 +10,11 @@ import OAuthSuccess from './pages/auth/OAuthSuccess';
 import DashboardPage from './pages/landlord/DashboardPage';
 import TenantDashboard from './pages/tenant/tenantDashboard';
 import RoleSelection from './pages/auth/RoleSelection';
+import TenantPage from './pages/landlord/TenantPage'; // Import the TenantPage component
+import Announcement from './pages/landlord/Announcement'; // Import the Announcement component
+import MaintenancePage from './pages/landlord/MaintenancePage'; // Import the MaintenancePage component
+import ArchivePage from './pages/landlord/ArchivePage'; // Import the ArchivePage component
+import LandlordLayout from './components/layout/LandlordLayout'; // Import the LandlordLayout component
 
 
 
@@ -132,6 +137,54 @@ function App() {
                         <ProtectedRoute>
                             <LandlordRoute>
                                 <DashboardPage />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/landlord/tenants'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordLayout>
+                                    <TenantPage />
+                                </LandlordLayout>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/landlord/announcements'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordLayout>
+                                    <Announcement />
+                                </LandlordLayout>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/maintenance'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordLayout>
+                                    <MaintenancePage />
+                                </LandlordLayout>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/archive'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordLayout>
+                                    <ArchivePage />
+                                </LandlordLayout>
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
