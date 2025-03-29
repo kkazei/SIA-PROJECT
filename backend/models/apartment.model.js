@@ -13,6 +13,14 @@ const apartmentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    bedrooms: { 
+        type: Number, 
+        default: 1 
+    },
+      bathrooms: { 
+        type: Number, 
+        default: 1 
+    },
     landlord_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -23,6 +31,16 @@ const apartmentSchema = new mongoose.Schema({
         ref: 'User',  // Changed from 'Tenant' to 'User'
         default: null
     },
+    address: {
+        street: { type: String },
+        city: { type: String },
+        state: { type: String },
+        zipCode: { type: String },
+        country: { type: String, default: 'Philippines' }
+      },
+      images: [{
+        type: String
+      }],
     status: {
         type: String,
         enum: ['available', 'occupied', 'maintenance'],

@@ -25,7 +25,8 @@ export const useApartmentStore = create((set, get) => ({
       
       const response = await axios.get(url);
       set({ 
-        apartments: response.data.apartments, 
+        // Updated to match controller response format
+        apartments: response.data.data || [], 
         isLoading: false 
       });
       return response.data;
@@ -44,10 +45,11 @@ export const useApartmentStore = create((set, get) => ({
     try {
       const response = await axios.get(`${API_URL}/${id}`);
       set({ 
-        currentApartment: response.data.apartment, 
+        // Updated to match controller response format
+        currentApartment: response.data.data, 
         isLoading: false 
       });
-      return response.data.apartment;
+      return response.data.data;
     } catch (error) {
       set({
         isLoading: false,
@@ -57,14 +59,19 @@ export const useApartmentStore = create((set, get) => ({
     }
   },
 
-  // Create a new apartment
-  createApartment: async (apartmentData) => {
+  // Create a new apartment - updated to use FormData for file uploads
+  createApartment: async (formData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(API_URL, apartmentData);
+      // FormData is already configured for file uploads
+      const response = await axios.post(API_URL, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       // Add new apartment to the list
-      const updatedApartments = [...get().apartments, response.data.apartment];
+      const updatedApartments = [...get().apartments, response.data.data];
       
       set({
         apartments: updatedApartments,
@@ -72,7 +79,7 @@ export const useApartmentStore = create((set, get) => ({
         message: "Apartment created successfully"
       });
       
-      return response.data.apartment;
+      return response.data.data;
     } catch (error) {
       set({
         isLoading: false,
@@ -82,25 +89,30 @@ export const useApartmentStore = create((set, get) => ({
     }
   },
 
-  // Update an existing apartment
-  updateApartment: async (id, updateData) => {
+  // Update an existing apartment - updated to use FormData for file uploads
+  updateApartment: async (id, formData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.put(`${API_URL}/${id}`, updateData);
+      // FormData is already configured for file uploads
+      const response = await axios.put(`${API_URL}/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       // Update apartment in the list
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === id ? response.data.apartment : apt
+        apt._id === id ? response.data.data : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.apartment,
+        currentApartment: response.data.data,
         isLoading: false,
         message: "Apartment updated successfully"
       });
       
-      return response.data.apartment;
+      return response.data.data;
     } catch (error) {
       set({
         isLoading: false,
@@ -146,17 +158,17 @@ export const useApartmentStore = create((set, get) => ({
       
       // Update apartment in the list
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === apartmentId ? response.data.apartment : apt
+        apt._id === apartmentId ? response.data.data : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.apartment,
+        currentApartment: response.data.data,
         isLoading: false,
         message: "Tenant assigned successfully"
       });
       
-      return response.data.apartment;
+      return response.data.data;
     } catch (error) {
       set({
         isLoading: false,
@@ -166,32 +178,63 @@ export const useApartmentStore = create((set, get) => ({
     }
   },
 
-  // Remove tenant from apartment
-  removeTenant: async (apartmentId) => {
+  // Vacate apartment (remove tenant) - updated to match the controller endpoint
+  vacateApartment: async (apartmentId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.delete(`${API_URL}/remove-tenant/${apartmentId}`);
+      const response = await axios.post(`${API_URL}/vacate`, {
+        apartmentId
+      });
       
       // Update apartment in the list
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === apartmentId ? response.data.apartment : apt
+        apt._id === apartmentId ? response.data.data : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.apartment,
+        currentApartment: response.data.data,
         isLoading: false,
-        message: "Tenant removed successfully"
+        message: "Apartment vacated successfully"
       });
       
-      return response.data.apartment;
+      return response.data.data;
     } catch (error) {
       set({
         isLoading: false,
-        error: error.response?.data?.message || "Error removing tenant"
+        error: error.response?.data?.message || "Error vacating apartment"
       });
       throw error;
     }
+  },
+
+  // Get available apartments (for tenants)
+  getAvailableApartments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/list/available`);
+      set({ 
+        apartments: response.data.data, 
+        isLoading: false 
+      });
+      return response.data.data;
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || "Error fetching available apartments"
+      });
+      throw error;
+    }
+  },
+
+  // Set current apartment (for editing)
+  setCurrentApartment: (apartment) => {
+    set({ currentApartment: apartment });
+  },
+
+  // Clear current apartment
+  clearCurrentApartment: () => {
+    set({ currentApartment: null });
   },
 
   // Clear any error or success message

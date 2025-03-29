@@ -1,26 +1,30 @@
-import express from "express";
+import express from 'express';
 import { 
-  createApartment, 
-  updateApartment, 
-  deleteApartment, 
-  assignTenant, 
-  removeTenant,
-  getApartments,
-  getApartmentById
-} from "../controllers/apartment.controller.js";
-import { verifyToken } from "../middleware/auth.middleware.js";
+    getApartments,
+    getApartmentById,
+    createApartment,
+    updateApartment,
+    deleteApartment,
+    assignTenant,
+    vacateApartment,
+    getAvailableApartments,
+    upload
+} from '../controllers/apartment.controller.js';
+import { verifyToken, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// Apartment CRUD routes
-router.post("/", verifyToken, createApartment);
-router.get("/", verifyToken, getApartments);
-router.get("/:id", verifyToken, getApartmentById);
-router.put("/:id", verifyToken, updateApartment);
-router.delete("/:id", verifyToken, deleteApartment);
+// Landlord routes (require landlord role)
+router.get('/', verifyToken, authorize('landlord'), getApartments);
+router.get('/:id', verifyToken, authorize('landlord'), getApartmentById);
+router.post('/', verifyToken, authorize('landlord'), upload.array('images', 5), createApartment);
+router.put('/:id', verifyToken, authorize('landlord'), upload.array('images', 5), updateApartment);
+router.delete('/:id', verifyToken, authorize('landlord'), deleteApartment);
+router.post('/assign-tenant', verifyToken, authorize('landlord'), assignTenant);
+router.post('/vacate', verifyToken, authorize('landlord'), vacateApartment);
 
-// Tenant management routes
-router.post("/assign-tenant", verifyToken, assignTenant);
-router.delete("/remove-tenant/:apartmentId", verifyToken, removeTenant);
+
+// Routes accessible to tenants
+router.get('/list/available', verifyToken, authorize('tenant'), getAvailableApartments);
 
 export default router;
