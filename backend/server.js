@@ -9,6 +9,7 @@ import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
+import tenantRoutes from "./routes/tenant.route.js";
 import userRoutes from "./routes/user.route.js";
 import { fileURLToPath } from "url";
 import session from "express-session";
@@ -63,6 +64,9 @@ app.use("/api/apartments", apartmentRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/tenants", tenantRoutes);  
+
+
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

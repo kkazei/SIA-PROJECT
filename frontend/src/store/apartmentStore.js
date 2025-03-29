@@ -288,7 +288,7 @@ export const useApartmentStore = create((set, get) => ({
   getAvailableApartments: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/available`);
+      const response = await axios.get(`${API_URL}/list/available`);
       
       // Process image URLs for each apartment
       const processedApartments = response.data.data.map(apartment => ({

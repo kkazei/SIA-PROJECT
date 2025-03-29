@@ -7,6 +7,7 @@ import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreemen
 import LandlordAnnouncementModal from "../../components/Tenant-Dashboard/LandlordAnnouncementModal";
 import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistoryModal";
 import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
+import BrowseApartmentsModal from "../../components/Tenant-Dashboard/BrowseApartmentsModal";
 
 // Main Dashboard Component
 const TenantDashboard = () => {
@@ -14,12 +15,19 @@ const TenantDashboard = () => {
   const [isLeaseModalOpen, setIsLeaseModalOpen] = useState(false);
   const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
   const [isLandlordAnnouncementModalOpen, setIsLandlordAnnouncementModalOpen] = useState(false);
+  const [isBrowseApartmentsModalOpen, setIsBrowseApartmentsModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
   
   const { user, logout } = useAuthStore();
-  const { getTenantApartment, currentApartment, isLoading: apartmentLoading } = useApartmentStore();
+  const { 
+    getTenantApartment, 
+    currentApartment, 
+    isLoading: apartmentLoading,
+    getAvailableApartments,
+    apartments: availableApartments,
+  } = useApartmentStore();
   const { getTenantAnnouncements } = useAnnouncementStore();
   
   // State management
@@ -164,6 +172,24 @@ const TenantDashboard = () => {
     setIsLandlordAnnouncementModalOpen(false);
     document.body.classList.remove("overflow-hidden");
   };
+  
+  // New functions for browsing apartments
+  const openBrowseApartmentsModal = async () => {
+    try {
+      // Fetch available apartments
+      await getAvailableApartments();
+      setIsBrowseApartmentsModalOpen(true);
+      document.body.classList.add("overflow-hidden");
+    } catch (error) {
+      console.error("Error fetching available apartments:", error);
+      setError("Unable to load available apartments. Please try again later.");
+    }
+  };
+  
+  const closeBrowseApartmentsModal = () => {
+    setIsBrowseApartmentsModalOpen(false);
+    document.body.classList.remove("overflow-hidden");
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -298,13 +324,28 @@ const TenantDashboard = () => {
       <div className="w-full max-w-4xl mx-auto p-8 text-center bg-white shadow-lg rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Welcome, {user?.name}</h2>
         <p className="mb-4 text-gray-600">You don't have any assigned apartment yet.</p>
-        <p className="text-gray-600">Please contact your landlord to assign you to an apartment.</p>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white py-2 px-4 rounded-lg mt-8 hover:bg-red-600"
-        >
-          Logout
-        </button>
+        <div className="flex flex-col md:flex-row gap-4 justify-center mt-6">
+          <button
+            onClick={openBrowseApartmentsModal}
+            className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
+          >
+            Browse Available Apartments
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
+        
+        {/* Browse Apartments Modal */}
+        <BrowseApartmentsModal 
+          isOpen={isBrowseApartmentsModalOpen}
+          closeModal={closeBrowseApartmentsModal}
+          apartments={availableApartments}
+          hasApartment={false}
+        />
       </div>
     );
   }
@@ -403,10 +444,19 @@ const TenantDashboard = () => {
         </div>
 
         <div
-          onClick={handleLogout}
-          className="bg-red-500 text-white py-2 px-4 w-full sm:w-32 rounded-lg mt-2 hover:bg-red-600 transition duration-200 text-center"
+          onClick={openBrowseApartmentsModal}
+          className="bg-gray-900 text-white p-6 rounded-lg flex flex-col items-center cursor-pointer hover:bg-gray-800 transition duration-200"
         >
-          <p>Logout</p>
+          <span className="text-3xl">🏘️</span>
+          <p className="mt-2">Browse Apartments</p>
+        </div>
+
+        <div
+          onClick={handleLogout}
+          className="bg-red-500 text-white p-6 rounded-lg flex flex-col items-center cursor-pointer hover:bg-red-600 transition duration-200"
+        >
+          <span className="text-3xl">👋</span>
+          <p className="mt-2">Logout</p>
         </div>
       </div>
 
@@ -431,7 +481,6 @@ const TenantDashboard = () => {
       <LandlordAnnouncementModal
         isOpen={isLandlordAnnouncementModalOpen}
         closeModal={closeLandlordAnnouncementModal}
-        announcements={announcements}
       />
 
       <InquiriesModal
@@ -467,6 +516,14 @@ const TenantDashboard = () => {
         paymentQR={paymentQR}
         tenantDetails={tenantDetails}
         submitPayment={submitPayment}
+      />
+
+      {/* Browse Apartments Modal */}
+      <BrowseApartmentsModal 
+        isOpen={isBrowseApartmentsModalOpen}
+        closeModal={closeBrowseApartmentsModal}
+        apartments={availableApartments}
+        hasApartment={true}
       />
     </div>
   );

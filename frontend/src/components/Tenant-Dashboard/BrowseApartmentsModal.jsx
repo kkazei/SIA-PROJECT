@@ -1,0 +1,345 @@
+import React, { useState } from "react";
+import { useApartmentStore } from "../../store/apartmentStore";
+import { useAuthStore } from "../../store/authStore";
+
+const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = false }) => {
+  const [selectedApartment, setSelectedApartment] = useState(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applicationSuccess, setApplicationSuccess] = useState(false);
+  
+  const { user } = useAuthStore();
+  const { assignTenant } = useApartmentStore();
+  
+  if (!isOpen) return null;
+  
+  const handleViewDetails = (apartment) => {
+    // Show apartment details
+    setSelectedApartment(apartment);
+    setIsApplying(false);
+    setApplicationSuccess(false);
+  };
+  
+  const handleApply = (apartment) => {
+    // Set the selected apartment and show application form
+    setSelectedApartment(apartment);
+    setIsApplying(true);
+    setApplicationSuccess(false);
+  };
+  
+  const handleSubmitApplication = async () => {
+    try {
+      // In a real implementation, you would call an API to apply for the apartment
+      // For now, simulate a successful application
+      // await assignTenant(selectedApartment._id, user.id);
+      
+      // Show success message
+      setIsApplying(false);
+      setApplicationSuccess(true);
+      
+      // In a real app, you might want to refresh tenant data after successful application
+      setTimeout(() => {
+        closeModal();
+        // You might want to redirect to dashboard or refresh page
+        window.location.reload();
+      }, 3000);
+    } catch (error) {
+      console.error("Error applying for apartment:", error);
+      // Handle error
+    }
+  };
+  
+  const closeDetails = () => {
+    setSelectedApartment(null);
+    setIsApplying(false);
+    setApplicationSuccess(false);
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold">Available Apartments</h2>
+          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+            ✖
+          </button>
+        </div>
+        
+        <div className="overflow-y-auto p-4 flex-grow">
+          {/* Show loading state or error */}
+          {!apartments && (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+          
+          {/* Show apartments if available */}
+          {apartments && apartments.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {apartments.map((apartment) => (
+                <div 
+                  key={apartment._id} 
+                  className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  {/* Apartment Image */}
+                  <div className="h-48 bg-gray-200 relative">
+                    {apartment.images && apartment.images.length > 0 ? (
+                      <img
+                        src={apartment.images[0]}
+                        alt={apartment.room}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/image/apartment-placeholder.jpg";
+                          e.target.className = "w-full h-full object-contain p-8 opacity-50";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <img
+                          src="/image/apartment-placeholder.jpg"
+                          alt="Apartment Placeholder"
+                          className="w-16 h-16 opacity-30"
+                        />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 text-xs rounded">
+                      Available
+                    </div>
+                  </div>
+                  
+                  {/* Apartment Details */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold">{apartment.room}</h3>
+                    <p className="text-green-600 font-semibold">₱{apartment.rent.toLocaleString()}/month</p>
+                    <p className="text-gray-600 text-sm mt-2 line-clamp-2">{apartment.description}</p>
+                    
+                    <div className="flex justify-between mt-2 text-sm text-gray-500">
+                      <span>{apartment.bedrooms} {apartment.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>
+                      <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
+                    </div>
+                    
+                    {/* Two separate buttons: View Details and Apply */}
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => handleViewDetails(apartment)}
+                        className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-colors"
+                      >
+                        View Details
+                      </button>
+                      
+                      {!hasApartment && (
+                        <button
+                          onClick={() => handleApply(apartment)}
+                          className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 transition-colors"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No available apartments found.
+            </div>
+          )}
+        </div>
+        
+        {/* Apartment details popup */}
+        {selectedApartment && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
+              <div className="p-4 border-b flex justify-between items-center">
+                <h2 className="text-xl font-bold">{selectedApartment.room}</h2>
+                <button onClick={closeDetails} className="text-gray-500 hover:text-gray-700">
+                  ✖
+                </button>
+              </div>
+              
+              {/* Application success message */}
+              {applicationSuccess && (
+                <div className="p-6 bg-green-50 border-b border-green-100">
+                  <div className="flex items-center">
+                    <div className="bg-green-100 rounded-full p-2 mr-3">
+                      <svg className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-green-800 font-medium">Application submitted successfully!</h3>
+                      <p className="text-green-700 text-sm mt-1">
+                        The landlord will review your application and get back to you shortly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Application form */}
+              {isApplying && !applicationSuccess && (
+                <div className="p-6">
+                  <h3 className="text-xl font-bold mb-4">Apply for {selectedApartment.room}</h3>
+                  <p className="text-gray-600 mb-6">
+                    Complete the form below to apply for this apartment. The landlord will be notified of your interest.
+                  </p>
+                  
+                  <div className="mb-6">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={user?.name || ""}
+                      readOnly
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-gray-100"
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={user?.email || ""}
+                      readOnly
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-gray-100"
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Move-in Date
+                    </label>
+                    <input
+                      type="date"
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Additional Comments
+                    </label>
+                    <textarea
+                      placeholder="Any additional information you'd like to share"
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 h-24"
+                    ></textarea>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <button
+                      onClick={closeDetails}
+                      className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitApplication}
+                      className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+                    >
+                      Submit Application
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Apartment details view */}
+              {!isApplying && !applicationSuccess && (
+                <div className="p-6">
+                  {/* Image Gallery */}
+                  <div className="h-64 bg-gray-200 mb-6">
+                    {selectedApartment.images && selectedApartment.images.length > 0 ? (
+                      <img
+                        src={selectedApartment.images[0]}
+                        alt={selectedApartment.room}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <img
+                          src="/image/apartment-placeholder.jpg"
+                          alt="Apartment Placeholder"
+                          className="w-24 h-24 opacity-30"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold mb-2">{selectedApartment.room}</h3>
+                  <p className="text-green-600 text-xl font-semibold mb-4">₱{selectedApartment.rent.toLocaleString()}/month</p>
+                  
+                  <div className="mb-6">
+                    <h4 className="font-bold text-lg mb-2">Description</h4>
+                    <p className="text-gray-700">{selectedApartment.description || "No description provided."}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="p-3 bg-gray-100 rounded">
+                      <p className="text-sm text-gray-500">Bedrooms</p>
+                      <p className="font-semibold">{selectedApartment.bedrooms || "N/A"}</p>
+                    </div>
+                    <div className="p-3 bg-gray-100 rounded">
+                      <p className="text-sm text-gray-500">Bathrooms</p>
+                      <p className="font-semibold">{selectedApartment.bathrooms || "N/A"}</p>
+                    </div>
+                    <div className="p-3 bg-gray-100 rounded">
+                      <p className="text-sm text-gray-500">Address</p>
+                      <p className="font-semibold">{selectedApartment.address || "Not provided"}</p>
+                    </div>
+                    <div className="p-3 bg-gray-100 rounded">
+                      <p className="text-sm text-gray-500">Status</p>
+                      <p className="font-semibold text-green-600">Available</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 flex justify-center gap-4">
+                    <button
+                      className="bg-gray-500 text-white py-2 px-6 rounded hover:bg-gray-600 transition-colors"
+                      onClick={closeDetails}
+                    >
+                      Close
+                    </button>
+                    
+                    {!hasApartment && (
+                      <button
+                        className="bg-green-500 text-white py-2 px-6 rounded hover:bg-green-600 transition-colors"
+                        onClick={() => setIsApplying(true)}
+                      >
+                        Apply Now
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <div className="p-4 border-t">
+          <button
+            onClick={closeModal}
+            className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BrowseApartmentsModal;
