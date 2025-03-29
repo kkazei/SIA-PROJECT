@@ -10,6 +10,7 @@ const TenantPage = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState("");
+  const [collapsed, setCollapsed] = useState(true); // Track sidebar state
 
   const { user } = useAuthStore();
   const { 
@@ -95,13 +96,21 @@ const TenantPage = () => {
 
   return (
     <div className="flex flex-col lg:flex-row">
-      <LandlordSideNav className="hidden lg:block" />
+      {/* Sidebar */}
+      <LandlordSideNav
+        onToggle={(isCollapsed) => setCollapsed(isCollapsed)} // Update collapsed state
+        className="hidden lg:block"
+      />
+
+      {/* Main Content */}
       <motion.div
         initial={{ opacity: 0, scale: 1 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.5 }}
-        className="p-4 lg:p-6 bg-blue-50 min-h-screen w-full lg:ml-64"
+        className={`p-4 lg:p-6 bg-blue-50 min-h-screen w-full transition-all duration-300 ${
+          collapsed ? "lg:ml-16" : "lg:ml-64"
+        }`}
       >
         {/* Title and Search Bar */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full mb-6">

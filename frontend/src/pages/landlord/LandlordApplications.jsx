@@ -171,19 +171,10 @@ const LandlordApplications = () => {
         )}
 
         {/* Applications table */}
-        {!loading && landlordApplications?.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h3 className="mt-2 text-lg font-medium text-gray-900">No applications found</h3>
-            <p className="mt-1 text-gray-500">There are currently no tenant applications for your apartments.</p>
-          </div>
-        )}
-
         {!loading && filteredApplications.length > 0 && (
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Desktop View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -296,6 +287,94 @@ const LandlordApplications = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="block md:hidden">
+              {filteredApplications.map((application) => (
+                <div key={application._id} className="bg-gray-50 mb-4 p-4 rounded-lg shadow">
+                  <div className="flex items-center mb-4">
+                    <div className="flex-shrink-0 h-12 w-12">
+                      {application.tenant_id?.avatar ? (
+                        <img 
+                          className="h-12 w-12 rounded-full object-cover" 
+                          src={application.tenant_id.avatar} 
+                          alt="" 
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
+                          <span className="text-gray-600 font-semibold">
+                            {application.tenant_id?.name?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {application.tenant_id?.name || 'Unknown Tenant'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {application.tenant_id?.email || 'No email provided'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <p className="text-sm font-medium text-gray-900">Apartment:</p>
+                    <p className="text-sm text-gray-500">{application.apartment_id?.room || 'Unknown Apartment'}</p>
+                  </div>
+                  <div className="mb-2">
+                    <p className="text-sm font-medium text-gray-900">Applied On:</p>
+                    <p className="text-sm text-gray-500">{formatDate(application.createdAt)}</p>
+                  </div>
+                  <div className="mb-2">
+                    <p className="text-sm font-medium text-gray-900">Status:</p>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${application.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                        application.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                        'bg-yellow-100 text-yellow-800'}`}>
+                      {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleViewDetails(application)}
+                      className="text-blue-600 hover:text-blue-900 flex items-center"
+                    >
+                      <FaEye className="mr-1" />
+                      Details
+                    </button>
+                    
+                    {application.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleProcess(application, 'approved')}
+                          disabled={processingStatus.status && processingStatus.id === application._id}
+                          className="text-green-600 hover:text-green-900 flex items-center disabled:opacity-50"
+                        >
+                          {processingStatus.status && processingStatus.id === application._id ? (
+                            <FaSpinner className="mr-1 animate-spin" />
+                          ) : (
+                            <FaCheck className="mr-1" />
+                          )}
+                          Approve
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setSelectedApplication(application);
+                            setShowDetailsModal(true);
+                          }}
+                          disabled={processingStatus.status && processingStatus.id === application._id}
+                          className="text-red-600 hover:text-red-900 flex items-center disabled:opacity-50"
+                        >
+                          <FaTimes className="mr-1" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

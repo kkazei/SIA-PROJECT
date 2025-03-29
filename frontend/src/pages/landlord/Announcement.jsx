@@ -86,11 +86,21 @@ const Announcement = () => {
 
     return (
         <div className="p-5">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Announcements</h2>
+            <div className="relative">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <h2 className="text-2xl font-bold text-gray-800">Announcements</h2>
+                    <button 
+                        onClick={() => setCreateModalOpen(true)}
+                        className="hidden sm:flex bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                        <FaPlus className="mr-2" /> New Announcement
+                    </button>
+                </div>
+
+                {/* Mobile Button */}
                 <button 
                     onClick={() => setCreateModalOpen(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center"
+                    className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center shadow-lg"
                 >
                     <FaPlus className="mr-2" /> New Announcement
                 </button>

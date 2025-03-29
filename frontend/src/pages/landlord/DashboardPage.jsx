@@ -10,6 +10,7 @@ import RoomModal from '../../components/RoomModal';
 import AnnouncementModal from '../../components/AnnouncementModal';
 import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
+import ApplicationModal from './ApplicationModal'; // Import the modal
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -24,6 +25,7 @@ const DashboardPage = () => {
     const [isTenantModalOpen, setTenantModalOpen] = useState(false);
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
+    const [isApplicationModalOpen, setApplicationModalOpen] = useState(false);
     const navigate = useNavigate();  
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Track sidebar state
 
@@ -115,10 +117,10 @@ const DashboardPage = () => {
                         <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
                         <div className='grid grid-cols-2 gap-2 lg:gap-4 mt-4'>
                             <button 
-                                onClick={() => setTenantModalOpen(true)}
+                                onClick={() => setApplicationModalOpen(true)} // Open modal
                                 className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/person.png" alt="Tenants" className="w-8 h-8 lg:w-12 lg:h-12"/> 
-                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Tenants</span> 
+                                <img src="/image/application.png" alt="Tenants" className="w-8 h-8 lg:w-12 lg:h-12"/> 
+                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Application</span> 
                             </button>
                             <button 
                                 onClick={() => setRoomModalOpen(true)}
@@ -274,6 +276,10 @@ const DashboardPage = () => {
                 <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
                 <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
                 <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />
+                <ApplicationModal 
+                    isOpen={isApplicationModalOpen} 
+                    onClose={() => setApplicationModalOpen(false)} 
+                />
             </motion.div>
         </div>
     );

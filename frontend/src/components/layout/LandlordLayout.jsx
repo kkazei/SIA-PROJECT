@@ -1,13 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import LandlordSideNav from './LandlordSideNav';
 
 const LandlordLayout = ({ children }) => {
+  const [collapsed, setCollapsed] = useState(true);
+
+  const handleToggle = (isCollapsed) => {
+    setCollapsed(isCollapsed);
+  };
+
   return (
     <div className="flex">
       {/* Sidebar */}
-      <LandlordSideNav />
+      <LandlordSideNav onToggle={handleToggle} />
+
       {/* Main Content */}
-      <div className="flex-1 bg-gray-100 min-h-screen p-4">
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          collapsed ? 'lg:ml-16' : 'lg:ml-64'
+        }`}
+      >
         {children}
       </div>
     </div>
