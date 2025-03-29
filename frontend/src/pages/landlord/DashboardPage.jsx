@@ -34,7 +34,7 @@ const DashboardPage = () => {
         getApartments();
     }, [getApartments]);
 
-    const navigateToConcernPage = () => navigate('/concerns');
+    const navigateToInquiriesPage = () => navigate('/landlord/inquiries');
 
     const [visibleDataset, setVisibleDataset] = useState(null); 
 
@@ -129,10 +129,10 @@ const DashboardPage = () => {
                                 <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Rooms</span> 
                             </button>
                             <button 
-                                onClick={navigateToConcernPage}
+                                onClick={navigateToInquiriesPage}
                                 className='p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full'>
-                                <img src="/image/envelope.png" alt="Concerns" className="w-8 h-8 lg:w-12 lg:h-12"/>
-                                <span className='mt-2 lg:mt-3 text-sm lg:text-lg font-semibold'>Concerns</span> 
+                                <img src="/image/envelope.png" alt="Inquiries" className="w-8 h-8 lg:w-12 lg:h-12"/>
+                                <span className='mt-2 lg:mt-3 text-sm lg:text-lg font-semibold'>Inquiries</span> 
                             </button>
                             <button 
                                 onClick={() => setAnnouncementModalOpen(true)}
