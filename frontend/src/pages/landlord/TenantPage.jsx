@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuthStore } from "../store/authStore";
-import { useTenantStore } from "../store/tenantStore";
+import { useAuthStore } from "../../store/authStore";
+import { useTenantStore } from "../../store/tenantStore";
 
 const TenantPage = () => {
   const [searchTerm, setSearchTerm] = useState("");

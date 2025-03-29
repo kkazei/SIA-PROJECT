@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAnnouncementStore } from "../store/announcementStore";
 
 const AnnouncementModal = ({ isOpen, onClose }) => {
@@ -7,11 +7,57 @@ const AnnouncementModal = ({ isOpen, onClose }) => {
     const [file, setFile] = useState(null);
     const [localError, setLocalError] = useState("");
     
-    // Get store functions and state
-    const { createAnnouncement, isLoading, error, success, clearError } = useAnnouncementStore();
+    // Get store functions and state - match property names with your store
+    const { 
+        createAnnouncement, 
+        loading, // was isLoading in modal
+        error, 
+        message, // was success in modal
+        clearMessage // was clearError in modal
+    } = useAnnouncementStore();
+
+    // Clear messages when opening/closing modal
+    useEffect(() => {
+        if (isOpen) {
+            clearMessage();
+            setLocalError("");
+        }
+    }, [isOpen, clearMessage]);
+
+    // Auto-close on successful creation
+    useEffect(() => {
+        if (message && message.includes('successfully')) {
+            const timer = setTimeout(() => {
+                onClose();
+            }, 1500);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [message, onClose]);
 
     const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
+        const selectedFile = e.target.files[0];
+        
+        // Optional: Add file validation here
+        if (selectedFile) {
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(selectedFile.type)) {
+                setLocalError("Please select an image file (JPEG, PNG, GIF)");
+                e.target.value = ''; // Clear the input
+                return;
+            }
+            
+            // Check file size (max 5MB)
+            if (selectedFile.size > 5 * 1024 * 1024) {
+                setLocalError("Image size should be less than 5MB");
+                e.target.value = ''; // Clear the input
+                return;
+            }
+        }
+        
+        setFile(selectedFile);
+        setLocalError("");
     };
 
     const handleSubmit = async (e) => {
@@ -31,20 +77,16 @@ const AnnouncementModal = ({ isOpen, onClose }) => {
         if (file) formData.append("image", file);
     
         try {
-            // Use the store action instead of direct fetch
+            // Use the store action
             await createAnnouncement(formData);
             
-            // Clear form
+            // Clear form on success - we'll let the useEffect handle closing the modal
             setTitle("");
             setContent("");
             setFile(null);
-            
-            // Close modal
-            onClose();
         } catch (err) {
             // Error handling is managed by the store
-            console.error("Error in component:", err);
-            setLocalError("Failed to create announcement. Please try again.");
+            console.error("Error creating announcement:", err);
         }
     };
     
@@ -96,7 +138,25 @@ const AnnouncementModal = ({ isOpen, onClose }) => {
                             className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white" 
                             accept="image/*"
                         />
+                        {file && (
+                            <div className="mt-2 p-1 bg-gray-800 border border-gray-700 rounded flex items-center">
+                                <span className="text-white text-xs truncate flex-1 px-1">{file.name}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setFile(null)}
+                                    className="ml-2 text-gray-400 hover:text-white p-1"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
                     </div>
+
+                    {message && (
+                        <div className="p-2 bg-green-500 bg-opacity-20 border border-green-500 rounded text-green-300 text-sm mb-4">
+                            {message}
+                        </div>
+                    )}
 
                     {(localError || error) && (
                         <div className="p-2 bg-red-500 bg-opacity-20 border border-red-500 rounded text-red-300 text-sm mb-4">
@@ -115,9 +175,9 @@ const AnnouncementModal = ({ isOpen, onClose }) => {
                         <button 
                             type="submit" 
                             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition-colors flex items-center"
-                            disabled={isLoading}
+                            disabled={loading}
                         >
-                            {isLoading ? (
+                            {loading ? (
                                 <>
                                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

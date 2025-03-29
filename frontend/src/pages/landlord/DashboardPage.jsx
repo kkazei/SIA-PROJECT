@@ -8,6 +8,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 import TenantModal from '../../components/TenantModal';
 import RoomModal from '../../components/RoomModal';
 import AnnouncementModal from '../../components/AnnouncementModal';
+import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -30,7 +31,7 @@ const DashboardPage = () => {
         getApartments();
     }, [getApartments]);
 
-    const navigateToConcernPage = () => navigate('/concern-page');
+    const navigateToConcernPage = () => navigate('/concerns');
 
     const [visibleDataset, setVisibleDataset] = useState(null); 
 
@@ -92,55 +93,63 @@ const DashboardPage = () => {
     };    
 
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.5 }}
-            className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full max-w-auto ml-0 mt-0'
-        >
-            <div className='bg-white shadow-md rounded-lg p-6 ml-6 mt-0'>
-                <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
-                <p className='text-gray-600'>{formatDate(new Date())}</p>
-            </div>
-
-            <div className='grid grid-cols-2 gap-6 mb-5 w-full max-w-lg ml-6 mt-6'>
-                <button 
-                    onClick={() => setTenantModalOpen(true)}
-                    className="p-12  bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
-                    <img src="/image/person.png" alt="menu icon" className="w-25 h-25"/> 
-                    <span className="mt-3 text-xl font-semibold">Tenants</span> 
-                </button>
-                <button 
-                    onClick={() => setRoomModalOpen(true)}
-                    className="p-11  bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
-                    <img src="/image/rename.png" alt="menu icon" className="w-25 h-25"/> 
-                    <span className="text-xl font-semibold">Rooms</span> 
-                </button>
-
-                <button 
-                    onClick={navigateToConcernPage}
-                    className='p-12  bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0'>
-                    <img src="/image/envelope.png" alt="menu icon" className="w-25 h-25"/>
-                    <span className='mt-3 text-xl font-semibold'>Concerns</span> 
-                </button>
-                <button 
-                    onClick={() => setAnnouncementModalOpen(true)}
-                    className="p-12 bg-gray-900  cursor-pointer hover:bg-gray-800 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full space-y-0">
-                    <img src="/image/announcement.png" alt="menu icon" className="w-25 h-25"/> 
-                    <span className="mt-3 text-xl font-semibold">Announcements</span> 
-                </button>
-            </div>
-
-            <div className='p-6 bg-gray-900 shadow-md rounded-lg mb-5 w-auto ml-[555px] mt-[-420px]'>
-            <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
-            <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
-                <p className='text-gray-700 text-center'>Income and Expenses Overview of 2024</p>
-                <div className='h-60'>
-                    <Bar data={data} options={options} />
+        <div className="flex">
+            <LandlordSideNav />
+            <motion.div
+                initial={{ opacity: 0, scale: 1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5 }}
+                className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full ml-64'
+            >
+                <div className='bg-white shadow-md rounded-lg p-6 mt-0'>
+                    <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
+                    <p className='text-gray-600'>{formatDate(new Date())}</p>
                 </div>
+
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6'>
+                    <div className='bg-gray-900 shadow-md rounded-lg p-6'>
+                        <h3 className="text-xl font-bold text-white">Quick Actions</h3>
+                        <div className='grid grid-cols-2 gap-4 mt-4'>
+                            <button 
+                                onClick={() => setTenantModalOpen(true)}
+                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/person.png" alt="Tenants" className="w-12 h-12"/> 
+                                <span className="mt-3 text-lg font-semibold">Tenants</span> 
+                            </button>
+                            <button 
+                                onClick={() => setRoomModalOpen(true)}
+                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/rename.png" alt="Rooms" className="w-12 h-12"/> 
+                                <span className="mt-3 text-lg font-semibold">Rooms</span> 
+                            </button>
+                            <button 
+                                onClick={navigateToConcernPage}
+                                className='p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full'>
+                                <img src="/image/envelope.png" alt="Concerns" className="w-12 h-12"/>
+                                <span className='mt-3 text-lg font-semibold'>Concerns</span> 
+                            </button>
+                            <button 
+                                onClick={() => setAnnouncementModalOpen(true)}
+                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/announcement.png" alt="Announcements" className="w-12 h-12"/> 
+                                <span className="mt-3 text-lg font-semibold">Announcements</span> 
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className='bg-gray-900 shadow-md rounded-lg p-6'>
+                        <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
+                        <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
+                            <p className='text-gray-700 text-center'>Income and Expenses</p>
+                            <div className='h-60'>
+                                <Bar data={data} options={options} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className='grid grid-cols-4 gap-4 mt-4'>
+                
+                <div className="grid grid-cols-4 gap-4 mt-6">
                     <div className='bg-blue-900 transition duration-200 text-white p-4 rounded-lg text-center shadow-md'>
                         <h4 className='text-lg font-bold'>
                             {apartments.filter(apt => apt.status === 'available').length}
@@ -167,43 +176,46 @@ const DashboardPage = () => {
                         <p>Total Expenses</p>
                     </div>
                 </div>
-            </div>
 
-            <div className='bg-gray-900 shadow-md rounded-lg p-6 ml-6 mt-0'>
-                <h3 className='text-xl font-bold text-white'>Apartment List</h3>
-                {isLoading ? (
-                    <p className='text-white'>Loading...</p>
-                ) : error ? (
-                    <p className='text-red-500'>{error}</p>
-                ) : (
-                    <table className='w-full mt-4 border border-gray-300'>
-                        <thead>
-                            <tr className='bg-white text-black'>
-                                <th className='p-2 text-left'>Apartment</th>
-                                <th className='p-2 text-left'>Rent</th>
-                                <th className='p-2 text-left'>Description</th>
-                                <th className='p-2 text-left'>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {apartments.map((apartment) => (
-                                <tr key={apartment._id} className='border-t'>
-                                    <td className='p-2 text-white'>{apartment.room}</td>
-                                    <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
-                                    <td className='p-2 text-white'>{apartment.description}</td>
-                                    <td className={`p-2 ${apartment.status === 'occupied' ? 'text-yellow-500' : 'text-green-600'}`}>
-                                        {apartment.status.charAt(0).toUpperCase() + apartment.status.slice(1)}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-            <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
-            <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
-            <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />
-        </motion.div>
+                <div className='bg-gray-900 shadow-md rounded-lg p-6 mt-6'>
+                    <h3 className='text-xl font-bold text-white'>Apartment List</h3>
+                    {isLoading ? (
+                        <p className='text-white'>Loading...</p>
+                    ) : error ? (
+                        <p className='text-red-500'>{error}</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className='w-full mt-4 border border-gray-300'>
+                                <thead>
+                                    <tr className='bg-white text-black'>
+                                        <th className='p-2 text-left'>Apartment</th>
+                                        <th className='p-2 text-left'>Rent</th>
+                                        <th className='p-2 text-left'>Description</th>
+                                        <th className='p-2 text-left'>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {apartments.map((apartment) => (
+                                        <tr key={apartment._id} className='border-t'>
+                                            <td className='p-2 text-white'>{apartment.room}</td>
+                                            <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
+                                            <td className='p-2 text-white'>{apartment.description}</td>
+                                            <td className={`p-2 ${apartment.status === 'occupied' ? 'text-yellow-500' : 'text-green-600'}`}>
+                                                {apartment.status.charAt(0).toUpperCase() + apartment.status.slice(1)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+                
+                <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
+                <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
+                <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />
+            </motion.div>
+        </div>
     );
 };
 

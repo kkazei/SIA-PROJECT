@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useMaintenanceStore } from "../store/maintenanceStore";
-import { useAuthStore } from "../store/authStore";
+import { useMaintenanceStore } from "../../store/maintenanceStore";
+import { useAuthStore } from "../../store/authStore";
 import { toast } from "react-hot-toast";
 
 const MaintenancePage = () => {

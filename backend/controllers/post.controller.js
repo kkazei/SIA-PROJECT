@@ -1,5 +1,5 @@
 import { Post } from "../models/post.model.js";
-import { User } from "../models/user.model.js"; // Changed from Tenant to User
+import { User } from "../models/user.model.js";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -23,7 +23,12 @@ export const upload = multer({ storage });
 // Get all posts/announcements
 export const getAllPosts = async (req, res) => {
     try {
-        const landlord_id = req.userId;
+        // Now using req.user instead of req.userId
+        const landlord_id = req.user.id;
+        
+        // No need for additional user role check since middleware already does this
+        // if using the authorize middleware
+        
         const posts = await Post.find({ landlord_id }).sort({ createdAt: -1 });
         
         res.status(200).json({
@@ -53,7 +58,7 @@ export const getPostById = async (req, res) => {
         }
         
         // Check if post belongs to logged in landlord
-        if (post.landlord_id.toString() !== req.userId) {
+        if (post.landlord_id.toString() !== req.user.id) { // Using req.user.id
             return res.status(403).json({
                 success: false,
                 message: "Not authorized to access this post"
@@ -77,16 +82,15 @@ export const getPostById = async (req, res) => {
 export const createPost = async (req, res) => {
     try {
         const { title, content } = req.body; 
-        const landlord_id = req.userId; // Fetch landlord ID from authenticated user
-        const image_path = req.file ? `/uploads/${req.file.filename}` : null; // Handle uploaded image
+        const landlord_id = req.user.id; // Using req.user.id instead of req.userId
+        const image_path = req.file ? `/uploads/${req.file.filename}` : null;
 
         if (!title || !content) {
             return res.status(400).json({ success: false, message: "Title and content are required!" });
         }
 
-        // Verify user is actually a landlord
-        const landlord = await User.findById(landlord_id);
-        if (!landlord || landlord.role !== 'landlord') {
+        // You can still check the role for extra security, but this should be handled by middleware
+        if (req.user.role !== 'landlord') {
             return res.status(403).json({ success: false, message: "Only landlords can create posts" });
         }
 
@@ -100,25 +104,12 @@ export const createPost = async (req, res) => {
     }
 };
 
-// Fetch announcements for the logged-in landlord
-export const getPosts = async (req, res) => {
-    try {
-        const landlord_id = req.userId; // Get landlord ID from token
-        const posts = await Post.find({ landlord_id });
-
-        res.status(200).json({ success: true, data: posts });
-    } catch (error) {
-        console.error("Error fetching posts:", error.message);
-        res.status(500).json({ success: false, message: "Server Error" });
-    }
-};
-
-// Edit (Update) a Post
+// Update a Post
 export const updatePost = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, content } = req.body;
-        const landlord_id = req.userId; // Get landlord ID from token
+        const landlord_id = req.user.id; // Using req.user.id
         const image_path = req.file ? `/uploads/${req.file.filename}` : req.body.image_path;
 
         // Check if post exists and belongs to the landlord
@@ -139,7 +130,7 @@ export const updatePost = async (req, res) => {
 
         res.json({ success: true, data: updatedPost });
     } catch (error) {
-        console.error("Error in Edit Post:", error.message);
+        console.error("Error in Update Post:", error.message);
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
@@ -148,7 +139,7 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
-        const landlord_id = req.userId; // Get landlord ID from token
+        const landlord_id = req.user.id; // Using req.user.id
 
         // Check if post exists and belongs to the landlord
         const post = await Post.findById(id);
@@ -168,7 +159,7 @@ export const deletePost = async (req, res) => {
             }
         }
 
-        const deletedPost = await Post.findByIdAndDelete(id);
+        await Post.findByIdAndDelete(id);
         res.json({ success: true, message: "Post deleted successfully" });
     } catch (error) {
         console.error("Error in Delete Post:", error.message);

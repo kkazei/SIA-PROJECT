@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { FaEllipsisV, FaPlus } from "react-icons/fa";
-import { useAnnouncementStore } from "../store/announcementStore";
+import { useAnnouncementStore } from "../../store/announcementStore";
 
 const Announcement = () => {
+    // Updated property names to match your announcementStore
     const {
         announcements,
-        isLoading,
+        loading,             // Changed from isLoading
         error,
-        success,
-        fetchAnnouncements,
+        message,             // Changed from success
+        getAnnouncements,    // Changed from fetchAnnouncements
         createAnnouncement,
         updateAnnouncement,
         deleteAnnouncement,
-        clearSuccess
+        clearMessage         // Changed from clearSuccess
     } = useAnnouncementStore();
     
     const [menuOpen, setMenuOpen] = useState(null);
@@ -22,8 +23,8 @@ const Announcement = () => {
     const [newPost, setNewPost] = useState({ title: "", content: "", image: null });
     
     useEffect(() => {
-        fetchAnnouncements();
-    }, [fetchAnnouncements]);
+        getAnnouncements();  // Changed from fetchAnnouncements
+    }, [getAnnouncements]);
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this announcement?")) return;
@@ -32,7 +33,7 @@ const Announcement = () => {
             await deleteAnnouncement(id);
             setMenuOpen(null);
         } catch (error) {
-            alert("Failed to delete announcement.");
+            console.error("Failed to delete announcement:", error);
         }
     };
 
@@ -53,12 +54,15 @@ const Announcement = () => {
             
             if (currentPost.image) {
                 formData.append("image", currentPost.image);
+            } else if (currentPost.image_path) {
+                // If image wasn't changed, pass the existing path
+                formData.append("image_path", currentPost.image_path);
             }
 
             await updateAnnouncement(currentPost._id, formData);
             setEditModalOpen(false);
         } catch (error) {
-            alert("Failed to update announcement.");
+            console.error("Failed to update announcement:", error);
         }
     };
     
@@ -76,7 +80,7 @@ const Announcement = () => {
             setCreateModalOpen(false);
             setNewPost({ title: "", content: "", image: null });
         } catch (error) {
-            alert("Failed to create announcement.");
+            console.error("Failed to create announcement:", error);
         }
     };
 
@@ -93,14 +97,14 @@ const Announcement = () => {
             </div>
             
             <div className="p-4">
-                {success && (
+                {message && ( // Changed from success
                     <div className="bg-green-500 text-white p-3 rounded-md mb-4 flex justify-between">
-                        <p>{success}</p>
-                        <button onClick={clearSuccess} className="text-white">✕</button>
+                        <p>{message}</p>
+                        <button onClick={clearMessage} className="text-white">✕</button>
                     </div>
                 )}
                 
-                {isLoading && (
+                {loading && ( // Changed from isLoading
                     <div className="flex justify-center items-center h-40">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                     </div>
@@ -114,9 +118,16 @@ const Announcement = () => {
                             <div key={post._id} className="relative bg-white shadow-md rounded-lg overflow-hidden">
                                 {post.image_path && (
                                     <img 
-                                        src={`http://localhost:5000${post.image_path}`} 
+                                        src={post.image_path.startsWith('http') 
+                                            ? post.image_path 
+                                            : `http://localhost:5000${post.image_path}`
+                                        } 
                                         alt="Announcement" 
                                         className="w-full h-48 object-cover"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.style.display = 'none';
+                                        }}
                                     />
                                 )}
                                 <div className="p-4">
@@ -156,7 +167,7 @@ const Announcement = () => {
                                 </div>
                             </div>
                         ))
-                    ) : !isLoading && (
+                    ) : !loading && ( // Changed from isLoading
                         <div className="col-span-full text-center p-10 bg-gray-50 rounded-lg">
                             <p className="text-gray-500">No announcements available.</p>
                             <button 
@@ -199,12 +210,30 @@ const Announcement = () => {
                                 className="w-full p-2 border rounded" 
                                 onChange={(e) => setCurrentPost({ ...currentPost, image: e.target.files[0] })} 
                             />
-                            {currentPost.image_path && (
+                            {currentPost.image_path && !currentPost.image && (
                                 <div className="mt-2">
                                     <p className="text-sm text-gray-500 mb-1">Current image:</p>
                                     <img 
-                                        src={`http://localhost:5000${currentPost.image_path}`} 
+                                        src={currentPost.image_path.startsWith('http') 
+                                            ? currentPost.image_path 
+                                            : `http://localhost:5000${currentPost.image_path}`
+                                        }
                                         alt="Current" 
+                                        className="h-20 object-cover rounded" 
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.style.display = 'none';
+                                            e.target.parentNode.innerHTML += '<p class="text-sm text-red-500">Image not found</p>';
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            {currentPost.image && (
+                                <div className="mt-2">
+                                    <p className="text-sm text-gray-500 mb-1">New image preview:</p>
+                                    <img 
+                                        src={URL.createObjectURL(currentPost.image)} 
+                                        alt="New" 
                                         className="h-20 object-cover rounded" 
                                     />
                                 </div>
@@ -220,8 +249,9 @@ const Announcement = () => {
                             <button 
                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" 
                                 onClick={handleSaveEdit}
+                                disabled={loading} // Changed from isLoading
                             >
-                                Save
+                                {loading ? 'Saving...' : 'Save'} {/* Changed from isLoading */}
                             </button>
                         </div>
                     </div>
@@ -256,6 +286,7 @@ const Announcement = () => {
                                 type="file" 
                                 className="w-full p-2 border rounded" 
                                 onChange={(e) => setNewPost({ ...newPost, image: e.target.files[0] })} 
+                                accept="image/*"
                             />
                             {newPost.image && (
                                 <div className="mt-2">
@@ -267,6 +298,7 @@ const Announcement = () => {
                                 </div>
                             )}
                         </div>
+                        {error && <p className="text-red-500 mb-4">{error}</p>}
                         <div className="flex justify-end space-x-2">
                             <button 
                                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400" 
@@ -275,11 +307,19 @@ const Announcement = () => {
                                 Cancel
                             </button>
                             <button 
-                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" 
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center min-w-[100px]" 
                                 onClick={handleCreateAnnouncement}
-                                disabled={!newPost.title || !newPost.content}
+                                disabled={loading || !newPost.title || !newPost.content} // Changed from isLoading
                             >
-                                Create
+                                {loading ? ( // Changed from isLoading
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Creating...
+                                    </>
+                                ) : 'Create'}
                             </button>
                         </div>
                     </div>

@@ -3,127 +3,216 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000/api/posts' : '/api/posts';
 
-export const useAnnouncementStore = create((set) => ({
+// Set default axios configs
+axios.defaults.withCredentials = true;
+
+export const useAnnouncementStore = create((set, get) => ({
   announcements: [],
-  isLoading: false,
-  error: null,
   currentAnnouncement: null,
-  success: '',
-  
-  // Fetch all announcements
-  fetchAnnouncements: async () => {
-    set({ isLoading: true, error: null });
+  loading: false,
+  error: null,
+  message: null,
+
+  // Get all announcements
+  getAnnouncements: async () => {
+    set({ loading: true, error: null });
     try {
-      const response = await axios.get(API_URL, { withCredentials: true });
+      const response = await axios.get(API_URL);
       set({ 
         announcements: response.data.data, 
-        isLoading: false 
+        loading: false 
       });
+      return response.data.data;
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Failed to fetch announcements', 
-        isLoading: false 
-      });
+      // Handle unauthorized error (possible token expiration)
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.' 
+        });
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error fetching announcements' 
+        });
+      }
+      console.error('Error fetching announcements:', error);
+      throw error;
     }
   },
-  
+
+  // Get a single announcement by ID
+  getAnnouncementById: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/${id}`);
+      set({ 
+        currentAnnouncement: response.data.data, 
+        loading: false 
+      });
+      return response.data.data;
+    } catch (error) {
+      // Handle unauthorized error
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.' 
+        });
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error fetching announcement' 
+        });
+      }
+      console.error('Error fetching announcement:', error);
+      throw error;
+    }
+  },
+
   // Create a new announcement
   createAnnouncement: async (formData) => {
-    set({ isLoading: true, error: null });
+    set({ loading: true, error: null });
     try {
+      // Ensure we're using credentials with the request
       const response = await axios.post(API_URL, formData, {
-        withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        withCredentials: true
       });
       
-      set((state) => ({ 
-        announcements: [response.data.data, ...state.announcements],
-        isLoading: false,
-        success: 'Announcement created successfully'
-      }));
+      const newAnnouncements = [...get().announcements, response.data.data];
       
-      // Clear success message after 3 seconds
-      setTimeout(() => set({ success: '' }), 3000);
-      
-      return response.data;
-    } catch (error) {
       set({ 
-        error: error.response?.data?.message || 'Failed to create announcement', 
-        isLoading: false 
+        announcements: newAnnouncements,
+        loading: false,
+        message: 'Announcement created successfully!'
       });
+      
+      return response.data.data;
+    } catch (error) {
+      // Provide more specific error messages for auth issues
+      if (error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'You do not have permission to create announcements. Please ensure you are logged in as a landlord.'
+        });
+      } else if (error.response?.status === 401) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.'
+        });
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error creating announcement' 
+        });
+      }
+      console.error('Error creating announcement:', error);
       throw error;
     }
   },
-  
-  // Update an announcement
+
+  // Update an existing announcement
   updateAnnouncement: async (id, formData) => {
-    set({ isLoading: true, error: null });
+    set({ loading: true, error: null });
     try {
       const response = await axios.put(`${API_URL}/${id}`, formData, {
-        withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        withCredentials: true
       });
       
-      set((state) => ({
-        announcements: state.announcements.map(announcement => 
-          announcement._id === id ? response.data.data : announcement
-        ),
-        isLoading: false,
-        success: 'Announcement updated successfully'
-      }));
+      const updatedAnnouncements = get().announcements.map(announcement => 
+        announcement._id === id ? response.data.data : announcement
+      );
       
-      // Clear success message after 3 seconds
-      setTimeout(() => set({ success: '' }), 3000);
-      
-      return response.data;
-    } catch (error) {
       set({ 
-        error: error.response?.data?.message || 'Failed to update announcement', 
-        isLoading: false 
+        announcements: updatedAnnouncements,
+        currentAnnouncement: response.data.data,
+        loading: false,
+        message: 'Announcement updated successfully!'
       });
+      
+      return response.data.data;
+    } catch (error) {
+      // Handle auth errors
+      if (error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'You do not have permission to update this announcement.'
+        });
+      } else if (error.response?.status === 401) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.'
+        });
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error updating announcement' 
+        });
+      }
+      console.error('Error updating announcement:', error);
       throw error;
     }
   },
-  
+
   // Delete an announcement
   deleteAnnouncement: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ loading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/${id}`, { withCredentials: true });
-      
-      set((state) => ({
-        announcements: state.announcements.filter(announcement => announcement._id !== id),
-        isLoading: false,
-        success: 'Announcement deleted successfully'
-      }));
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => set({ success: '' }), 3000);
-    } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Failed to delete announcement', 
-        isLoading: false 
+      await axios.delete(`${API_URL}/${id}`, {
+        withCredentials: true
       });
+      
+      const filteredAnnouncements = get().announcements.filter(
+        announcement => announcement._id !== id
+      );
+      
+      set({ 
+        announcements: filteredAnnouncements,
+        loading: false,
+        message: 'Announcement deleted successfully!'
+      });
+      
+      return true;
+    } catch (error) {
+      // Handle auth errors
+      if (error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'You do not have permission to delete this announcement.'
+        });
+      } else if (error.response?.status === 401) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.'
+        });
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error deleting announcement' 
+        });
+      }
+      console.error('Error deleting announcement:', error);
       throw error;
     }
   },
-  
-  // Set current announcement for editing
+
+  // Set current announcement (for editing)
   setCurrentAnnouncement: (announcement) => {
     set({ currentAnnouncement: announcement });
   },
-  
-  // Clear success message
-  clearSuccess: () => {
-    set({ success: '' });
+
+  // Clear current announcement
+  clearCurrentAnnouncement: () => {
+    set({ currentAnnouncement: null });
   },
-  
-  // Clear error message
-  clearError: () => {
-    set({ error: null });
+
+  // Clear error or success message
+  clearMessage: () => {
+    set({ error: null, message: null });
   }
 }));
