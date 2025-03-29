@@ -93,87 +93,87 @@ const DashboardPage = () => {
     };    
 
     return (
-        <div className="flex">
-            <LandlordSideNav />
+        <div className="flex flex-col lg:flex-row">
+            <LandlordSideNav className="hidden lg:block" />
             <motion.div
                 initial={{ opacity: 0, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5 }}
-                className='p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full ml-64'
+                className='p-4 lg:p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full lg:ml-64'
             >
-                <div className='bg-white shadow-md rounded-lg p-6 mt-0'>
-                    <h2 className='text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
+                <div className='bg-white shadow-md rounded-lg p-4 lg:p-6 mt-0'>
+                    <h2 className='text-xl lg:text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
                     <p className='text-gray-600'>{formatDate(new Date())}</p>
                 </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6'>
-                    <div className='bg-gray-900 shadow-md rounded-lg p-6'>
-                        <h3 className="text-xl font-bold text-white">Quick Actions</h3>
-                        <div className='grid grid-cols-2 gap-4 mt-4'>
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
+                    <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
+                        <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
+                        <div className='grid grid-cols-2 gap-2 lg:gap-4 mt-4'>
                             <button 
                                 onClick={() => setTenantModalOpen(true)}
-                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/person.png" alt="Tenants" className="w-12 h-12"/> 
-                                <span className="mt-3 text-lg font-semibold">Tenants</span> 
+                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/person.png" alt="Tenants" className="w-8 h-8 lg:w-12 lg:h-12"/> 
+                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Tenants</span> 
                             </button>
                             <button 
                                 onClick={() => setRoomModalOpen(true)}
-                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/rename.png" alt="Rooms" className="w-12 h-12"/> 
-                                <span className="mt-3 text-lg font-semibold">Rooms</span> 
+                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/rename.png" alt="Rooms" className="w-8 h-8 lg:w-12 lg:h-12"/> 
+                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Rooms</span> 
                             </button>
                             <button 
                                 onClick={navigateToConcernPage}
-                                className='p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full'>
-                                <img src="/image/envelope.png" alt="Concerns" className="w-12 h-12"/>
-                                <span className='mt-3 text-lg font-semibold'>Concerns</span> 
+                                className='p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full'>
+                                <img src="/image/envelope.png" alt="Concerns" className="w-8 h-8 lg:w-12 lg:h-12"/>
+                                <span className='mt-2 lg:mt-3 text-sm lg:text-lg font-semibold'>Concerns</span> 
                             </button>
                             <button 
                                 onClick={() => setAnnouncementModalOpen(true)}
-                                className="p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/announcement.png" alt="Announcements" className="w-12 h-12"/> 
-                                <span className="mt-3 text-lg font-semibold">Announcements</span> 
+                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
+                                <img src="/image/announcement.png" alt="Announcements" className="w-8 h-8 lg:w-12 lg:h-12"/> 
+                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Announcements</span> 
                             </button>
                         </div>
                     </div>
 
-                    <div className='bg-gray-900 shadow-md rounded-lg p-6'>
-                        <h3 className="text-xl font-bold text-white">Overview of 2024</h3>
-                        <div className='mt-4 bg-gray-100 p-4 rounded-lg shadow-inner'>
+                    <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
+                        <h3 className="text-lg lg:text-xl font-bold text-white">Overview of 2024</h3>
+                        <div className='mt-4 bg-gray-100 p-2 lg:p-4 rounded-lg shadow-inner'>
                             <p className='text-gray-700 text-center'>Income and Expenses</p>
-                            <div className='h-60'>
+                            <div className='h-40 lg:h-60'>
                                 <Bar data={data} options={options} />
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-4 gap-4 mt-6">
-                    <div className='bg-blue-900 transition duration-200 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6">
+                    <div className='bg-blue-900 transition duration-200 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
+                        <h4 className='text-sm lg:text-lg font-bold'>
                             {apartments.filter(apt => apt.status === 'available').length}
                         </h4>
-                        <p>Vacant</p>
+                        <p className='text-xs lg:text-base'>Vacant</p>
                     </div>
-                    <div className='bg-green-600 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>
+                    <div className='bg-green-600 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
+                        <h4 className='text-sm lg:text-lg font-bold'>
                             {apartments.filter(apt => apt.status === 'occupied').length}
                         </h4>
-                        <p>Occupied</p>
+                        <p className='text-xs lg:text-base'>Occupied</p>
                     </div>
-                    <div className='bg-green-500 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>
+                    <div className='bg-green-500 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
+                        <h4 className='text-sm lg:text-lg font-bold'>
                             ₱{apartments
                                 .filter(apt => apt.status === 'occupied')
                                 .reduce((total, apt) => total + apt.rent, 0)
                                 .toLocaleString()}
                         </h4>
-                        <p>Total Income</p>
+                        <p className='text-xs lg:text-base'>Total Income</p>
                     </div>
-                    <div className='bg-blue-900 text-white p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-lg font-bold'>₱39,523</h4>
-                        <p>Total Expenses</p>
+                    <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
+                        <h4 className='text-sm lg:text-lg font-bold'>₱39,523</h4>
+                        <p className='text-xs lg:text-base'>Total Expenses</p>
                     </div>
                 </div>
 
