@@ -12,17 +12,10 @@ const __dirname = path.dirname(__filename);
 // Multer setup for handling file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../uploads/apartments');
-        // Create directory if it doesn't exist
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
+        cb(null, "uploads/"); // Ensure this folder exists
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(file.originalname);
-        cb(null, 'apartment-' + uniqueSuffix + extension);
+        cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
 
@@ -58,7 +51,7 @@ export const getApartments = async (req, res) => {
         res.status(200).json({
             success: true,
             count: apartments.length,
-            data: apartments // Use consistent field name 'data'
+            data: apartments
         });
     } catch (error) {
         console.error("Error fetching apartments:", error);
@@ -103,7 +96,7 @@ export const getApartmentById = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            data: apartment // Use consistent field name 'data'
+            data: apartment
         });
     } catch (error) {
         console.error("Error fetching apartment:", error);
@@ -126,83 +119,35 @@ export const createApartment = async (req, res) => {
             address
         } = req.body;
 
-        // Validate required fields
-        if (!room || !rent || !description) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide room name, rent, and description"
-            });
-        }
-
-        // Check if user is a landlord
-        if (req.user.role !== 'landlord') {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Only landlords can create apartments' 
-            });
-        }
-
-        // Process uploaded images
-        const images = [];
-        if (req.files && req.files.length > 0) {
-            for (const file of req.files) {
-                images.push(`/uploads/apartments/${file.filename}`);
-            }
-        }
-
-        // Create new apartment object
-        const apartmentData = {
+        // Create apartment object
+        const apartment = new Apartment({
             room,
-            rent: Number(rent),
+            rent,
             description,
+            bedrooms,
+            bathrooms,
+            address,
             landlord_id: req.user.id,
-            images,
             status: 'available'
-        };
-
-        // Add optional fields if provided
-        if (bedrooms) apartmentData.bedrooms = Number(bedrooms);
-        if (bathrooms) apartmentData.bathrooms = Number(bathrooms);
-        
-        // Handle address if provided
-        if (address && typeof address === 'object') {
-            apartmentData.address = {
-                street: address.street || '',
-                city: address.city || '',
-                state: address.state || '',
-                zipCode: address.zipCode || '',
-                country: address.country || 'Philippines'
-            };
-        } else if (typeof address === 'string') {
-            // Handle case where address might be sent as JSON string
-            try {
-                const parsedAddress = JSON.parse(address);
-                apartmentData.address = {
-                    street: parsedAddress.street || '',
-                    city: parsedAddress.city || '',
-                    state: parsedAddress.state || '',
-                    zipCode: parsedAddress.zipCode || '',
-                    country: parsedAddress.country || 'Philippines'
-                };
-            } catch (e) {
-                console.error('Error parsing address:', e);
-            }
-        }
-
-        const newApartment = new Apartment(apartmentData);
-        await newApartment.save();
-
-        res.status(201).json({
-            success: true,
-            message: "Apartment created successfully",
-            data: newApartment
         });
 
+        // Handle image uploads
+        if (req.files && req.files.length > 0) {
+            // Store image paths directly in the uploads folder, just like posts
+            apartment.images = req.files.map(file => `/uploads/${file.filename}`);
+            console.log("Saved apartment images:", apartment.images);
+        }
+
+        await apartment.save();
+        res.status(201).json({
+            success: true,
+            data: apartment
+        });
     } catch (error) {
         console.error("Error creating apartment:", error);
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: error.message || "Error creating apartment"
         });
     }
 };
@@ -249,7 +194,7 @@ export const updateApartment = async (req, res) => {
         const newImages = [];
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                newImages.push(`/uploads/apartments/${file.filename}`);
+                newImages.push(`/uploads/${file.filename}`);
             }
         }
 
@@ -437,9 +382,32 @@ export const assignTenant = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Selected user is not a tenant' });
         }
         
-        // Update apartment with tenant and change status to occupied
+        // Check if tenant is already assigned to another apartment
+        const existingAssignment = await Apartment.findOne({
+            tenant_id: tenantId,
+            status: 'occupied'
+        });
+        
+        if (existingAssignment) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'This tenant is already assigned to another apartment' 
+            });
+        }
+        
+        // Calculate due date (1 month from now)
+        const currentDate = new Date();
+        const dueDate = new Date();
+        dueDate.setMonth(currentDate.getMonth() + 1);
+        
+        // Update apartment with tenant, change status to occupied, and set due date
         apartment.tenant_id = tenantId;
         apartment.status = 'occupied';
+        apartment.paymentInfo = {
+            nextDueDate: dueDate,
+            lastPaymentDate: null,
+            paymentStatus: 'pending'
+        };
         
         await apartment.save();
         
@@ -488,9 +456,14 @@ export const vacateApartment = async (req, res) => {
             });
         }
         
-        // Update apartment: remove tenant and change status to available
+        // Update apartment: remove tenant, change status to available, clear payment info
         apartment.tenant_id = null;
         apartment.status = 'available';
+        apartment.paymentInfo = {
+            nextDueDate: null,
+            lastPaymentDate: null,
+            paymentStatus: null
+        };
         
         await apartment.save();
         
@@ -520,6 +493,66 @@ export const getAvailableApartments = async (req, res) => {
         });
     } catch (error) {
         console.error("Error fetching available apartments:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
+export const getTenantApartment = async (req, res) => {
+    try {
+        // Check if user is a tenant
+        if (req.user.role !== 'tenant') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Only tenants can access this endpoint' 
+            });
+        }
+        
+        // Find apartment where this user is assigned as tenant
+        const apartment = await Apartment.findOne({ 
+            tenant_id: req.user.id,
+            status: 'occupied'
+        }).populate('landlord_id', 'name email phone avatar');
+        
+        if (!apartment) {
+            return res.status(404).json({
+                success: false,
+                message: "You don't have any assigned apartment"
+            });
+        }
+        
+        // Calculate days remaining until next payment
+        let daysRemaining = null;
+        let paymentStatus = apartment.paymentInfo?.paymentStatus || 'pending';
+        
+        if (apartment.paymentInfo && apartment.paymentInfo.nextDueDate) {
+            const today = new Date();
+            const dueDate = new Date(apartment.paymentInfo.nextDueDate);
+            const timeDiff = dueDate - today;
+            daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            
+            // Update payment status based on due date
+            if (daysRemaining < 0) {
+                paymentStatus = 'overdue';
+                // Also update the apartment record
+                apartment.paymentInfo.paymentStatus = 'overdue';
+                await apartment.save();
+            }
+        }
+        
+        // Include payment status and days remaining in the response
+        const apartmentData = apartment.toObject();
+        apartmentData.daysRemaining = daysRemaining;
+        apartmentData.paymentStatus = paymentStatus;
+
+        res.status(200).json({
+            success: true,
+            data: apartmentData
+        });
+    } catch (error) {
+        console.error("Error fetching tenant's apartment:", error);
         res.status(500).json({
             success: false,
             message: "Server error"

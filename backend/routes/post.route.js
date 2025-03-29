@@ -4,7 +4,8 @@ import {
     getPostById, 
     createPost, 
     updatePost, 
-    deletePost 
+    deletePost,
+    getLandlordAnnouncementsForTenant
 } from "../controllers/post.controller.js";
 import { upload } from "../controllers/post.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
@@ -25,5 +26,8 @@ router.put("/:id", verifyToken, upload.single('image'), updatePost);
 
 // Delete a post
 router.delete("/:id", verifyToken, deletePost);
+
+// Get landlord announcements for tenant
+router.get("/tenant/announcements", verifyToken, getLandlordAnnouncementsForTenant);
 
 export default router;

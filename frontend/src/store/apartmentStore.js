@@ -1,11 +1,20 @@
 import { create } from "zustand";
 import axios from "axios";
 
-const API_URL = import.meta.env.MODE === "development" 
-  ? "http://localhost:5000/api/apartments" 
-  : "/api/apartments";
+// Define base URLs once at the top of the file
+const BASE_URL = import.meta.env.MODE === "development" 
+  ? "http://localhost:5000" 
+  : "";
+const API_URL = `${BASE_URL}/api/apartments`;
 
 axios.defaults.withCredentials = true;
+
+// Helper function to process image paths
+const processImagePath = (path) => {
+  if (!path) return null;
+  if (typeof path === 'string' && path.startsWith('http')) return path;
+  return `${BASE_URL}${path}`;
+};
 
 export const useApartmentStore = create((set, get) => ({
   apartments: [],
@@ -14,7 +23,7 @@ export const useApartmentStore = create((set, get) => ({
   error: null,
   message: null,
 
-  // Fetch all apartments for landlord
+  // Get all apartments for landlord
   getApartments: async (statusFilter = null) => {
     set({ isLoading: true, error: null });
     try {
@@ -24,12 +33,19 @@ export const useApartmentStore = create((set, get) => ({
       }
       
       const response = await axios.get(url);
+      
+      // Process image paths for each apartment
+      const processedApartments = response.data.data.map(apartment => ({
+        ...apartment,
+        images: apartment.images?.map(img => processImagePath(img)) || []
+      }));
+      
       set({ 
-        // Updated to match controller response format
-        apartments: response.data.data || [], 
+        apartments: processedApartments, 
         isLoading: false 
       });
-      return response.data;
+      
+      return processedApartments;
     } catch (error) {
       set({
         isLoading: false,
@@ -44,12 +60,19 @@ export const useApartmentStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/${id}`);
+      
+      // Process image URLs for the apartment
+      const processedApartment = {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      };
+      
       set({ 
-        // Updated to match controller response format
-        currentApartment: response.data.data, 
+        currentApartment: processedApartment, 
         isLoading: false 
       });
-      return response.data.data;
+      
+      return processedApartment;
     } catch (error) {
       set({
         isLoading: false,
@@ -59,27 +82,67 @@ export const useApartmentStore = create((set, get) => ({
     }
   },
 
-  // Create a new apartment - updated to use FormData for file uploads
+  // Get apartment for tenant
+  getTenantApartment: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/tenant/current`);
+      
+      // Process image URLs for the apartment
+      const processedApartment = response.data.data ? {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      } : null;
+      
+      set({ 
+        currentApartment: processedApartment,
+        isLoading: false 
+      });
+      
+      return processedApartment;
+    } catch (error) {
+      // If 404 (no apartment assigned), don't treat as error
+      if (error.response?.status === 404) {
+        set({
+          currentApartment: null,
+          isLoading: false
+        });
+        return null;
+      }
+      
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || "Error fetching tenant apartment"
+      });
+      throw error;
+    }
+  },
+
+  // Create a new apartment
   createApartment: async (formData) => {
     set({ isLoading: true, error: null });
     try {
-      // FormData is already configured for file uploads
       const response = await axios.post(API_URL, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       
-      // Add new apartment to the list
-      const updatedApartments = [...get().apartments, response.data.data];
+      // Process image URLs for the new apartment
+      const newApartment = {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      };
+      
+      const currentApartments = get().apartments;
       
       set({
-        apartments: updatedApartments,
+        apartments: [...currentApartments, newApartment],
         isLoading: false,
         message: "Apartment created successfully"
       });
       
-      return response.data.data;
+      return newApartment;
     } catch (error) {
       set({
         isLoading: false,
@@ -89,30 +152,35 @@ export const useApartmentStore = create((set, get) => ({
     }
   },
 
-  // Update an existing apartment - updated to use FormData for file uploads
+  // Update an existing apartment
   updateApartment: async (id, formData) => {
     set({ isLoading: true, error: null });
     try {
-      // FormData is already configured for file uploads
       const response = await axios.put(`${API_URL}/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       
-      // Update apartment in the list
+      // Process image URLs for the updated apartment
+      const updatedApartment = {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      };
+      
+      // Update apartment in state
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === id ? response.data.data : apt
+        apt._id === id ? updatedApartment : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.data,
+        currentApartment: updatedApartment,
         isLoading: false,
         message: "Apartment updated successfully"
       });
       
-      return response.data.data;
+      return updatedApartment;
     } catch (error) {
       set({
         isLoading: false,
@@ -156,19 +224,24 @@ export const useApartmentStore = create((set, get) => ({
         tenantId
       });
       
+      // Process image URLs for the updated apartment
+      const updatedApartment = {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      };
+      
       // Update apartment in the list
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === apartmentId ? response.data.data : apt
+        apt._id === apartmentId ? updatedApartment : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.data,
         isLoading: false,
-        message: "Tenant assigned successfully"
+        message: response.data.message || "Tenant assigned successfully"
       });
       
-      return response.data.data;
+      return updatedApartment;
     } catch (error) {
       set({
         isLoading: false,
@@ -177,28 +250,31 @@ export const useApartmentStore = create((set, get) => ({
       throw error;
     }
   },
-
-  // Vacate apartment (remove tenant) - updated to match the controller endpoint
+  
+  // Vacate apartment
   vacateApartment: async (apartmentId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`${API_URL}/vacate`, {
-        apartmentId
-      });
+      const response = await axios.post(`${API_URL}/vacate`, { apartmentId });
+      
+      // Process image URLs for the updated apartment
+      const updatedApartment = {
+        ...response.data.data,
+        images: response.data.data.images?.map(img => processImagePath(img)) || []
+      };
       
       // Update apartment in the list
       const updatedApartments = get().apartments.map(apt => 
-        apt._id === apartmentId ? response.data.data : apt
+        apt._id === apartmentId ? updatedApartment : apt
       );
       
       set({
         apartments: updatedApartments,
-        currentApartment: response.data.data,
         isLoading: false,
         message: "Apartment vacated successfully"
       });
       
-      return response.data.data;
+      return updatedApartment;
     } catch (error) {
       set({
         isLoading: false,
@@ -207,17 +283,25 @@ export const useApartmentStore = create((set, get) => ({
       throw error;
     }
   },
-
-  // Get available apartments (for tenants)
+  
+  // Get available apartments (for tenants to browse)
   getAvailableApartments: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/list/available`);
+      const response = await axios.get(`${API_URL}/available`);
+      
+      // Process image URLs for each apartment
+      const processedApartments = response.data.data.map(apartment => ({
+        ...apartment,
+        images: apartment.images?.map(img => processImagePath(img)) || []
+      }));
+      
       set({ 
-        apartments: response.data.data, 
+        apartments: processedApartments, 
         isLoading: false 
       });
-      return response.data.data;
+      
+      return processedApartments;
     } catch (error) {
       set({
         isLoading: false,
@@ -226,22 +310,19 @@ export const useApartmentStore = create((set, get) => ({
       throw error;
     }
   },
-
+  
   // Set current apartment (for editing)
   setCurrentApartment: (apartment) => {
     set({ currentApartment: apartment });
   },
-
+  
   // Clear current apartment
   clearCurrentApartment: () => {
     set({ currentApartment: null });
   },
-
-  // Clear any error or success message
+  
+  // Clear messages (error and success)
   clearMessages: () => {
-    set({
-      error: null,
-      message: null
-    });
+    set({ error: null, message: null });
   }
 }));

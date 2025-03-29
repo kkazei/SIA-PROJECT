@@ -1,6 +1,41 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useAnnouncementStore } from "../../store/announcementStore";
 
-const LandlordAnnouncementModal = ({ isOpen, closeModal, announcements }) => {
+const LandlordAnnouncementModal = ({ isOpen, closeModal }) => {
+  const { 
+    getTenantAnnouncements, 
+    announcements,
+    loading,
+    error,
+    clearMessage
+  } = useAnnouncementStore();
+  
+  const [loadingInitial, setLoadingInitial] = useState(true);
+
+  useEffect(() => {
+    // If modal is open, fetch announcements
+    if (isOpen) {
+      const fetchAnnouncements = async () => {
+        try {
+          await getTenantAnnouncements();
+          setLoadingInitial(false);
+        } catch (error) {
+          console.error('Error fetching announcements:', error);
+          setLoadingInitial(false);
+        }
+      };
+      
+      fetchAnnouncements();
+    }
+    
+    // Clear messages when modal closes
+    return () => {
+      if (!isOpen) {
+        clearMessage();
+      }
+    };
+  }, [isOpen, getTenantAnnouncements, clearMessage]);
+
   if (!isOpen) return null;
 
   // Format date for display
@@ -24,7 +59,22 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal, announcements }) => {
         </div>
         
         <div className="overflow-y-auto p-4 flex-grow">
-          {announcements && announcements.length > 0 ? (
+          {/* Show loading state */}
+          {(loading || loadingInitial) && (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+          
+          {/* Show error message if any */}
+          {error && !loading && !loadingInitial && (
+            <div className="bg-red-50 text-red-800 p-4 rounded mb-4">
+              <p>{error}</p>
+            </div>
+          )}
+          
+          {/* Show announcements if available */}
+          {!loading && !loadingInitial && !error && announcements && announcements.length > 0 ? (
             <div className="space-y-6">
               {announcements.map((announcement) => (
                 <div key={announcement._id} className="border rounded-lg overflow-hidden shadow-sm">
@@ -33,6 +83,10 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal, announcements }) => {
                       src={announcement.image_path}
                       alt="Announcement"
                       className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                      }}
                     />
                   )}
                   <div className="p-4">
@@ -46,9 +100,12 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal, announcements }) => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No announcements available.</p>
-            </div>
+            // Show no announcements message only when not loading and no error
+            !loading && !loadingInitial && !error && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No announcements available.</p>
+              </div>
+            )
           )}
         </div>
         

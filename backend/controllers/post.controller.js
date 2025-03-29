@@ -166,3 +166,54 @@ export const deletePost = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+export const getLandlordAnnouncementsForTenant = async (req, res) => {
+    try {
+        // Only tenants should access this endpoint
+        if (req.user.role !== 'tenant') {
+            return res.status(403).json({
+                success: false,
+                message: "Only tenants can access this endpoint"
+            });
+        }
+        
+        // First, we need to find the tenant's apartment to get their landlord's ID
+        const tenantId = req.user.id;
+        
+        // Find the apartment where this tenant is assigned
+        const apartment = await mongoose.model('Apartment').findOne({ 
+            tenant_id: tenantId,
+            status: 'occupied'
+        });
+        
+        if (!apartment) {
+            return res.status(404).json({
+                success: false,
+                message: "You don't have any assigned apartment"
+            });
+        }
+        
+        // Get the landlord ID from the apartment
+        const landlordId = apartment.landlord_id;
+        
+        // Find all announcements from this landlord
+        const announcements = await Post.find({ 
+            landlord_id: landlordId 
+        }).sort({ 
+            createdAt: -1 
+        });
+        
+        res.status(200).json({
+            success: true,
+            count: announcements.length,
+            data: announcements
+        });
+        
+    } catch (error) {
+        console.error("Error fetching landlord announcements for tenant:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};

@@ -1,10 +1,18 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000/api/posts' : '/api/posts';
+// Define base URLs once at the top of the file
+const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000' : '';
+const API_URL = `${BASE_URL}/api/posts`;
 
 // Set default axios configs
 axios.defaults.withCredentials = true;
+
+// Utility function to process image paths
+const processImagePath = (path) => {
+  if (!path || path.startsWith('http')) return path;
+  return `${BASE_URL}${path}`;
+};
 
 export const useAnnouncementStore = create((set, get) => ({
   announcements: [],
@@ -13,16 +21,23 @@ export const useAnnouncementStore = create((set, get) => ({
   error: null,
   message: null,
 
-  // Get all announcements
+  // Get all announcements (for landlords)
   getAnnouncements: async () => {
     set({ loading: true, error: null });
     try {
       const response = await axios.get(API_URL);
+      
+      // Process image paths using the utility function
+      const processedAnnouncements = response.data.data.map(announcement => ({
+        ...announcement,
+        image_path: processImagePath(announcement.image_path)
+      }));
+      
       set({ 
-        announcements: response.data.data, 
+        announcements: processedAnnouncements, 
         loading: false 
       });
-      return response.data.data;
+      return processedAnnouncements;
     } catch (error) {
       // Handle unauthorized error (possible token expiration)
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -41,16 +56,71 @@ export const useAnnouncementStore = create((set, get) => ({
     }
   },
 
+  // Get announcements for the logged-in tenant
+  getTenantAnnouncements: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/tenant/announcements`);
+      
+      // Process image paths using the utility function
+      const processedAnnouncements = response.data.data.map(announcement => ({
+        ...announcement,
+        image_path: processImagePath(announcement.image_path)
+      }));
+      
+      set({ 
+        announcements: processedAnnouncements, 
+        loading: false 
+      });
+      return processedAnnouncements;
+    } catch (error) {
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        set({ 
+          loading: false, 
+          error: 'Your session has expired. Please log in again.' 
+        });
+      } else if (error.response?.status === 403) {
+        set({ 
+          loading: false, 
+          error: 'Only tenants can access landlord announcements.' 
+        });
+      } else if (error.response?.status === 404) {
+        // If tenant has no apartment assigned
+        set({ 
+          loading: false,
+          announcements: [],
+          error: "You don't have any assigned apartment yet."
+        });
+        return [];
+      } else {
+        set({ 
+          loading: false, 
+          error: error.response?.data?.message || 'Error fetching landlord announcements' 
+        });
+      }
+      console.error('Error fetching tenant announcements:', error);
+      throw error;
+    }
+  },
+
   // Get a single announcement by ID
   getAnnouncementById: async (id) => {
     set({ loading: true, error: null });
     try {
       const response = await axios.get(`${API_URL}/${id}`);
+      
+      // Process using the utility function
+      const announcement = {
+        ...response.data.data,
+        image_path: processImagePath(response.data.data?.image_path)
+      };
+      
       set({ 
-        currentAnnouncement: response.data.data, 
+        currentAnnouncement: announcement, 
         loading: false 
       });
-      return response.data.data;
+      return announcement;
     } catch (error) {
       // Handle unauthorized error
       if (error.response?.status === 401 || error.response?.status === 403) {

@@ -30,19 +30,33 @@ const TenantModal = ({ isOpen, onClose }) => {
   const [isTenantEnabled, setIsTenantEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [localApartments, setLocalApartments] = useState([]);
+  const [availableTenants, setAvailableTenants] = useState([]);
+  const [dataRefreshed, setDataRefreshed] = useState(false);
 
   // Fetch apartments and tenants when modal opens
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setDataRefreshed(false);
+      return;
+    }
 
     clearMessages();
     setStatusMessage("");
     
-    // Fetch available apartments
-    getApartments('available');
+    // Fetch data only once when modal opens
+    const fetchData = async () => {
+      try {
+        await Promise.all([
+          getApartments(),
+          fetchTenants()
+        ]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
     
-    // Fetch tenants
-    fetchTenants();
+    fetchData();
 
     return () => {
       // Clean up form state when modal closes
@@ -52,13 +66,38 @@ const TenantModal = ({ isOpen, onClose }) => {
     };
   }, [isOpen, getApartments, fetchTenants, clearMessages]);
 
+  // Update local apartments list whenever the store apartments change
+  useEffect(() => {
+    // Filter apartments locally for the modal display
+    setLocalApartments(apartments.filter(apt => apt.status === 'available'));
+  }, [apartments]);
+
+  // Filter tenants who already have apartments
+  useEffect(() => {
+    if (tenants && apartments) {
+      // Get IDs of tenants who already have apartments
+      const assignedTenantIds = apartments
+        .filter(apt => apt.status === 'occupied' && apt.tenant_id)
+        .map(apt => apt.tenant_id);
+      
+      // Filter out tenants who already have apartments
+      const filteredTenants = tenants.filter(
+        tenant => !assignedTenantIds.includes(tenant._id)
+      );
+      
+      setAvailableTenants(filteredTenants);
+    }
+  }, [tenants, apartments]);
+
   // Display success or error message
   useEffect(() => {
     if (apartmentMessage) {
       setStatusMessage(apartmentMessage);
       
-      // Auto close on success after delay
-      if (apartmentMessage.includes('success')) {
+      // Auto close on success after delay, but only refetch data once
+      if (apartmentMessage.includes('success') && !dataRefreshed) {
+        setDataRefreshed(true);
+        
         const timer = setTimeout(() => {
           onClose();
         }, 1500);
@@ -68,7 +107,7 @@ const TenantModal = ({ isOpen, onClose }) => {
     } else if (apartmentError) {
       setStatusMessage(apartmentError);
     }
-  }, [apartmentMessage, apartmentError, onClose]);
+  }, [apartmentMessage, apartmentError, onClose, dataRefreshed]);
 
   const handleApartmentChange = (event) => {
     const aptId = event.target.value;
@@ -90,7 +129,10 @@ const TenantModal = ({ isOpen, onClose }) => {
     try {
       // Use the store function for assigning tenant
       await assignTenant(selectedApartment, selectedTenant);
-      // Form will auto-close on success via useEffect
+      
+      // Refresh data immediately after successful assignment
+      await getApartments();
+      setDataRefreshed(true);
     } catch (error) {
       console.error("Error assigning tenant:", error);
       // Error is handled by the store and displayed via the useEffect
@@ -99,10 +141,12 @@ const TenantModal = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    // Close modal without triggering additional data refresh
+    onClose();
+  };
 
-  // Filter apartments to show only available ones
-  const availableApartments = apartments.filter(apt => apt.status === 'available');
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -110,7 +154,7 @@ const TenantModal = ({ isOpen, onClose }) => {
         <div className="flex justify-between items-center border-b border-gray-700 pb-3">
           <h2 className="text-xl text-white font-bold">Assign Tenant to a Room</h2>
           <button 
-            onClick={onClose} 
+            onClick={handleClose} 
             className="text-gray-400 hover:text-white transition"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,10 +177,10 @@ const TenantModal = ({ isOpen, onClose }) => {
                 <option value="">Select an Apartment</option>
                 {apartmentsLoading ? (
                   <option disabled>Loading apartments...</option>
-                ) : availableApartments.length === 0 ? (
+                ) : localApartments.length === 0 ? (
                   <option disabled>No available apartments</option>
                 ) : (
-                  availableApartments.map((apt) => (
+                  localApartments.map((apt) => (
                     <option key={apt._id} value={apt._id}>
                       {apt.room} - ₱{apt.rent.toLocaleString()}
                     </option>
@@ -156,9 +200,7 @@ const TenantModal = ({ isOpen, onClose }) => {
             <label className="block text-white font-medium mb-1">Select Tenant</label>
             <div className="relative">
               <select
-                className={`w-full p-2 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none ${
-                  isTenantEnabled ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-500'
-                }`}
+                className="w-full p-2 border border-gray-700 bg-gray-800 text-white rounded focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
                 value={selectedTenant}
                 onChange={handleTenantChange}
                 disabled={!isTenantEnabled || tenantsLoading || submitting}
@@ -166,18 +208,14 @@ const TenantModal = ({ isOpen, onClose }) => {
                 <option value="">Select a Tenant</option>
                 {tenantsLoading ? (
                   <option disabled>Loading tenants...</option>
-                ) : tenantsError ? (
-                  <option disabled>Error loading tenants</option>
-                ) : tenants.length === 0 ? (
-                  <option disabled>No tenants available</option>
+                ) : availableTenants.length === 0 ? (
+                  <option disabled>No available tenants</option>
                 ) : (
-                  tenants
-                    .filter(tenant => tenant.role === 'tenant')
-                    .map((tenant) => (
-                      <option key={tenant._id} value={tenant._id}>
-                        {tenant.name} ({tenant.email})
-                      </option>
-                    ))
+                  availableTenants.map((tenant) => (
+                    <option key={tenant._id} value={tenant._id}>
+                      {tenant.name} ({tenant.email})
+                    </option>
+                  ))
                 )}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
@@ -203,7 +241,7 @@ const TenantModal = ({ isOpen, onClose }) => {
           <div className="flex justify-end mt-6 space-x-3">
             <button
               className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={submitting}
             >
               Cancel

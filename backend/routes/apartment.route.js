@@ -8,6 +8,7 @@ import {
     assignTenant,
     vacateApartment,
     getAvailableApartments,
+    getTenantApartment,
     upload
 } from '../controllers/apartment.controller.js';
 import { verifyToken, authorize } from '../middleware/auth.middleware.js';
@@ -26,5 +27,6 @@ router.post('/vacate', verifyToken, authorize('landlord'), vacateApartment);
 
 // Routes accessible to tenants
 router.get('/list/available', verifyToken, authorize('tenant'), getAvailableApartments);
+router.get('/tenant/current', verifyToken, authorize('tenant'), getTenantApartment);
 
 export default router;

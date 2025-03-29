@@ -178,35 +178,92 @@ const DashboardPage = () => {
                 </div>
 
                 <div className='bg-gray-900 shadow-md rounded-lg p-6 mt-6'>
-                    <h3 className='text-xl font-bold text-white'>Apartment List</h3>
+                    <h3 className='text-xl font-bold text-white'>My Apartments</h3>
                     {isLoading ? (
-                        <p className='text-white'>Loading...</p>
+                        <p className='text-white'>Loading your apartments...</p>
                     ) : error ? (
                         <p className='text-red-500'>{error}</p>
+                    ) : apartments.length === 0 ? (
+                        <div className="text-center py-10">
+                            <p className="text-white">You haven't added any apartments yet.</p>
+                            <button 
+                                onClick={() => setRoomModalOpen(true)}
+                                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                            >
+                                Add Your First Apartment
+                            </button>
+                        </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className='w-full mt-4 border border-gray-300'>
-                                <thead>
-                                    <tr className='bg-white text-black'>
-                                        <th className='p-2 text-left'>Apartment</th>
-                                        <th className='p-2 text-left'>Rent</th>
-                                        <th className='p-2 text-left'>Description</th>
-                                        <th className='p-2 text-left'>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {apartments.map((apartment) => (
-                                        <tr key={apartment._id} className='border-t'>
-                                            <td className='p-2 text-white'>{apartment.room}</td>
-                                            <td className='p-2 text-white'>₱{apartment.rent.toLocaleString()}</td>
-                                            <td className='p-2 text-white'>{apartment.description}</td>
-                                            <td className={`p-2 ${apartment.status === 'occupied' ? 'text-yellow-500' : 'text-green-600'}`}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                            {apartments.map((apartment) => (
+                                <div key={apartment._id} className="bg-gray-800 rounded-lg overflow-hidden shadow-md">
+                                    {/* Apartment Image */}
+                                    <div className="h-48 overflow-hidden bg-gray-700">
+                                        {apartment.images && apartment.images.length > 0 ? (
+                                            <img
+                                                key={apartment.images[0]} // Add key to force re-render when URL changes
+                                                src={apartment.images[0]}
+                                                alt={apartment.room}
+                                                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = "/image/apartment-placeholder.jpg";
+                                                    e.target.className = "w-16 h-16 opacity-30 m-auto";
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                                                <img 
+                                                    src="/image/apartment-placeholder.jpg" 
+                                                    alt="Apartment Placeholder" 
+                                                    className="w-16 h-16 opacity-30"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Apartment Info */}
+                                    <div className="p-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-lg font-bold text-white">{apartment.room}</h4>
+                                            <span className={`px-2 py-1 text-xs rounded-full ${
+                                                apartment.status === 'occupied' 
+                                                    ? 'bg-yellow-500 bg-opacity-20 text-yellow-300 border border-yellow-500' 
+                                                    : 'bg-green-500 bg-opacity-20 text-green-300 border border-green-500'
+                                            }`}>
                                                 {apartment.status.charAt(0).toUpperCase() + apartment.status.slice(1)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                            </span>
+                                        </div>
+                                        
+                                        <p className="text-green-400 font-semibold mb-2">₱{apartment.rent.toLocaleString()}/month</p>
+                                        
+                                        <p className="text-gray-400 text-sm mb-3 line-clamp-2">{apartment.description}</p>
+                                        
+                                        <div className="flex justify-between text-sm text-gray-400">
+                                            <span>{apartment.bedrooms} {apartment.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>
+                                            <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
+                                        </div>
+                                        
+                                        {apartment.status === 'occupied' && apartment.tenant_id && (
+                                            <div className="mt-4 pt-3 border-t border-gray-700">
+                                                <div className="flex items-center">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                                                        {apartment.tenant_id.name ? apartment.tenant_id.name.charAt(0) : 'T'}
+                                                    </div>
+                                                    <div className="ml-2">
+                                                        <p className="text-white text-sm">
+                                                            Tenant: {apartment.tenant_id.name || 'Assigned'}
+                                                        </p>
+                                                        <p className="text-gray-400 text-xs">
+                                                            {apartment.tenant_id.email}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>

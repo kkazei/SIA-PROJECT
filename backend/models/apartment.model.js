@@ -46,6 +46,21 @@ const apartmentSchema = new mongoose.Schema({
         enum: ['available', 'occupied', 'maintenance'],
         default: 'available'
     },
+    paymentInfo: {
+        nextDueDate: {
+            type: Date,
+            default: null
+        },
+        lastPaymentDate: {
+            type: Date,
+            default: null
+        },
+        paymentStatus: {
+            type: String,
+            enum: ['pending', 'paid', 'overdue', null],
+            default: null
+        }
+    }
 }, { timestamps: true });
 
 // Add an index for faster queries

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
+import { useApartmentStore } from "../../store/apartmentStore";
+import { useAnnouncementStore } from "../../store/announcementStore";
 import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
 import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreementModal";
 import LandlordAnnouncementModal from "../../components/Tenant-Dashboard/LandlordAnnouncementModal";
@@ -15,65 +17,111 @@ const TenantDashboard = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
-  const { user, logout } = useAuthStore();
   
-  // Static data for tenant dashboard
+  const { user, logout } = useAuthStore();
+  const { getTenantApartment, currentApartment, isLoading: apartmentLoading } = useApartmentStore();
+  const { getTenantAnnouncements } = useAnnouncementStore();
+  
+  // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [tenantDetails, setTenantDetails] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
-  const [paymentQR, setPaymentQR] = useState("https://example.com/payment-qr.png");
+  const [paymentQR, setPaymentQR] = useState(null);
+  
+  // Mock payment history (will be replaced by actual API calls later)
+  const [paymentHistory, setPaymentHistory] = useState([
+    {
+      _id: "pay1",
+      amount: 10000,
+      status: "approved",
+      paymentDate: new Date(new Date().setDate(new Date().getDate() - 25)).toISOString(),
+      referenceNumber: "REF123456",
+      proofImage: "/image/payment-proof-sample.jpg"
+    }
+  ]);
 
-  // Simulate data loading
+  // Fetch tenant's apartment and payment details
   useEffect(() => {
-    // Simulate API call with timeout
-    const timer = setTimeout(() => {
+    const fetchTenantData = async () => {
+      try {
+        // Fetch the apartment assigned to the tenant
+        await getTenantApartment();
+        
+        // Generate a QR code for payment
+        setPaymentQR(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Tenant:${user?.id || "unknown"}`);
+        
+        // Fetch real announcements from API
+        try {
+          const announcementsData = await getTenantAnnouncements();
+          setAnnouncements(announcementsData || []);
+        } catch (announcementError) {
+          console.error("Error fetching announcements:", announcementError);
+          // If there's an error fetching announcements, use placeholder data
+          setAnnouncements([
+            {
+              _id: "placeholder1",
+              title: "No Announcements Available",
+              content: "There was an issue loading announcements. Please try again later.",
+              createdAt: new Date().toISOString(),
+              important: false
+            }
+          ]);
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching tenant data:", err);
+        setError("Unable to load your dashboard. Please try again later.");
+        setLoading(false);
+      }
+    };
+    
+    if (user) {
+      fetchTenantData();
+    }
+  }, [user, getTenantApartment, getTenantAnnouncements]);
+
+  // Update tenant details when apartment data changes
+  useEffect(() => {
+    if (currentApartment) {
+      // Get payment info from the apartment
+      const paymentInfo = currentApartment.paymentInfo || {};
+      const nextDueDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate) : null;
+      
+      // Use payment status from backend, or calculate it
+      let paymentStatus = paymentInfo.paymentStatus || 'pending';
+      let daysRemaining = null;
+      
+      if (nextDueDate) {
+        // Calculate days remaining
+        const today = new Date();
+        const diffTime = nextDueDate - today;
+        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // If backend hasn't updated status but date is past due, set to overdue
+        if (paymentStatus === 'pending' && daysRemaining < 0) {
+          paymentStatus = 'overdue';
+        }
+      }
+      
+      // Set tenant details with the apartment information including payment info
       setTenantDetails({
-        tenant_fullname: user?.name || "John Doe",
-        room: "Room 101",
-        rent: 5000,
-        status: "pending",
-        due_date: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-        daysRemaining: 7,
-        landlord: {
-          _id: "landlord123",
-          name: "Jane Smith",
-          email: "landlord@example.com",
-          phone: "123-456-7890"
+        tenant_fullname: user?.name,
+        room: currentApartment.room,
+        rent: currentApartment.rent,
+        status: paymentStatus,
+        due_date: nextDueDate ? nextDueDate.toISOString() : null,
+        daysRemaining: daysRemaining,
+        landlord: currentApartment.landlord_id || {
+          name: "Your Landlord",
+          email: "contact@landlord.com",
+          phone: "Please contact property management"
         }
       });
-      
-      setAnnouncements([
-        {
-          _id: "ann1",
-          title: "Building Maintenance",
-          content: "Water will be shut off for maintenance on Saturday from 10am-2pm.",
-          createdAt: new Date().toISOString(),
-          important: true
-        },
-        {
-          _id: "ann2",
-          title: "Rent Increase Notice",
-          content: "Please be advised that rent will increase by 5% starting next month due to increased utility costs.",
-          createdAt: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
-          important: true
-        },
-        {
-          _id: "ann3",
-          title: "Holiday Schedule",
-          content: "The management office will be closed during the holidays from Dec 24-26.",
-          createdAt: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
-          important: false
-        }
-      ]);
-
-      setPaymentQR("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PaymentDetails12345");
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [user]);
+    }
+  }, [currentApartment, user]);
 
   // Modal control functions
   const openInquiriesModal = () => {
@@ -140,44 +188,59 @@ const TenantDashboard = () => {
 
   const removeFile = () => setSelectedFile(null);
 
-  // Mock functions for actions
+  // Submit inquiry
   const submitInquiry = async (data) => {
     console.log("Submitting inquiry:", data);
     setSuccess("Inquiry submitted successfully!");
     return { success: true };
   };
 
+  // Fetch payment history - temporary mock implementation
   const fetchPaymentHistory = async () => {
-    return [
-      {
-        _id: "payment1",
-        amount: 5000,
-        date: new Date().toISOString(),
-        status: "paid",
-        referenceNumber: "REF123456"
-      },
-      {
-        _id: "payment2",
-        amount: 5000,
-        date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-        status: "paid",
-        referenceNumber: "REF789012"
-      },
-      {
-        _id: "payment3",
-        amount: 5000,
-        date: new Date(new Date().setMonth(new Date().getMonth() - 2)).toISOString(),
-        status: "paid",
-        referenceNumber: "REF345678"
-      }
-    ];
+    return paymentHistory || [];
   };
 
+  // Submit payment proof - temporary implementation without payment store
   const submitPayment = async (data) => {
-    console.log("Submitting payment:", data);
-    setSuccess("Payment proof submitted successfully!");
-    closePaymentProofModal();
-    return { success: true };
+    try {
+      console.log("Payment data:", data);
+      
+      // Create a new payment record (mock implementation)
+      const newPayment = {
+        _id: `pay${Date.now()}`,
+        amount: currentApartment.rent,
+        status: "pending", // Initially pending until approved
+        paymentDate: new Date().toISOString(),
+        referenceNumber: data.referenceNumber,
+        proofImage: selectedFile ? URL.createObjectURL(selectedFile) : null
+      };
+      
+      // Add to payment history
+      setPaymentHistory(prev => [newPayment, ...prev]);
+      
+      // After successful payment submission, update the tenant details
+      // The due date should be updated to next month
+      const newDueDate = new Date();
+      newDueDate.setMonth(newDueDate.getMonth() + 1);
+      
+      // Update payment info locally (backend will handle the real update)
+      setTenantDetails(prev => ({
+        ...prev,
+        due_date: newDueDate.toISOString(),
+        daysRemaining: 30, // Approximately
+        status: 'pending' // Reset to pending for the new payment cycle
+      }));
+      
+      // In a real implementation, you would refresh apartment data here
+      // to get the updated payment info from the backend
+      
+      setSuccess("Payment proof submitted successfully!");
+      closePaymentProofModal();
+      return { success: true };
+    } catch (error) {
+      setError("Failed to submit payment. Please try again.");
+      return { success: false };
+    }
   };
 
   const clearError = () => setError(null);
@@ -203,7 +266,7 @@ const TenantDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading || apartmentLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 text-center">
         <p className="text-gray-600">Loading your dashboard...</p>
@@ -224,6 +287,23 @@ const TenantDashboard = () => {
           className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg"
         >
           Retry
+        </button>
+      </div>
+    );
+  }
+
+  // If tenant has no assigned apartment yet
+  if (!currentApartment) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-8 text-center bg-white shadow-lg rounded-lg">
+        <h2 className="text-2xl font-bold mb-4">Welcome, {user?.name}</h2>
+        <p className="mb-4 text-gray-600">You don't have any assigned apartment yet.</p>
+        <p className="text-gray-600">Please contact your landlord to assign you to an apartment.</p>
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white py-2 px-4 rounded-lg mt-8 hover:bg-red-600"
+        >
+          Logout
         </button>
       </div>
     );
@@ -373,7 +453,7 @@ const TenantDashboard = () => {
       <PaymentHistoryModal
         isOpen={isPaymentHistoryModalOpen}
         closeModal={closePaymentHistoryModal}
-        tenantId={tenantDetails?._id}
+        tenantId={user?.id}
         fetchPaymentHistory={fetchPaymentHistory}
       />
 
