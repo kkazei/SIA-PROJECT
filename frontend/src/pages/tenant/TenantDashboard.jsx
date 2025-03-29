@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
+import { useInquiryStore } from "../../store/inquiryStore"; // Add this import
 
 // Component imports
 import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
@@ -45,6 +46,14 @@ const TenantDashboard = () => {
   } = useApartmentStore();
   const { getTenantAnnouncements } = useAnnouncementStore();
   
+  // Add inquiry store hook
+  const {
+    inquiries,
+    getTenantInquiries,
+    loading: inquiriesLoading,
+    error: inquiriesError
+  } = useInquiryStore();
+  
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,11 +75,26 @@ const TenantDashboard = () => {
       getAvailableApartments();
     }
     
+    // Fetch inquiries when opening inquiries modal
+    if (modalName === 'inquiries' && !modals.inquiries) {
+      loadTenantInquiries();
+    }
+    
     // Handle body overflow
     if (!modals[modalName]) {
       document.body.classList.add("overflow-hidden");
     } else {
       document.body.classList.remove("overflow-hidden");
+    }
+  };
+
+  // Load tenant inquiries function
+  const loadTenantInquiries = async () => {
+    try {
+      await getTenantInquiries();
+    } catch (err) {
+      console.error("Error fetching tenant inquiries:", err);
+      setError("Unable to load your inquiries. Please try again later.");
     }
   };
 
@@ -97,6 +121,9 @@ const TenantDashboard = () => {
             important: false
           }]);
         }
+        
+        // Also load tenant inquiries on dashboard load
+        await loadTenantInquiries();
         
         setLoading(false);
       } catch (err) {
@@ -150,6 +177,13 @@ const TenantDashboard = () => {
     }
   }, [currentApartment, user]);
 
+  // Handle any inquiries error
+  useEffect(() => {
+    if (inquiriesError) {
+      setError(inquiriesError);
+    }
+  }, [inquiriesError]);
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) setSelectedFile(file);
@@ -157,13 +191,9 @@ const TenantDashboard = () => {
 
   const removeFile = () => setSelectedFile(null);
 
-  // Submit inquiry
-  const submitInquiry = async (data) => {
-    console.log("Submitting inquiry:", data);
-    setSuccess("Inquiry submitted successfully!");
-    return { success: true };
-  };
-
+  // Submit inquiry function is no longer needed since we're using the inquiry store
+  // Instead, we'll rely on the InquiriesModal component to directly use the inquiry store
+  
   // Fetch payment history - temporary mock implementation
   const fetchPaymentHistory = async () => {
     return paymentHistory || [];
@@ -206,7 +236,7 @@ const TenantDashboard = () => {
   const clearError = () => setError(null);
   const clearSuccess = () => setSuccess(null);
 
-  if (loading || apartmentLoading) {
+  if (loading || apartmentLoading || inquiriesLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 text-center">
         <p className="text-gray-600">Loading your dashboard...</p>
@@ -273,6 +303,7 @@ const TenantDashboard = () => {
         announcements={announcements} 
         onOpenModal={toggleModal}
         onLogout={logout}
+        inquiries={inquiries || []} // Pass inquiries to the menu
       />
 
       {tenantDetails?.landlord && (
@@ -288,11 +319,6 @@ const TenantDashboard = () => {
       <InquiriesModal
         isOpen={modals.inquiries}
         closeModal={() => toggleModal('inquiries')}
-        handleFileChange={handleFileChange}
-        selectedFile={selectedFile}
-        removeFile={removeFile}
-        landlordId={tenantDetails?.landlord?._id}
-        submitInquiry={submitInquiry}
       />
 
       <LeaseAgreementModal

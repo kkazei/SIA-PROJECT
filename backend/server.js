@@ -67,8 +67,11 @@ app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
 app.use("/api/applications", applicationRoutes); // Add this line
-app.use('/api/inquiries', inquiryRoute); 
 
+// Add this before mounting the route
+console.log('Setting up inquiry routes...');
+app.use('/api/inquiries', inquiryRoute);
+console.log('Inquiry routes set up successfully');
 
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

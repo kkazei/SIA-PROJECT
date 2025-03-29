@@ -9,9 +9,12 @@ const API_URL = `${BASE_URL}/api/inquiries`;
 axios.defaults.withCredentials = true;
 
 // Utility function to process image paths
-const processImagePath = (path) => {
-  if (!path || path.startsWith('http')) return path;
-  return `${BASE_URL}${path}`;
+const processImagePaths = (images) => {
+  if (!images || !Array.isArray(images)) return [];
+  return images.map(path => {
+    if (!path || path.startsWith('http')) return path;
+    return `${BASE_URL}${path}`;
+  });
 };
 
 export const useInquiryStore = create((set, get) => ({
@@ -21,16 +24,16 @@ export const useInquiryStore = create((set, get) => ({
   error: null,
   message: null,
 
-  // Get all inquiries (for admins/landlords)
-  getInquiries: async () => {
+  // Get all inquiries for the logged-in tenant
+  getTenantInquiries: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.get(API_URL);
+      const response = await axios.get(`${API_URL}/tenant`);
       
-      // Process image paths using the utility function
-      const processedInquiries = response.data.map(inquiry => ({
+      // Process image paths
+      const processedInquiries = response.data.data.map(inquiry => ({
         ...inquiry,
-        image_path: processImagePath(inquiry.image_path)
+        images: processImagePaths(inquiry.images)
       }));
       
       set({ 
@@ -51,61 +54,21 @@ export const useInquiryStore = create((set, get) => ({
           error: error.response?.data?.message || 'Error fetching inquiries' 
         });
       }
-      console.error('Error fetching inquiries:', error);
-      throw error;
-    }
-  },
-
-  // Get inquiries for a specific tenant
-  getTenantInquiries: async (tenantId) => {
-    set({ loading: true, error: null });
-    try {
-      const response = await axios.get(`${API_URL}/tenant/${tenantId}`);
-      
-      // Process image paths using the utility function
-      const processedInquiries = response.data.map(inquiry => ({
-        ...inquiry,
-        image_path: processImagePath(inquiry.image_path)
-      }));
-      
-      set({ 
-        inquiries: processedInquiries, 
-        loading: false 
-      });
-      return processedInquiries;
-    } catch (error) {
-      // Handle specific error cases
-      if (error.response?.status === 401) {
-        set({ 
-          loading: false, 
-          error: 'Your session has expired. Please log in again.' 
-        });
-      } else if (error.response?.status === 403) {
-        set({ 
-          loading: false, 
-          error: 'You do not have permission to access these inquiries.' 
-        });
-      } else {
-        set({ 
-          loading: false, 
-          error: error.response?.data?.message || 'Error fetching tenant inquiries' 
-        });
-      }
       console.error('Error fetching tenant inquiries:', error);
       throw error;
     }
   },
 
-  // Get inquiries by status
-  getInquiriesByStatus: async (status) => {
+  // Get all inquiries for the logged-in landlord
+  getLandlordInquiries: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/status/${status}`);
+      const response = await axios.get(`${API_URL}/landlord`);
       
-      // Process image paths using the utility function
-      const processedInquiries = response.data.map(inquiry => ({
+      // Process image paths
+      const processedInquiries = response.data.data.map(inquiry => ({
         ...inquiry,
-        image_path: processImagePath(inquiry.image_path)
+        images: processImagePaths(inquiry.images)
       }));
       
       set({ 
@@ -114,6 +77,7 @@ export const useInquiryStore = create((set, get) => ({
       });
       return processedInquiries;
     } catch (error) {
+      // Handle unauthorized error (possible token expiration)
       if (error.response?.status === 401 || error.response?.status === 403) {
         set({ 
           loading: false, 
@@ -122,44 +86,10 @@ export const useInquiryStore = create((set, get) => ({
       } else {
         set({ 
           loading: false, 
-          error: error.response?.data?.message || `Error fetching ${status} inquiries` 
+          error: error.response?.data?.message || 'Error fetching inquiries' 
         });
       }
-      console.error(`Error fetching ${status} inquiries:`, error);
-      throw error;
-    }
-  },
-
-  // Get inquiries by category
-  getInquiriesByCategory: async (category) => {
-    set({ loading: true, error: null });
-    try {
-      const response = await axios.get(`${API_URL}/category/${category}`);
-      
-      // Process image paths using the utility function
-      const processedInquiries = response.data.map(inquiry => ({
-        ...inquiry,
-        image_path: processImagePath(inquiry.image_path)
-      }));
-      
-      set({ 
-        inquiries: processedInquiries, 
-        loading: false 
-      });
-      return processedInquiries;
-    } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        set({ 
-          loading: false, 
-          error: 'Your session has expired. Please log in again.' 
-        });
-      } else {
-        set({ 
-          loading: false, 
-          error: error.response?.data?.message || `Error fetching ${category} inquiries` 
-        });
-      }
-      console.error(`Error fetching ${category} inquiries:`, error);
+      console.error('Error fetching landlord inquiries:', error);
       throw error;
     }
   },
@@ -170,10 +100,10 @@ export const useInquiryStore = create((set, get) => ({
     try {
       const response = await axios.get(`${API_URL}/${id}`);
       
-      // Process using the utility function
+      // Process image paths
       const inquiry = {
-        ...response.data,
-        image_path: processImagePath(response.data?.image_path)
+        ...response.data.data,
+        images: processImagePaths(response.data.data?.images)
       };
       
       set({ 
@@ -199,11 +129,10 @@ export const useInquiryStore = create((set, get) => ({
     }
   },
 
-  // Create a new inquiry
+  // Create a new inquiry (for tenants)
   createInquiry: async (formData) => {
     set({ loading: true, error: null });
     try {
-      // Ensure we're using credentials with the request
       const response = await axios.post(API_URL, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -211,7 +140,14 @@ export const useInquiryStore = create((set, get) => ({
         withCredentials: true
       });
       
-      const newInquiries = [...get().inquiries, response.data];
+      // Process the returned inquiry to fix image paths
+      const newInquiry = {
+        ...response.data.data,
+        images: processImagePaths(response.data.data?.images)
+      };
+      
+      // Update state with the new inquiry
+      const newInquiries = [...get().inquiries, newInquiry];
       
       set({ 
         inquiries: newInquiries,
@@ -219,13 +155,13 @@ export const useInquiryStore = create((set, get) => ({
         message: 'Inquiry submitted successfully!'
       });
       
-      return response.data;
+      return newInquiry;
     } catch (error) {
       // Provide more specific error messages for auth issues
       if (error.response?.status === 403) {
         set({ 
           loading: false, 
-          error: 'You do not have permission to submit inquiries. Please ensure you are logged in.'
+          error: 'You do not have permission to create inquiries. Please ensure you are logged in as a tenant.'
         });
       } else if (error.response?.status === 401) {
         set({ 
@@ -243,35 +179,36 @@ export const useInquiryStore = create((set, get) => ({
     }
   },
 
-  // Update an existing inquiry
-  updateInquiry: async (id, formData) => {
+  // Add a response to an inquiry
+  addResponse: async (id, message) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.put(`${API_URL}/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        withCredentials: true
-      });
+      const response = await axios.post(`${API_URL}/${id}/respond`, { message });
       
+      // Process the returned inquiry to fix image paths
+      const updatedInquiry = {
+        ...response.data.data,
+        images: processImagePaths(response.data.data?.images)
+      };
+      
+      // Update the list of inquiries
       const updatedInquiries = get().inquiries.map(inquiry => 
-        inquiry._id === id ? response.data : inquiry
+        inquiry._id === id ? updatedInquiry : inquiry
       );
       
       set({ 
         inquiries: updatedInquiries,
-        currentInquiry: response.data,
+        currentInquiry: updatedInquiry,
         loading: false,
-        message: 'Inquiry updated successfully!'
+        message: 'Response added successfully!'
       });
       
-      return response.data;
+      return updatedInquiry;
     } catch (error) {
-      // Handle auth errors
       if (error.response?.status === 403) {
         set({ 
           loading: false, 
-          error: 'You do not have permission to update this inquiry.'
+          error: 'You do not have permission to respond to this inquiry.'
         });
       } else if (error.response?.status === 401) {
         set({ 
@@ -281,34 +218,39 @@ export const useInquiryStore = create((set, get) => ({
       } else {
         set({ 
           loading: false, 
-          error: error.response?.data?.message || 'Error updating inquiry' 
+          error: error.response?.data?.message || 'Error adding response' 
         });
       }
-      console.error('Error updating inquiry:', error);
+      console.error('Error adding response:', error);
       throw error;
     }
   },
 
-  // Update inquiry status
-  updateInquiryStatus: async (id, status) => {
+  // Update inquiry status (landlord only)
+  updateInquiryStatus: async (id, statusData) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.patch(`${API_URL}/${id}/status`, { status }, {
-        withCredentials: true
-      });
+      const response = await axios.patch(`${API_URL}/${id}/status`, statusData);
       
+      // Process the returned inquiry to fix image paths
+      const updatedInquiry = {
+        ...response.data.data,
+        images: processImagePaths(response.data.data?.images)
+      };
+      
+      // Update the list of inquiries
       const updatedInquiries = get().inquiries.map(inquiry => 
-        inquiry._id === id ? response.data : inquiry
+        inquiry._id === id ? updatedInquiry : inquiry
       );
       
       set({ 
         inquiries: updatedInquiries,
-        currentInquiry: get().currentInquiry?._id === id ? response.data : get().currentInquiry,
+        currentInquiry: updatedInquiry,
         loading: false,
-        message: `Inquiry status updated to ${status}!`
+        message: `Inquiry status updated to ${statusData.status} successfully!`
       });
       
-      return response.data;
+      return updatedInquiry;
     } catch (error) {
       if (error.response?.status === 403) {
         set({ 
@@ -331,49 +273,7 @@ export const useInquiryStore = create((set, get) => ({
     }
   },
 
-  // Delete an inquiry
-  deleteInquiry: async (id) => {
-    set({ loading: true, error: null });
-    try {
-      await axios.delete(`${API_URL}/${id}`, {
-        withCredentials: true
-      });
-      
-      const filteredInquiries = get().inquiries.filter(
-        inquiry => inquiry._id !== id
-      );
-      
-      set({ 
-        inquiries: filteredInquiries,
-        loading: false,
-        message: 'Inquiry deleted successfully!'
-      });
-      
-      return true;
-    } catch (error) {
-      // Handle auth errors
-      if (error.response?.status === 403) {
-        set({ 
-          loading: false, 
-          error: 'You do not have permission to delete this inquiry.'
-        });
-      } else if (error.response?.status === 401) {
-        set({ 
-          loading: false, 
-          error: 'Your session has expired. Please log in again.'
-        });
-      } else {
-        set({ 
-          loading: false, 
-          error: error.response?.data?.message || 'Error deleting inquiry' 
-        });
-      }
-      console.error('Error deleting inquiry:', error);
-      throw error;
-    }
-  },
-
-  // Set current inquiry (for editing or viewing details)
+  // Set current inquiry (for viewing details)
   setCurrentInquiry: (inquiry) => {
     set({ currentInquiry: inquiry });
   },
@@ -386,5 +286,37 @@ export const useInquiryStore = create((set, get) => ({
   // Clear error or success message
   clearMessage: () => {
     set({ error: null, message: null });
+  },
+
+  // Filter inquiries by status
+  filterInquiriesByStatus: (status) => {
+    const allInquiries = get().inquiries;
+    if (!status || status === 'All') {
+      return allInquiries;
+    }
+    return allInquiries.filter(inquiry => inquiry.status === status);
+  },
+
+  // Get inquiry statistics (for landlord dashboard)
+  getInquiryStats: () => {
+    const inquiries = get().inquiries;
+    
+    const stats = {
+      total: inquiries.length,
+      open: inquiries.filter(i => i.status === 'Open').length,
+      inProgress: inquiries.filter(i => i.status === 'In Progress').length,
+      approved: inquiries.filter(i => i.status === 'Approved').length,
+      resolved: inquiries.filter(i => i.status === 'Resolved').length,
+      closed: inquiries.filter(i => i.status === 'Closed').length,
+      byCategory: {
+        maintenance: inquiries.filter(i => i.category === 'Maintenance').length,
+        paymentIssue: inquiries.filter(i => i.category === 'Payment Issue').length,
+        complaint: inquiries.filter(i => i.category === 'Complaint').length,
+        generalInquiry: inquiries.filter(i => i.category === 'General Inquiry').length,
+        other: inquiries.filter(i => i.category === 'Other').length,
+      }
+    };
+    
+    return stats;
   }
 }));

@@ -1,44 +1,37 @@
-import express from 'express';
+import express from "express";
 import { 
-  createInquiry, 
-  getAllInquiries, 
-  getInquiriesByTenant, 
-  getInquiryById, 
-  updateInquiryStatus, 
-  updateInquiry, 
-  deleteInquiry,
-  getInquiriesByStatus,
-  getInquiriesByCategory
-} from '../controllers/inquiry.controller.js';
-import { verifyToken } from '../middleware/auth.middleware.js';
+    getTenantInquiries,
+    getLandlordInquiries,
+    getInquiryById,
+    createInquiry,
+    addResponse,
+    updateInquiryStatus,
+    deleteInquiry
+} from "../controllers/inquiry.controller.js";
+import { upload } from "../controllers/inquiry.controller.js";
+import { verifyToken } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Create a new inquiry
-router.post('/', verifyToken, createInquiry);
+// Get all inquiries for logged-in tenant
+router.get("/tenant", verifyToken, getTenantInquiries);
 
-// Get all inquiries
-router.get('/', verifyToken, getAllInquiries);
+// Get all inquiries for logged-in landlord's properties
+router.get("/landlord", verifyToken, getLandlordInquiries);
 
-// Get inquiries by tenant ID
-router.get('/tenant/:tenantId', verifyToken, getInquiriesByTenant);
+// Get a specific inquiry by ID
+router.get("/:id", verifyToken, getInquiryById);
 
-// Get inquiries by status
-router.get('/status/:status', verifyToken, getInquiriesByStatus);
+// Create a new inquiry (tenant only) - with image upload support
+router.post("/", verifyToken, upload.array('images', 5), createInquiry);
 
-// Get inquiries by category
-router.get('/category/:category', verifyToken, getInquiriesByCategory);
+// Add a response to an inquiry
+router.post("/:id/respond", verifyToken, addResponse);
 
-// Get inquiry by ID
-router.get('/:id', verifyToken, getInquiryById);
+// Update inquiry status (landlord only)
+router.patch("/:id/status", verifyToken, updateInquiryStatus);
 
-// Update inquiry status
-router.patch('/:id/status', verifyToken, updateInquiryStatus);
-
-// Update inquiry details
-router.put('/:id', verifyToken, updateInquiry);
-
-// Delete inquiry
-router.delete('/:id', verifyToken, deleteInquiry);
+// Delete an inquiry (admin only)
+router.delete("/:id", verifyToken, deleteInquiry);
 
 export default router;
