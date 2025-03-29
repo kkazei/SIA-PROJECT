@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
-import { useInquiryStore } from "../../store/inquiryStore"; // Add this import
+import { useInquiryStore } from "../../store/inquiryStore";
+import TenantSideNav from "../../components/layout/TenantSideNav";
+import { FaFileInvoiceDollar, FaFileContract } from 'react-icons/fa';
 
-// Component imports
+// Import your modals
 import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
 import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreementModal";
 import LandlordAnnouncementModal from "../../components/Tenant-Dashboard/LandlordAnnouncementModal";
@@ -12,16 +15,22 @@ import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistor
 import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
 import BrowseApartmentsModal from "../../components/Tenant-Dashboard/BrowseApartmentsModal";
 import ApplicationsModal from "../../components/Tenant-Dashboard/ApplicationsModal";
+import { formatDate } from "../../components/utils/date";
 
-// Dashboard sections
-import TenantHeader from "../../components/Tenant-Dashboard/TenantHeader";
-import TenantMenu from "../../components/Tenant-Dashboard/TenantMenu";
-import LandlordInfo from "../../components/Tenant-Dashboard/LandlordInfo";
-import NoApartmentView from "../../components/Tenant-Dashboard/NoApartmentView";
-
-// Main Dashboard Component
 const TenantDashboard = () => {
-  // Modal states
+  // State declarations
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [tenantDetails, setTenantDetails] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [paymentQR, setPaymentQR] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+
+  // Unified modal state
   const [modals, setModals] = useState({
     inquiries: false,
     lease: false,
@@ -29,12 +38,11 @@ const TenantDashboard = () => {
     landlordAnnouncement: false,
     browseApartments: false,
     paymentProof: false,
-    applications: false
+    applications: false,
+    payments: false,
+    announcements: false
   });
-  
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [referenceNumber, setReferenceNumber] = useState("");
-  
+
   // Store hooks
   const { user, logout } = useAuthStore();
   const { 
@@ -45,50 +53,33 @@ const TenantDashboard = () => {
     apartments: availableApartments,
   } = useApartmentStore();
   const { getTenantAnnouncements } = useAnnouncementStore();
-  
-  // Add inquiry store hook
   const {
     inquiries,
     getTenantInquiries,
     loading: inquiriesLoading,
     error: inquiriesError
   } = useInquiryStore();
-  
-  // State management
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [tenantDetails, setTenantDetails] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
-  const [paymentQR, setPaymentQR] = useState(null);
-  const [paymentHistory, setPaymentHistory] = useState([]);
 
-  // Toggle modal functions
-  const toggleModal = (modalName) => {
-    setModals(prev => ({
-      ...prev,
-      [modalName]: !prev[modalName]
-    }));
-    
+  // Unified modal handlers
+  const handleModalOpen = (modalId) => {
+    setModals(prev => ({ ...prev, [modalId]: true }));
+    document.body.classList.add("overflow-hidden");
+
     // Additional actions for specific modals
-    if (modalName === 'browseApartments' && !modals.browseApartments) {
+    if (modalId === 'browseApartments') {
       getAvailableApartments();
     }
-    
-    // Fetch inquiries when opening inquiries modal
-    if (modalName === 'inquiries' && !modals.inquiries) {
+    if (modalId === 'inquiries') {
       loadTenantInquiries();
-    }
-    
-    // Handle body overflow
-    if (!modals[modalName]) {
-      document.body.classList.add("overflow-hidden");
-    } else {
-      document.body.classList.remove("overflow-hidden");
     }
   };
 
-  // Load tenant inquiries function
+  const handleModalClose = (modalId) => {
+    setModals(prev => ({ ...prev, [modalId]: false }));
+    document.body.classList.remove("overflow-hidden");
+  };
+
+  // Data fetching function
   const loadTenantInquiries = async () => {
     try {
       await getTenantInquiries();
@@ -98,31 +89,15 @@ const TenantDashboard = () => {
     }
   };
 
-  // Fetch tenant's apartment and payment details
+  // Initial data fetch
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
         await getTenantApartment();
-        
-        // Generate a QR code for payment
         setPaymentQR(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Tenant:${user?.id || "unknown"}`);
         
-        // Fetch announcements
-        try {
-          const announcementsData = await getTenantAnnouncements();
-          setAnnouncements(announcementsData || []);
-        } catch (announcementError) {
-          console.error("Error fetching announcements:", announcementError);
-          setAnnouncements([{
-            _id: "placeholder1",
-            title: "No Announcements Available",
-            content: "There was an issue loading announcements. Please try again later.",
-            createdAt: new Date().toISOString(),
-            important: false
-          }]);
-        }
-        
-        // Also load tenant inquiries on dashboard load
+        const announcementsData = await getTenantAnnouncements();
+        setAnnouncements(announcementsData || []);
         await loadTenantInquiries();
         
         setLoading(false);
@@ -132,74 +107,28 @@ const TenantDashboard = () => {
         setLoading(false);
       }
     };
-    
-    if (user) {
-      fetchTenantData();
-    }
-  }, [user, getTenantApartment, getTenantAnnouncements]);
 
-  // Update tenant details when apartment data changes
-  useEffect(() => {
-    if (currentApartment) {
-      // Get payment info from the apartment
-      const paymentInfo = currentApartment.paymentInfo || {};
-      const nextDueDate = paymentInfo.nextDueDate ? new Date(paymentInfo.nextDueDate) : null;
-      
-      // Use payment status from backend, or calculate it
-      let paymentStatus = paymentInfo.paymentStatus || 'pending';
-      let daysRemaining = null;
-      
-      if (nextDueDate) {
-        // Calculate days remaining
-        const today = new Date();
-        const diffTime = nextDueDate - today;
-        daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (paymentStatus === 'pending' && daysRemaining < 0) {
-          paymentStatus = 'overdue';
-        }
-      }
-      
-      // Set tenant details with the apartment information
-      setTenantDetails({
-        tenant_fullname: user?.name,
-        room: currentApartment.room,
-        rent: currentApartment.rent,
-        status: paymentStatus,
-        due_date: nextDueDate ? nextDueDate.toISOString() : null,
-        daysRemaining: daysRemaining,
-        landlord: currentApartment.landlord_id || {
-          name: "Your Landlord",
-          email: "contact@landlord.com",
-          phone: "Please contact property management"
-        }
-      });
-    }
-  }, [currentApartment, user]);
+    fetchTenantData();
+  }, [getTenantApartment, getTenantAnnouncements, user?.id]);
 
-  // Handle any inquiries error
+  // Handle errors
   useEffect(() => {
     if (inquiriesError) {
       setError(inquiriesError);
     }
   }, [inquiriesError]);
 
+  // File handling
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) setSelectedFile(file);
   };
 
-  const removeFile = () => setSelectedFile(null);
-
-  // Submit inquiry function is no longer needed since we're using the inquiry store
-  // Instead, we'll rely on the InquiriesModal component to directly use the inquiry store
-  
-  // Fetch payment history - temporary mock implementation
+  // Payment functions
   const fetchPaymentHistory = async () => {
     return paymentHistory || [];
   };
 
-  // Submit payment proof - temporary implementation
   const submitPayment = async (data) => {
     try {
       const newPayment = {
@@ -212,20 +141,8 @@ const TenantDashboard = () => {
       };
       
       setPaymentHistory(prev => [newPayment, ...prev]);
-      
-      // Update due date locally
-      const newDueDate = new Date();
-      newDueDate.setMonth(newDueDate.getMonth() + 1);
-      
-      setTenantDetails(prev => ({
-        ...prev,
-        due_date: newDueDate.toISOString(),
-        daysRemaining: 30,
-        status: 'pending'
-      }));
-      
       setSuccess("Payment proof submitted successfully!");
-      toggleModal('paymentProof');
+      handleModalClose('paymentProof');
       return { success: true };
     } catch (error) {
       setError("Failed to submit payment. Please try again.");
@@ -233,130 +150,149 @@ const TenantDashboard = () => {
     }
   };
 
-  const clearError = () => setError(null);
-  const clearSuccess = () => setSuccess(null);
-
+  // Loading state
   if (loading || apartmentLoading || inquiriesLoading) {
-    return (
-      <div className="w-full max-w-4xl mx-auto p-8 text-center">
-        <p className="text-gray-600">Loading your dashboard...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full max-w-4xl mx-auto p-8 text-center">
-        <p className="text-red-500">{error}</p>
-        <button 
-          onClick={() => {
-            clearError();
-            setLoading(true);
-            setTimeout(() => setLoading(false), 1000);
-          }}
-          className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  // If tenant has no assigned apartment yet
-  if (!currentApartment) {
-    return (
-      <NoApartmentView 
-        userName={user?.name}
-        onBrowseClick={() => toggleModal('browseApartments')}
-        onApplicationsClick={() => toggleModal('applications')}
-        onLogout={logout}
-      >
-        <BrowseApartmentsModal 
-          isOpen={modals.browseApartments}
-          closeModal={() => toggleModal('browseApartments')}
-          apartments={availableApartments}
-          hasApartment={false}
-        />
-        <ApplicationsModal
-          isOpen={modals.applications}
-          closeModal={() => toggleModal('applications')}
-        />
-      </NoApartmentView>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 mx-auto px-4">
-      {success && (
-        <div className="bg-green-500 text-white p-3 rounded-md mb-4 flex justify-between">
-          <p>{success}</p>
-          <button onClick={clearSuccess} className="text-white">✕</button>
+    <div className="flex flex-col lg:flex-row">
+      <TenantSideNav 
+        onToggle={setSidebarCollapsed} 
+        onModalOpen={handleModalOpen}
+      />
+
+      {/* Main content */}
+      <motion.div className={`p-4 lg:p-6 bg-blue-50 min-h-screen w-full transition-all duration-300 ${
+        isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+      }`}>
+        {/* Welcome Section */}
+        <div className='bg-white shadow-md rounded-lg p-4 lg:p-6 mt-0'>
+          <h2 className='text-xl lg:text-2xl font-bold text-gray-800'>
+            Welcome, {user?.name || 'Tenant'}
+          </h2>
+          <p className='text-gray-600'>{formatDate(new Date())}</p>
         </div>
-      )}
-      
-      <TenantHeader 
-        tenantDetails={tenantDetails}
-        onPaymentClick={() => toggleModal('paymentProof')}
-      />
 
-      <TenantMenu 
-        announcements={announcements} 
-        onOpenModal={toggleModal}
-        onLogout={logout}
-        inquiries={inquiries || []} // Pass inquiries to the menu
-      />
+        {/* Quick Actions Grid */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
+          <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
+            <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
+            <div className='grid grid-cols-2 gap-2 lg:gap-4 mt-4'>
+              <button 
+                onClick={() => handleModalOpen('applications')}
+                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center">
+                <img src="/image/application.png" alt="Applications" className="w-8 h-8 lg:w-12 lg:h-12"/>
+                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Applications</span>
+              </button>
+              <button 
+                onClick={() => handleModalOpen('payments')}
+                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center">
+                <FaFileInvoiceDollar className="w-8 h-8 lg:w-12 lg:h-12" />
+                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Pay Rent</span>
+              </button>
+              <button 
+                onClick={() => handleModalOpen('inquiries')}
+                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center">
+                <img src="/image/envelope.png" alt="Inquiries" className="w-8 h-8 lg:w-12 lg:h-12"/>
+                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Inquiries</span>
+              </button>
+              <button 
+                onClick={() => handleModalOpen('lease')}
+                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center">
+                <FaFileContract className="w-8 h-8 lg:w-12 lg:h-12" />
+                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Lease</span>
+              </button>
+            </div>
+          </div>
 
-      {tenantDetails?.landlord && (
-        <LandlordInfo landlord={tenantDetails.landlord} />
-      )}
+          {/* Payment Status Section */}
+          <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
+            <h3 className="text-lg lg:text-xl font-bold text-white">Payment Status</h3>
+            <div className="mt-4 space-y-4">
+              {currentApartment ? (
+                <>
+                  <div className="bg-gray-800 p-4 rounded-lg">
+                    <p className="text-white">Room: {currentApartment.room}</p>
+                    <p className="text-green-400 font-semibold">
+                      Rent: ₱{currentApartment.rent?.toLocaleString()}/month
+                    </p>
+                    <p className="text-gray-400">
+                      Next Due Date: {formatDate(currentApartment.nextDueDate)}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>No active lease found</p>
+                  <button 
+                    onClick={() => handleModalOpen('browseApartments')}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                  >
+                    Browse Apartments
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-      {/* All modals */}
-      <LandlordAnnouncementModal
-        isOpen={modals.landlordAnnouncement}
-        closeModal={() => toggleModal('landlordAnnouncement')}
-      />
+        {/* Status Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div className="bg-blue-900 p-4 rounded-lg text-white text-center">
+            <h4 className="text-lg font-bold">Rent Status</h4>
+            <p className="text-sm mt-2">Up to date</p>
+          </div>
+          <div className="bg-green-600 p-4 rounded-lg text-white text-center">
+            <h4 className="text-lg font-bold">Last Payment</h4>
+            <p className="text-sm mt-2">₱{currentApartment?.rent?.toLocaleString() || '0'}</p>
+          </div>
+          <div className="bg-blue-900 p-4 rounded-lg text-white text-center">
+            <h4 className="text-lg font-bold">Due Date</h4>
+            <p className="text-sm mt-2">{formatDate(currentApartment?.nextDueDate)}</p>
+          </div>
+          <div className="bg-green-600 p-4 rounded-lg text-white text-center">
+            <h4 className="text-lg font-bold">Contract Status</h4>
+            <p className="text-sm mt-2">Active</p>
+          </div>
+        </div>
 
-      <InquiriesModal
-        isOpen={modals.inquiries}
-        closeModal={() => toggleModal('inquiries')}
-      />
-
-      <LeaseAgreementModal
-        isOpen={modals.lease}
-        closeModal={() => toggleModal('lease')}
-        tenantDetails={tenantDetails}
-      />
-
-      <PaymentHistoryModal
-        isOpen={modals.paymentHistory}
-        closeModal={() => toggleModal('paymentHistory')}
-        tenantId={user?.id}
-        fetchPaymentHistory={fetchPaymentHistory}
-      />
-
-      <PaymentProofModal
-        isOpen={modals.paymentProof}
-        closeModal={() => toggleModal('paymentProof')}
-        handleFileChange={handleFileChange}
-        selectedFile={selectedFile}
-        referenceNumber={referenceNumber}
-        setReferenceNumber={setReferenceNumber}
-        paymentQR={paymentQR}
-        tenantDetails={tenantDetails}
-        submitPayment={submitPayment}
-      />
-
-      <BrowseApartmentsModal 
-        isOpen={modals.browseApartments}
-        closeModal={() => toggleModal('browseApartments')}
-        apartments={availableApartments}
-        hasApartment={true}
-      />
-      
-      <ApplicationsModal
-        isOpen={modals.applications}
-        closeModal={() => toggleModal('applications')}
-      />
+        {/* Modals */}
+        <InquiriesModal
+          isOpen={modals.inquiries}
+          closeModal={() => handleModalClose('inquiries')}
+        />
+        <LeaseAgreementModal
+          isOpen={modals.lease}
+          closeModal={() => handleModalClose('lease')}
+        />
+        <LandlordAnnouncementModal
+          isOpen={modals.announcements}
+          closeModal={() => handleModalClose('announcements')}
+        />
+        <PaymentHistoryModal
+          isOpen={modals.paymentHistory}
+          closeModal={() => handleModalClose('paymentHistory')}
+        />
+        <PaymentProofModal
+          isOpen={modals.payments}
+          closeModal={() => handleModalClose('payments')}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          referenceNumber={referenceNumber}
+          setReferenceNumber={setReferenceNumber}
+          paymentQR={paymentQR}
+          tenantDetails={currentApartment}
+        />
+        <BrowseApartmentsModal
+          isOpen={modals.browseApartments}
+          closeModal={() => handleModalClose('browseApartments')}
+        />
+        <ApplicationsModal
+          isOpen={modals.applications}
+          closeModal={() => handleModalClose('applications')}
+        />
+      </motion.div>
     </div>
   );
 };
