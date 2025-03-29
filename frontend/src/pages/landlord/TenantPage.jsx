@@ -11,6 +11,8 @@ const TenantPage = () => {
   const [showModal, setShowModal] = useState(false); // For Payment QR
   const [showAssignModal, setShowAssignModal] = useState(false); // For Assign Tenant
   const [collapsed, setCollapsed] = useState(true); // Track sidebar state
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [paymentDetails, setPaymentDetails] = useState("");
 
   const { user } = useAuthStore();
   const {
@@ -18,6 +20,7 @@ const TenantPage = () => {
     loading,
     error,
     fetchTenants,
+    uploadPaymentQR,
     clearMessages,
   } = useTenantStore();
 
@@ -37,6 +40,28 @@ const TenantPage = () => {
       tenant.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tenant.apartment?.room?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setSelectedFile(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      alert("Please select a file first.");
+      return;
+    }
+
+    try {
+      await uploadPaymentQR(selectedFile, paymentDetails);
+      alert("Payment QR uploaded successfully!");
+      setShowModal(false);
+      setSelectedFile(null);
+      setPaymentDetails("");
+    } catch (error) {
+      alert("Failed to upload QR code: " + (error.message || "Unknown error"));
+    }
+  };
 
   return (
     <div className="flex flex-col lg:flex-row">
@@ -61,29 +86,31 @@ const TenantPage = () => {
           <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 lg:mb-0">
             Tenant Management
           </h2>
-          <div className="flex flex-col sm:flex-row w-full lg:w-auto">
+          <div className="flex flex-col sm:flex-row w-full lg:w-auto space-y-2 sm:space-y-0 sm:space-x-4">
             <input
               type="text"
               placeholder="Search tenant by name or room"
-              className="border p-2 rounded-lg w-full sm:w-80 mb-2 sm:mb-0"
+              className="border p-2 rounded-lg w-full sm:w-80"
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button
-              className="sm:ml-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-              onClick={() => setShowModal(true)}
-            >
-              Add Payment QR
-            </button>
-            <button
-              className="sm:ml-4 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
-              onClick={() => {
-                setShowAssignModal(true); // Open the Assign Tenant modal
-                fetchUnassignedTenants(); // Fetch unassigned tenants
-                getApartments(); // Fetch apartments
-              }}
-            >
-              Assign Tenant
-            </button>
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-4">
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                onClick={() => setShowModal(true)}
+              >
+                Add Payment QR
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                onClick={() => {
+                  setShowAssignModal(true); // Open the Assign Tenant modal
+                  fetchUnassignedTenants(); // Fetch unassigned tenants
+                  getApartments(); // Fetch apartments
+                }}
+              >
+                Assign Tenant
+              </button>
+            </div>
           </div>
         </div>
 
@@ -106,9 +133,25 @@ const TenantPage = () => {
                     className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition duration-300 cursor-pointer"
                   >
                     <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold mb-3">
-                        {tenant.name?.charAt(0).toUpperCase() || "T"}
+                      {/* Avatar */}
+                      <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold mb-3 overflow-hidden">
+                        {tenant.avatar ? (
+                          <img
+                            src={tenant.avatar}
+                            alt={tenant.name || "Tenant"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "/image/avatar-placeholder.png"; // Fallback avatar
+                            }}
+                          />
+                        ) : (
+                          <span>
+                            {tenant.name?.charAt(0).toUpperCase() || "T"}
+                          </span>
+                        )}
                       </div>
+                      {/* Tenant Details */}
                       <h3 className="font-medium text-lg text-center">
                         {tenant.name}
                       </h3>
@@ -137,6 +180,58 @@ const TenantPage = () => {
           isOpen={showAssignModal}
           onClose={() => setShowAssignModal(false)}
         />
+
+        {showModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+              <button
+                className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowModal(false)}
+              >
+                ✕
+              </button>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                Upload Payment QR
+              </h3>
+              <div className="flex flex-col">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  id="fileInput"
+                  onChange={handleFileChange}
+                />
+                <label
+                  htmlFor="fileInput"
+                  className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md mb-4 cursor-pointer hover:bg-gray-300 text-center"
+                >
+                  {selectedFile ? selectedFile.name : "Select File"}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Add Payment Details"
+                  className="border p-2 rounded-lg w-full mb-4"
+                  value={paymentDetails}
+                  onChange={(e) => setPaymentDetails(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+                    onClick={() => setShowModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                    onClick={handleUpload}
+                  >
+                    Upload
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );

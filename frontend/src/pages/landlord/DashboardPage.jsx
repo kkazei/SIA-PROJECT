@@ -249,15 +249,32 @@ const DashboardPage = () => {
                                             <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
                                         </div>
                                         
+                                        {/* Tenant Information */}
                                         {apartment.status === 'occupied' && apartment.tenant_id && (
                                             <div className="mt-4 pt-3 border-t border-gray-700">
                                                 <div className="flex items-center">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                                                        {apartment.tenant_id.name ? apartment.tenant_id.name.charAt(0) : 'T'}
+                                                    {/* Tenant Avatar */}
+                                                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white overflow-hidden">
+                                                        {apartment.tenant_id.avatar ? (
+                                                            <img
+                                                                src={apartment.tenant_id.avatar}
+                                                                alt={apartment.tenant_id.name || "Tenant"}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.onerror = null;
+                                                                    e.target.src = "/image/avatar-placeholder.png"; // Fallback avatar
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-white font-bold">
+                                                                {apartment.tenant_id.name?.charAt(0).toUpperCase() || "T"}
+                                                            </span>
+                                                        )}
                                                     </div>
+                                                    {/* Tenant Details */}
                                                     <div className="ml-2">
                                                         <p className="text-white text-sm">
-                                                            Tenant: {apartment.tenant_id.name || 'Assigned'}
+                                                            Tenant: {apartment.tenant_id.name || "Assigned"}
                                                         </p>
                                                         <p className="text-gray-400 text-xs">
                                                             {apartment.tenant_id.email}
