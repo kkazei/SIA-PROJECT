@@ -98,12 +98,12 @@ const Announcement = () => {
                 </div>
 
                 {/* Mobile Button */}
-                <button 
-                    onClick={() => setCreateModalOpen(true)}
-                    className="sm:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center shadow-lg"
-                >
-                    <FaPlus className="mr-2" /> New Announcement
-                </button>
+<button 
+    onClick={() => setCreateModalOpen(true)}
+    className="sm:hidden fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center shadow-lg"
+>
+    <FaPlus className="mr-2" /> New Announcement
+</button>
             </div>
             
             <div className="p-4">
