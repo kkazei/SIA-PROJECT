@@ -25,6 +25,7 @@ const DashboardPage = () => {
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     const navigate = useNavigate();  
+    const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Track sidebar state
 
     useEffect(() => {
         // Fetch apartments when component mounts
@@ -94,13 +95,15 @@ const DashboardPage = () => {
 
     return (
         <div className="flex flex-col lg:flex-row">
-            <LandlordSideNav className="hidden lg:block" />
+            <LandlordSideNav onToggle={setSidebarCollapsed} />
             <motion.div
                 initial={{ opacity: 0, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5 }}
-                className='p-4 lg:p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full lg:ml-64'
+                className={`p-4 lg:p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full transition-all duration-300 ${
+                    isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+                }`}
             >
                 <div className='bg-white shadow-md rounded-lg p-4 lg:p-6 mt-0'>
                     <h2 className='text-xl lg:text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>

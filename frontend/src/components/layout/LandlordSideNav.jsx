@@ -15,7 +15,7 @@ import {
   FaClipboardList // Add this for applications
 } from 'react-icons/fa';
 
-const LandlordSideNav = () => {
+const LandlordSideNav = ({ onToggle }) => {
   const [collapsed, setCollapsed] = useState(true); // Sidebar starts collapsed
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,6 +24,11 @@ const LandlordSideNav = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+    if (onToggle) onToggle(!collapsed); // Notify parent about the state change
   };
 
   const navItems = [
@@ -72,7 +77,7 @@ const LandlordSideNav = () => {
         className={`absolute top-4 ${
           collapsed ? 'right-[-17px]' : '-right-4'
         } bg-gray-900 text-white p-2 rounded-full shadow-md`}
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggleSidebar}
       >
         {collapsed ? <FaChevronRight size={20} /> : <FaChevronLeft size={20} />}
       </button>
@@ -89,24 +94,24 @@ const LandlordSideNav = () => {
       <div className={`p-4 border-b border-gray-700 ${collapsed ? 'hidden' : 'block'} lg:block`}>
         {user && (
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-3">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt="User Avatar"
-                  className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
-                  {user.name ? user.name[0].toUpperCase() : 'L'}
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="font-semibold">{user.name || 'Landlord'}</p>
-              <p className="text-sm text-gray-400">{user.email || 'landlord@example.com'}</p>
-            </div>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt="User Avatar"
+                className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
+                {user.name ? user.name[0].toUpperCase() : 'L'}
+              </div>
+            )}
+            {!collapsed && (
+              <div>
+                <p className="font-semibold">{user.name || 'Landlord'}</p>
+                <p className="text-xs text-gray-400">{user.email || 'landlord@example.com'}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
