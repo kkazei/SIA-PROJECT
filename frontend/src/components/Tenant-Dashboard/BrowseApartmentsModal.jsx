@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAuthStore } from "../../store/authStore";
+import ApplyApartmentModal from "./ApplyApartmentModal";
 
 const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = false }) => {
   const [selectedApartment, setSelectedApartment] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
   const [applicationSuccess, setApplicationSuccess] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   
   const { user } = useAuthStore();
   const { assignTenant } = useApartmentStore();
@@ -20,10 +22,13 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
   };
   
   const handleApply = (apartment) => {
-    // Set the selected apartment and show application form
     setSelectedApartment(apartment);
-    setIsApplying(true);
-    setApplicationSuccess(false);
+    setIsApplyModalOpen(true);
+  };
+
+  const closeApplyModal = () => {
+    setIsApplyModalOpen(false);
+    setSelectedApartment(null);
   };
   
   const handleSubmitApplication = async () => {
@@ -130,9 +135,9 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
                       {!hasApartment && (
                         <button
                           onClick={() => handleApply(apartment)}
-                          className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 transition-colors"
+                          className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md mt-2 w-full"
                         >
-                          Apply
+                          Apply Now
                         </button>
                       )}
                     </div>
@@ -298,7 +303,11 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
                     </div>
                     <div className="p-3 bg-gray-100 rounded">
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="font-semibold">{selectedApartment.address || "Not provided"}</p>
+                      <p className="font-semibold">
+                        {typeof selectedApartment.address === 'object' 
+                          ? `${selectedApartment.address.street || ''}, ${selectedApartment.address.city || ''}` 
+                          : (selectedApartment.address || "Not provided")}
+                      </p>
                     </div>
                     <div className="p-3 bg-gray-100 rounded">
                       <p className="text-sm text-gray-500">Status</p>
@@ -338,6 +347,11 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
           </button>
         </div>
       </div>
+      <ApplyApartmentModal
+        isOpen={isApplyModalOpen}
+        closeModal={closeApplyModal}
+        apartment={selectedApartment}
+      />
     </div>
   );
 };

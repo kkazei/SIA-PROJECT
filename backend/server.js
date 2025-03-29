@@ -11,6 +11,7 @@ import postRoutes from "./routes/post.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
 import tenantRoutes from "./routes/tenant.route.js";
 import userRoutes from "./routes/user.route.js";
+import applicationRoutes from "./routes/application.route.js";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import passport from "./config/passport.js";
@@ -64,7 +65,8 @@ app.use("/api/apartments", apartmentRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/tenants", tenantRoutes);  
+app.use("/api/tenants", tenantRoutes); 
+app.use("/api/applications", applicationRoutes); // Add this line 
 
 
 // Static file serving

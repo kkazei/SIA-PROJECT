@@ -48,17 +48,18 @@ const apartmentSchema = new mongoose.Schema({
     },
     paymentInfo: {
         nextDueDate: {
-            type: Date,
-            default: null
+            type: Date
         },
         lastPaymentDate: {
-            type: Date,
-            default: null
+            type: Date
         },
         paymentStatus: {
             type: String,
-            enum: ['pending', 'paid', 'overdue', null],
-            default: null
+            enum: ['paid', 'pending', 'overdue'],
+            default: 'pending'
+        },
+        moveInDate: {
+            type: Date
         }
     }
 }, { timestamps: true });

@@ -11,7 +11,8 @@ import {
   FaSignOutAlt,
   FaCog,
   FaChevronRight,
-  FaChevronLeft
+  FaChevronLeft,
+  FaClipboardList // Add this for applications
 } from 'react-icons/fa';
 
 const LandlordSideNav = () => {
@@ -32,46 +33,49 @@ const LandlordSideNav = () => {
       icon: <FaHome size={20} />
     },
     {
-      path: '/landlord/tenants', // Update the path to match the route in App.jsx
+      path: '/landlord/tenants',
       name: 'Tenants',
       icon: <FaUsers size={20} />
     },
-    
     {
-      path: '/landlord/announcements', // Update the path to match the route in App.jsx
+      path: '/landlord/applications', // Add this new route for applications
+      name: 'Applications',
+      icon: <FaClipboardList size={20} />
+    },
+    {
+      path: '/landlord/announcements',
       name: 'Announcements',
       icon: <FaBullhorn size={20} />
     },
     {
-      path: '/maintenance', // Update the path to match the route in App.jsx
+      path: '/maintenance',
       name: 'Maintenance',
       icon: <FaEnvelope size={20} />
     },
     {
-      path: '/archive', // Update the path to match the route in App.jsx
+      path: '/archive',
       name: 'Archive',
       icon: <FaMoneyBillWave size={20} />
     },
-    
   ];
 
   return (
     <div
-  className={`${
-    collapsed ? '-left-14 lg:left-0' : 'left-0'
-  } ${
-    collapsed ? 'w-16' : 'w-64'
-  } bg-gray-900 text-white h-screen fixed top-0 transition-all duration-300 z-40 shadow-xl`}
->
-  {/* Toggle Button (Mobile & Desktop) */}
-  <button
-    className={`absolute top-4 ${
-      collapsed ? 'right-[-17px]' : '-right-4'
-    } bg-gray-900 text-white p-2 rounded-full shadow-md`}
-    onClick={() => setCollapsed(!collapsed)}
-  >
-    {collapsed ? <FaChevronRight size={20} /> : <FaChevronLeft size={20} />}
-  </button>
+      className={`${
+        collapsed ? '-left-14 lg:left-0' : 'left-0'
+      } ${
+        collapsed ? 'w-16' : 'w-64'
+      } bg-gray-900 text-white h-screen fixed top-0 transition-all duration-300 z-40 shadow-xl`}
+    >
+      {/* Toggle Button (Mobile & Desktop) */}
+      <button
+        className={`absolute top-4 ${
+          collapsed ? 'right-[-17px]' : '-right-4'
+        } bg-gray-900 text-white p-2 rounded-full shadow-md`}
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        {collapsed ? <FaChevronRight size={20} /> : <FaChevronLeft size={20} />}
+      </button>
 
       {/* Sidebar Header */}
       <div className={`flex justify-between items-center p-4 border-b border-gray-700 ${collapsed ? 'hidden' : 'block'} lg:flex`}>
@@ -85,22 +89,20 @@ const LandlordSideNav = () => {
       <div className={`p-4 border-b border-gray-700 ${collapsed ? 'hidden' : 'block'} lg:block`}>
         {user && (
           <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-3">
-          {user.avatar ? (
-            <img
-          src={user.avatar}
-          alt="User Avatar"
-          className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover"
-          referrerPolicy="no-referrer"
-        />
-
-        
-          ) : (
-            <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
-              {user.name ? user.name[0].toUpperCase() : 'L'}
+            <div className="flex items-center space-x-3">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="User Avatar"
+                  className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
+                  {user.name ? user.name[0].toUpperCase() : 'L'}
+                </div>
+              )}
             </div>
-          )}
-        </div>
             <div>
               <p className="font-semibold">{user.name || 'Landlord'}</p>
               <p className="text-sm text-gray-400">{user.email || 'landlord@example.com'}</p>

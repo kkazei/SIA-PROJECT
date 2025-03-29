@@ -15,8 +15,7 @@ import Announcement from './pages/landlord/Announcement'; // Import the Announce
 import MaintenancePage from './pages/landlord/MaintenancePage'; // Import the MaintenancePage component
 import ArchivePage from './pages/landlord/ArchivePage'; // Import the ArchivePage component
 import LandlordLayout from './components/layout/LandlordLayout'; // Import the LandlordLayout component
-
-
+import LandlordApplications from "./pages/landlord/LandlordApplications"; // Import the LandlordApplications component
 
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
@@ -185,6 +184,16 @@ function App() {
                                 <LandlordLayout>
                                     <ArchivePage />
                                 </LandlordLayout>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path='/landlord/applications'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordApplications />
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
