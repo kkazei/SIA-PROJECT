@@ -1,106 +1,175 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useInquiryStore } from "../../store/inquiryStore.js";
 
-// Inquiries Modal Component
-const InquiriesModal = ({
-  isOpen,
-  closeModal,
-  handleFileChange,
-  selectedFile,
-  removeFile,
-}) => {
-  const renderFilePreview = () => {
+const InquiriesModal = ({ isOpen, closeModal, userId }) => {
+  console.log("Rendering InquiriesModal, isOpen:", isOpen);
+  
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [file, setFile] = useState(null);
+  const [localError, setLocalError] = useState("");
+  
+  // Access the store with error handling
+  let loading, error, message, createInquiry, clearMessage;
+  try {
+    const inquiryStore = useInquiryStore();
+    loading = inquiryStore.loading;
+    error = inquiryStore.error;
+    message = inquiryStore.message;
+    createInquiry = inquiryStore.createInquiry;
+    clearMessage = inquiryStore.clearMessage;
+    console.log("Successfully connected to inquiry store");
+  } catch (err) {
+    console.error("Error using inquiry store:", err);
+  }
+  
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
     if (selectedFile) {
-      if (selectedFile.type.startsWith("image/")) {
-        const fileUrl = URL.createObjectURL(selectedFile);
-        return (
-          <div className="relative mt-4">
-            <img
-              src={fileUrl}
-              alt="Preview"
-              className="max-w-full h-auto rounded-lg mx-auto shadow-lg"
-            />
-            <button
-              onClick={removeFile}
-              className="absolute top-2 right-2 bg-red-500 text-white font-bold text-xl p-2 w-8 h-8 rounded-md hover:bg-red-700 transition-all duration-200 flex items-center justify-center"
-            >
-              ✕
-            </button>
-          </div>
-        );
-      } else {
-        return (
-          <div className="mt-4 text-gray-700 flex justify-between items-center">
-            <p>File: {selectedFile.name}</p>
-            <button
-              onClick={removeFile}
-              className="text-red-500 text-sm hover:underline"
-            >
-              Remove
-            </button>
-          </div>
-        );
-      }
+      setFile(selectedFile);
     }
-    return null;
+  };
+  
+  // Remove selected file
+  const removeFile = () => {
+    setFile(null);
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!description || !category) {
+      setLocalError("Please fill all required fields");
+      return;
+    }
+    
+    if (!userId) {
+      setLocalError("User ID is required. Please ensure you're logged in.");
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append("description", description);
+    formData.append("category", category);
+    formData.append("tenant_id", userId);
+    
+    if (file) {
+      formData.append("image", file);
+    }
+    
+    if (createInquiry) {
+      try {
+        await createInquiry(formData);
+        console.log("Inquiry submitted successfully");
+        
+        // Clear form after submission
+        setDescription("");
+        setCategory("");
+        setFile(null);
+      } catch (err) {
+        console.error("Error submitting inquiry:", err);
+        setLocalError("Failed to submit inquiry. Please try again.");
+      }
+    } else {
+      setLocalError("Submission is currently unavailable.");
+      console.error("createInquiry function not available");
+    }
   };
 
+  // Simple rendering without store dependencies
+  if (!isOpen) return null;
+
   return (
-    <div
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity ${
-        isOpen ? "opacity-100 visible" : "opacity-0 invisible"
-      }`}
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={closeModal}
     >
-      <div
-        className={`bg-white p-6 rounded-lg w-full max-w-lg max-h-[80%] overflow-y-auto shadow-xl transform transition-all duration-300 ${
-          isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
-        }`}
-        onClick={(e) => e.stopPropagation()}
+      <div 
+        className="bg-white p-6 rounded-lg w-full max-w-lg shadow-xl" 
+        onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-bold text-gray-900">Inquiries</h2>
-
-        <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-4">
-          <select className="w-full p-2 bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500">
-            <option value="">Select Category</option>
-            <option value="general">General Inquiry</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="payment">Payment Issue</option>
-          </select>
-          <span className="text-lg font-semibold text-white bg-green-500 py-2 px-4 rounded-lg">
-            Category
-          </span>
-        </div>
-
-        <textarea
-          className="w-full p-4 mt-4 bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-          placeholder="Describe your inquiry..."
-          rows="5"
-        />
-
-        <label className="flex items-center space-x-2 cursor-pointer text-green-500 mt-4">
-          <span>Upload Photo</span>
-          <input
-            type="file"
-            accept=".png, .jpeg, .jpg"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </label>
-
-        {renderFilePreview()}
-
-        <button className="w-full py-3 px-4 mt-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition duration-200">
-          Send Inquiry
-        </button>
-
-        <div className="flex justify-end">
-          <button
-            onClick={closeModal}
-            className="text-sm text-red-500 mt-4 hover:underline"
-          >
-            Close
-          </button>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Submit an Inquiry</h2>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">Category</label>
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            >
+              <option value="">Select Category</option>
+              <option value="General Inquiry">General Inquiry</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Payment Issue">Payment Issue</option>
+            </select>
+          </div>
+          
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" 
+              rows="4"
+              placeholder="Describe your inquiry..."
+            ></textarea>
+          </div>
+          
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">Attach Image (Optional)</label>
+            <input 
+              type="file"
+              onChange={handleFileChange}
+              accept="image/*"
+              className="mt-1 block w-full text-sm text-gray-500"
+            />
+            {file && (
+              <div className="mt-2 flex items-center">
+                <span className="text-sm text-gray-500">{file.name}</span>
+                <button 
+                  type="button"
+                  onClick={removeFile}
+                  className="ml-2 text-sm text-red-500"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {(error || localError) && (
+            <div className="mt-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error || localError}
+            </div>
+          )}
+          
+          {message && (
+            <div className="mt-4 p-2 bg-green-100 border border-green-400 text-green-700 rounded">
+              {message}
+            </div>
+          )}
+          
+          <div className="mt-6 flex justify-between">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            
+            <button
+              type="submit"
+              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+              disabled={loading}
+            >
+              {loading ? "Submitting..." : "Submit Inquiry"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

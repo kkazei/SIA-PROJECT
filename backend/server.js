@@ -15,7 +15,7 @@ import applicationRoutes from "./routes/application.route.js";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import passport from "./config/passport.js";
-
+import inquiryRoute from './routes/inquiry.route.js';
 
 dotenv.config();
 
@@ -66,7 +66,8 @@ app.use("/api/posts", postRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
-app.use("/api/applications", applicationRoutes); // Add this line 
+app.use("/api/applications", applicationRoutes); // Add this line
+app.use('/api/inquiries', inquiryRoute); 
 
 
 // Static file serving
