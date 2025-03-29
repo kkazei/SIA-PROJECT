@@ -19,10 +19,9 @@ const TenantModal = ({ isOpen, onClose }) => {
 
   // Get functions from tenant store
   const { 
-    tenants, 
-    fetchTenants, 
-    loading: tenantsLoading, 
-    error: tenantsError 
+    fetchUnassignedTenants, 
+    unassignedTenants,
+    loading: tenantsLoading 
   } = useTenantStore();
 
   const [selectedApartment, setSelectedApartment] = useState("");
@@ -31,7 +30,6 @@ const TenantModal = ({ isOpen, onClose }) => {
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [localApartments, setLocalApartments] = useState([]);
-  const [availableTenants, setAvailableTenants] = useState([]);
   const [dataRefreshed, setDataRefreshed] = useState(false);
 
   // Fetch apartments and tenants when modal opens
@@ -49,7 +47,7 @@ const TenantModal = ({ isOpen, onClose }) => {
       try {
         await Promise.all([
           getApartments(),
-          fetchTenants()
+          fetchUnassignedTenants() // Use the new function to get only unassigned tenants
         ]);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -64,30 +62,13 @@ const TenantModal = ({ isOpen, onClose }) => {
       setSelectedTenant("");
       setIsTenantEnabled(false);
     };
-  }, [isOpen, getApartments, fetchTenants, clearMessages]);
+  }, [isOpen, getApartments, fetchUnassignedTenants, clearMessages]);
 
   // Update local apartments list whenever the store apartments change
   useEffect(() => {
     // Filter apartments locally for the modal display
     setLocalApartments(apartments.filter(apt => apt.status === 'available'));
   }, [apartments]);
-
-  // Filter tenants who already have apartments
-  useEffect(() => {
-    if (tenants && apartments) {
-      // Get IDs of tenants who already have apartments
-      const assignedTenantIds = apartments
-        .filter(apt => apt.status === 'occupied' && apt.tenant_id)
-        .map(apt => apt.tenant_id);
-      
-      // Filter out tenants who already have apartments
-      const filteredTenants = tenants.filter(
-        tenant => !assignedTenantIds.includes(tenant._id)
-      );
-      
-      setAvailableTenants(filteredTenants);
-    }
-  }, [tenants, apartments]);
 
   // Display success or error message
   useEffect(() => {
@@ -206,16 +187,16 @@ const TenantModal = ({ isOpen, onClose }) => {
                 disabled={!isTenantEnabled || tenantsLoading || submitting}
               >
                 <option value="">Select a Tenant</option>
-                {tenantsLoading ? (
-                  <option disabled>Loading tenants...</option>
-                ) : availableTenants.length === 0 ? (
-                  <option disabled>No available tenants</option>
-                ) : (
-                  availableTenants.map((tenant) => (
+                {unassignedTenants && unassignedTenants.length > 0 ? (
+                  unassignedTenants.map((tenant) => (
                     <option key={tenant._id} value={tenant._id}>
                       {tenant.name} ({tenant.email})
                     </option>
                   ))
+                ) : (
+                  <option value="" disabled>
+                    {tenantsLoading ? "Loading tenants..." : "No available tenants"}
+                  </option>
                 )}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">

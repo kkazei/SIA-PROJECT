@@ -51,6 +51,65 @@ export const getLandlordTenants = async (req, res) => {
   }
 };
 
+// Get all tenants who don't have apartments assigned
+export const getTenantsWithNoApartments = async (req, res) => {
+    try {
+      // Check if req.user exists first
+      if (!req.user) {
+        console.error("User not found in request");
+        return res.status(401).json({
+          success: false,
+          message: "Authentication failed. User not found in request."
+        });
+      }
+  
+      // Get the landlord ID from the authenticated user
+      const landlordId = req.user.id;
+      
+      console.log("Looking for unassigned tenants, landlord ID:", landlordId);
+      
+      // Find all tenant IDs who are already assigned to any apartment
+      // This is more efficient than filtering after fetching all tenants
+      const assignedApartments = await Apartment.find({
+        tenant_id: { $exists: true, $ne: null }
+      }).select('tenant_id');
+      
+      const assignedTenantIds = assignedApartments.map(apt => apt.tenant_id);
+      console.log(`Found ${assignedTenantIds.length} assigned tenant IDs`);
+      
+      // Find all users with the 'tenant' role who are NOT assigned to any apartment
+      const unassignedTenants = await User.find({
+        role: 'tenant',
+        _id: { $nin: assignedTenantIds }
+      }).select('-password -resetPasswordToken -resetPasswordExpiresAt -verificationToken -verificationTokenExpiresAt');
+      
+      console.log(`Found ${unassignedTenants.length} unassigned tenants`);
+      
+      // Format the response
+      const tenantData = unassignedTenants.map(tenant => ({
+        _id: tenant._id,
+        name: tenant.name,
+        email: tenant.email,
+        avatar: tenant.avatar || null,
+        createdAt: tenant.createdAt
+      }));
+      
+      res.status(200).json({
+        success: true,
+        count: tenantData.length,
+        data: tenantData
+      });
+      
+    } catch (error) {
+      console.error("Error fetching unassigned tenants:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error while fetching unassigned tenants",
+        error: error.message
+      });
+    }
+  };
+
 // Get a single tenant's details
 export const getTenantById = async (req, res) => {
   try {

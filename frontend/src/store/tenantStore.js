@@ -39,6 +39,35 @@ export const useTenantStore = create((set, get) => ({
     }
   },
 
+  fetchUnassignedTenants: async () => {
+    set({ loading: true, error: null });
+    try {
+      // Fix the API URL - make sure it includes the full path
+      const response = await axios.get(`${API_URL}/unassigned`, {
+        withCredentials: true // Ensure cookies are sent with the request
+      });
+      
+      console.log("Unassigned tenants API response:", response);
+      
+      if (response.data && response.data.success) {
+        set({ 
+          unassignedTenants: response.data.data || [], 
+          loading: false 
+        });
+        return response.data.data;
+      } else {
+        throw new Error(response.data?.message || "Failed to fetch unassigned tenants");
+      }
+    } catch (error) {
+      console.error("Error fetching unassigned tenants:", error);
+      set({ 
+        loading: false, 
+        error: error.response?.data?.message || error.message || "Error fetching unassigned tenants"
+      });
+      return [];
+    }
+  },
+
   // Get details for a specific tenant
   getTenantById: async (id) => {
     set({ loading: true, error: null });
