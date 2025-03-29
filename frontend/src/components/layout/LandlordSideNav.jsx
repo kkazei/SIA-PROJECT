@@ -12,7 +12,10 @@ import {
   FaCog,
   FaChevronRight,
   FaChevronLeft,
-  FaClipboardList // Add this for applications
+  FaClipboardList, // Add this for applications
+  FaHammer,
+  FaMailchimp,
+  FaMailBulk
 } from 'react-icons/fa';
 
 const LandlordSideNav = ({ onToggle }) => {
@@ -55,12 +58,12 @@ const LandlordSideNav = ({ onToggle }) => {
     {
       path: '/maintenance',
       name: 'Maintenance',
-      icon: <FaEnvelope size={20} />
+      icon: <FaHammer size={20} />
     },
     {
       path: '/archive',
       name: 'Archive',
-      icon: <FaMoneyBillWave size={20} />
+      icon: <FaMailBulk size={20} />
     },
   ];
 
@@ -85,7 +88,11 @@ const LandlordSideNav = ({ onToggle }) => {
       {/* Sidebar Header */}
       <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <div className="flex items-center gap-3">
-          <img src="/image/logo.png" alt="Logo" className="w-10 h-10" />
+          <img 
+            src="/image/Logo.png" 
+            alt="Logo" 
+            className={`${collapsed ? 'w-10 h-12' : 'w-14 h-16'}`}
+          />
           {!collapsed && <span className="text-xl font-bold">RentFlow</span>}
         </div>
       </div>
