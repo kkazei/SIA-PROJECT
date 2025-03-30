@@ -31,13 +31,6 @@ const maintenanceSchema = new mongoose.Schema(
         isVisible: {
             type: Boolean,
             default: true,
-        },
-        // Adding apartment_id to match controller functionality 
-        // but keeping model minimal
-        apartment_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Apartment",
-            default: null,
         }
     },
     { timestamps: true }

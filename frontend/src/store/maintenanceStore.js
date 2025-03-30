@@ -7,21 +7,22 @@ const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000"
 export const useMaintenanceStore = create((set, get) => ({
   maintenanceRequests: [],
   selectedRequest: null,
+  statistics: null,
   isLoading: false,
   error: null,
   success: null,
   
-  // Fetch all maintenance requests
+  // Fetch all maintenance requests for the landlord
   fetchMaintenance: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Fix: Add leading slash to API path
-      const response = await axios.get(`${API_URL}/api/maintenance`, { withCredentials: true });
+      // Updated to match the correct endpoint
+      const response = await axios.get(`${API_URL}/api/maintenance/landlord`, { withCredentials: true });
       set({ 
-        maintenanceRequests: response.data, 
+        maintenanceRequests: response.data.data, 
         isLoading: false 
       });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error("Error fetching maintenance requests:", error);
       set({ 
@@ -36,13 +37,12 @@ export const useMaintenanceStore = create((set, get) => ({
   getMaintenanceById: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      // Fix: Add leading slash to API path
       const response = await axios.get(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
       set({ 
-        selectedRequest: response.data, 
+        selectedRequest: response.data.data, 
         isLoading: false 
       });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error(`Error fetching maintenance request with ID ${id}:`, error);
       set({ 
@@ -57,8 +57,8 @@ export const useMaintenanceStore = create((set, get) => ({
   createMaintenance: async (maintenanceData) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      // Fix: Add leading slash to API path
-      const response = await axios.post(`${API_URL}/api/maintenance`, maintenanceData, { 
+      // Updated to match the correct endpoint
+      const response = await axios.post(`${API_URL}/api/maintenance/create`, maintenanceData, { 
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
@@ -66,15 +66,15 @@ export const useMaintenanceStore = create((set, get) => ({
       });
       
       // Add the new request to the state
-      const updatedRequests = [...get().maintenanceRequests, response.data];
+      const updatedRequests = [...get().maintenanceRequests, response.data.data];
       
       set({ 
         maintenanceRequests: updatedRequests, 
         isLoading: false,
-        success: "Maintenance request created successfully" 
+        success: response.data.message || "Maintenance request created successfully" 
       });
       
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error("Error creating maintenance request:", error);
       set({ 
@@ -89,7 +89,6 @@ export const useMaintenanceStore = create((set, get) => ({
   updateMaintenance: async (id, updateData) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      // Fix: Add leading slash to API path
       const response = await axios.put(`${API_URL}/api/maintenance/${id}`, updateData, { 
         withCredentials: true,
         headers: {
@@ -99,17 +98,17 @@ export const useMaintenanceStore = create((set, get) => ({
       
       // Update the request in the state
       const updatedRequests = get().maintenanceRequests.map(request => 
-        request._id === id ? response.data : request
+        request._id === id ? response.data.data : request
       );
       
       set({ 
         maintenanceRequests: updatedRequests,
-        selectedRequest: response.data,
+        selectedRequest: response.data.data,
         isLoading: false,
-        success: "Maintenance request updated successfully" 
+        success: response.data.message || "Maintenance request updated successfully" 
       });
       
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error(`Error updating maintenance request with ID ${id}:`, error);
       set({ 
@@ -124,8 +123,7 @@ export const useMaintenanceStore = create((set, get) => ({
   deleteMaintenance: async (id) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      // Fix: Add leading slash to API path
-      await axios.delete(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
+      const response = await axios.delete(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
       
       // Remove the deleted request from the state
       const updatedRequests = get().maintenanceRequests.filter(request => request._id !== id);
@@ -133,7 +131,7 @@ export const useMaintenanceStore = create((set, get) => ({
       set({ 
         maintenanceRequests: updatedRequests, 
         isLoading: false,
-        success: "Maintenance request deleted successfully" 
+        success: response.data.message || "Maintenance request deleted successfully" 
       });
       
       return true;
@@ -144,6 +142,26 @@ export const useMaintenanceStore = create((set, get) => ({
         isLoading: false 
       });
       return false;
+    }
+  },
+
+  // Get maintenance statistics
+  fetchMaintenanceStats: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/api/maintenance/stats`, { withCredentials: true });
+      set({ 
+        statistics: response.data.data, 
+        isLoading: false 
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching maintenance statistics:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to fetch maintenance statistics", 
+        isLoading: false 
+      });
+      return null;
     }
   },
   
@@ -163,6 +181,7 @@ export const useMaintenanceStore = create((set, get) => ({
   resetStore: () => set({ 
     maintenanceRequests: [],
     selectedRequest: null,
+    statistics: null,
     isLoading: false,
     error: null,
     success: null
