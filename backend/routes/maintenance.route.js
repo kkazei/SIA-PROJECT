@@ -5,7 +5,11 @@ import {
   getMaintenanceById, 
   updateMaintenance, 
   deleteMaintenance, 
-  getMaintenanceStats 
+  getMaintenanceStats,
+  archiveMaintenance,
+  getArchivedMaintenances,
+  restoreArchive,
+  permanentlyDeleteMaintenance
 } from "../controllers/maintenance.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
 
@@ -19,6 +23,14 @@ router.get("/landlord", verifyToken, getMaintenancesByLandlord);
 
 // Get maintenance statistics
 router.get("/stats", verifyToken, getMaintenanceStats);
+
+// Archive-related routes
+router.get("/archived", verifyToken, getArchivedMaintenances);
+router.put("/archive/:id", verifyToken, archiveMaintenance);
+router.put("/restore/:id", verifyToken, restoreArchive);
+
+// Permanently delete specific maintenance record by ID
+router.delete("/permanent/:id", verifyToken, permanentlyDeleteMaintenance);
 
 // Get, update, delete specific maintenance record by ID
 router.get("/:id", verifyToken, getMaintenanceById);

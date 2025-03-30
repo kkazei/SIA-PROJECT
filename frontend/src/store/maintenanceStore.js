@@ -6,6 +6,7 @@ const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000"
 
 export const useMaintenanceStore = create((set, get) => ({
   maintenanceRequests: [],
+  archivedRequests: [],  // Make sure this is initialized as an empty array
   selectedRequest: null,
   statistics: null,
   isLoading: false,
@@ -16,7 +17,6 @@ export const useMaintenanceStore = create((set, get) => ({
   fetchMaintenance: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Updated to match the correct endpoint
       const response = await axios.get(`${API_URL}/api/maintenance/landlord`, { withCredentials: true });
       set({ 
         maintenanceRequests: response.data.data, 
@@ -57,7 +57,6 @@ export const useMaintenanceStore = create((set, get) => ({
   createMaintenance: async (maintenanceData) => {
     set({ isLoading: true, error: null, success: null });
     try {
-      // Updated to match the correct endpoint
       const response = await axios.post(`${API_URL}/api/maintenance/create`, maintenanceData, { 
         withCredentials: true,
         headers: {
@@ -65,7 +64,6 @@ export const useMaintenanceStore = create((set, get) => ({
         }
       });
       
-      // Add the new request to the state
       const updatedRequests = [...get().maintenanceRequests, response.data.data];
       
       set({ 
@@ -96,7 +94,6 @@ export const useMaintenanceStore = create((set, get) => ({
         }
       });
       
-      // Update the request in the state
       const updatedRequests = get().maintenanceRequests.map(request => 
         request._id === id ? response.data.data : request
       );
@@ -125,7 +122,6 @@ export const useMaintenanceStore = create((set, get) => ({
     try {
       const response = await axios.delete(`${API_URL}/api/maintenance/${id}`, { withCredentials: true });
       
-      // Remove the deleted request from the state
       const updatedRequests = get().maintenanceRequests.filter(request => request._id !== id);
       
       set({ 
@@ -165,6 +161,111 @@ export const useMaintenanceStore = create((set, get) => ({
     }
   },
   
+  // Fetch all archived maintenance requests for the landlord
+  fetchArchivedMaintenance: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/api/maintenance/archived`, { withCredentials: true });
+      set({ 
+        archivedRequests: response.data.data || [], 
+        isLoading: false 
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error("Error fetching archived maintenance requests:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to fetch archived maintenance requests", 
+        isLoading: false,
+        archivedRequests: []
+      });
+      return null;
+    }
+  },
+  
+  // Archive a maintenance request
+  archiveMaintenance: async (id) => {
+    set({ isLoading: true, error: null, success: null });
+    try {
+      const response = await axios.put(`${API_URL}/api/maintenance/archive/${id}`, {}, { 
+        withCredentials: true 
+      });
+      
+      const updatedRequests = get().maintenanceRequests.filter(req => req._id !== id);
+      
+      set({ 
+        maintenanceRequests: updatedRequests, 
+        isLoading: false,
+        success: "Maintenance request archived successfully" 
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error archiving maintenance request:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to archive maintenance request", 
+        isLoading: false 
+      });
+      return false;
+    }
+  },
+  
+  // Restore an archived maintenance request
+  restoreArchive: async (id) => {
+    set({ isLoading: true, error: null, success: null });
+    try {
+      await axios.put(`${API_URL}/api/maintenance/restore/${id}`, {}, { 
+        withCredentials: true 
+      });
+      
+      const updatedArchivedRequests = get().archivedRequests.filter(req => req._id !== id);
+      
+      set({ 
+        archivedRequests: updatedArchivedRequests, 
+        isLoading: false,
+        success: "Maintenance request restored successfully" 
+      });
+      
+      get().fetchMaintenance();
+      
+      return true;
+    } catch (error) {
+      console.error("Error restoring maintenance request:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to restore maintenance request", 
+        isLoading: false 
+      });
+      return false;
+    }
+  },
+  
+  // Permanently delete a maintenance request (from archive)
+  permanentlyDeleteMaintenance: async (id) => {
+    set({ isLoading: true, error: null, success: null });
+    try {
+      await axios.delete(`${API_URL}/api/maintenance/permanent/${id}`, { 
+        withCredentials: true 
+      });
+      
+      // Remove from archived list
+      const updatedArchivedRequests = get().archivedRequests.filter(req => req._id !== id);
+      
+      set({ 
+        archivedRequests: updatedArchivedRequests, 
+        isLoading: false,
+        success: "Maintenance record permanently deleted" 
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting maintenance request:", error);
+      set({ 
+        error: error.response?.data?.message || "Failed to delete maintenance request", 
+        isLoading: false 
+      });
+      return false;
+    }
+  },
+  
   // Clear error message
   clearError: () => set({ error: null }),
   
@@ -180,6 +281,7 @@ export const useMaintenanceStore = create((set, get) => ({
   // Reset store state
   resetStore: () => set({ 
     maintenanceRequests: [],
+    archivedRequests: [],
     selectedRequest: null,
     statistics: null,
     isLoading: false,

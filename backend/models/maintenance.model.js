@@ -31,6 +31,10 @@ const maintenanceSchema = new mongoose.Schema(
         isVisible: {
             type: Boolean,
             default: true,
+        },
+        isArchived: {
+            type: Boolean,
+            default: false,
         }
     },
     { timestamps: true }
