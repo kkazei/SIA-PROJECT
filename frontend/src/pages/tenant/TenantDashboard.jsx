@@ -252,7 +252,7 @@ const TenantDashboard = () => {
                   Rent: ₱{currentApartment.rent?.toLocaleString()}/month
                 </p>
                 <p className="text-gray-400">
-                  Next Due Date: {formatDate(currentApartment.nextDueDate)}
+                  Next Due Date: {currentApartment.nextDueDate ? formatDate(currentApartment.nextDueDate) : 'Not set'}
                 </p>
               </div>
             </div>
@@ -261,21 +261,15 @@ const TenantDashboard = () => {
 
         {/* Status Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className="bg-blue-900 p-4 rounded-lg text-white text-center">
-            <h4 className="text-lg font-bold">Rent Status</h4>
-            <p className="text-sm mt-2">Up to date</p>
-          </div>
           <div className="bg-green-600 p-4 rounded-lg text-white text-center">
             <h4 className="text-lg font-bold">Last Payment</h4>
             <p className="text-sm mt-2">₱{currentApartment?.rent?.toLocaleString() || '0'}</p>
           </div>
           <div className="bg-blue-900 p-4 rounded-lg text-white text-center">
             <h4 className="text-lg font-bold">Due Date</h4>
-            <p className="text-sm mt-2">{formatDate(currentApartment?.nextDueDate)}</p>
-          </div>
-          <div className="bg-green-600 p-4 rounded-lg text-white text-center">
-            <h4 className="text-lg font-bold">Contract Status</h4>
-            <p className="text-sm mt-2">Active</p>
+            <p className="text-sm mt-2">
+              {currentApartment?.nextDueDate ? formatDate(currentApartment.nextDueDate) : 'Not set'}
+            </p>
           </div>
         </div>
 
