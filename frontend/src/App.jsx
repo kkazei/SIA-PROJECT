@@ -8,7 +8,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner'
 import LandingPage from './pages/LandingPage'
 import OAuthSuccess from './pages/auth/OAuthSuccess';
 import DashboardPage from './pages/landlord/DashboardPage';
-import TenantDashboard from './pages/tenant/TenantDashboard';
+import TenantDashboard from './pages/tenant/tenantDashboard';
 import RoleSelection from './pages/auth/RoleSelection';
 import TenantPage from './pages/landlord/TenantPage'; // Import the TenantPage component
 import Announcement from './pages/landlord/Announcement'; // Import the Announcement component
