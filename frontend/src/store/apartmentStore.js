@@ -88,11 +88,51 @@ export const useApartmentStore = create((set, get) => ({
     try {
       const response = await axios.get(`${API_URL}/tenant/current`);
       
-      // Process image URLs for the apartment
-      const processedApartment = response.data.data ? {
-        ...response.data.data,
-        images: response.data.data.images?.map(img => processImagePath(img)) || []
-      } : null;
+      // If no apartment data returned
+      if (!response.data.data) {
+        set({ 
+          currentApartment: null,
+          isLoading: false 
+        });
+        return null;
+      }
+      
+      // Create a deep copy to avoid reference issues
+      const apartmentData = response.data.data;
+      
+      console.log("Raw apartment data from API:", apartmentData);
+      
+      // Set a default next due date if not provided
+      // Assuming rent is due on the 1st of next month if not specified
+      let nextDueDate = null;
+      if (apartmentData.nextDueDate) {
+        nextDueDate = new Date(apartmentData.nextDueDate);
+      } else if (apartmentData.paymentInfo?.nextDueDate) {
+        nextDueDate = new Date(apartmentData.paymentInfo.nextDueDate);
+      } else {
+        // Default to 1st of next month
+        const today = new Date();
+        nextDueDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      }
+      
+      // Process image URLs and convert date strings to Date objects
+      const processedApartment = {
+        ...apartmentData,
+        // Convert date strings to proper Date objects with fallbacks
+        nextDueDate: nextDueDate,
+        lastPaymentDate: apartmentData.lastPaymentDate ? new Date(apartmentData.lastPaymentDate) : 
+                         (apartmentData.paymentInfo?.lastPaymentDate ? new Date(apartmentData.paymentInfo.lastPaymentDate) : null),
+        moveInDate: apartmentData.moveInDate ? new Date(apartmentData.moveInDate) : null,
+        createdAt: apartmentData.createdAt ? new Date(apartmentData.createdAt) : null,
+        updatedAt: apartmentData.updatedAt ? new Date(apartmentData.updatedAt) : null,
+        // Process images
+        images: apartmentData.images?.map(img => processImagePath(img)) || []
+      };
+      
+      // Debug output
+      console.log("Original nextDueDate:", apartmentData.nextDueDate);
+      console.log("Payment info nextDueDate:", apartmentData.paymentInfo?.nextDueDate);
+      console.log("Processed nextDueDate:", processedApartment.nextDueDate);
       
       set({ 
         currentApartment: processedApartment,
