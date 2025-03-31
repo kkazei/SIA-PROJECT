@@ -4,10 +4,8 @@ import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
 import { useInquiryStore } from "../../store/inquiryStore";
-import { useApplicationStore } from "../../store/applicationStore";
 import TenantSideNav from "../../components/layout/TenantSideNav";
 import { FaFileInvoiceDollar, FaFileContract } from 'react-icons/fa';
-import NoApartmentView from "../../components/Tenant-Dashboard/NoApartmentView";
 
 // Import your modals
 import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
@@ -91,11 +89,6 @@ const TenantDashboard = () => {
     }
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    logout();
-  };
-
   // Initial data fetch
   useEffect(() => {
     const fetchTenantData = async () => {
@@ -159,38 +152,9 @@ const TenantDashboard = () => {
 
   // Loading state
   if (loading || apartmentLoading || inquiriesLoading) {
-    return <div className="flex justify-center items-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    </div>;
+    return <div>Loading...</div>;
   }
 
-  // Check if tenant has an apartment
-  const hasApartment = currentApartment && Object.keys(currentApartment).length > 0;
-
-  // If tenant doesn't have an apartment, show NoApartmentView
-  if (!hasApartment) {
-    return (
-      <NoApartmentView
-        userName={user?.name || "Tenant"}
-        onBrowseClick={() => handleModalOpen('browseApartments')}
-        onApplicationsClick={() => handleModalOpen('applications')}
-        onLogout={handleLogout}
-      >
-        <BrowseApartmentsModal
-          isOpen={modals.browseApartments}
-          closeModal={() => handleModalClose('browseApartments')}
-          apartments={availableApartments || []}
-          hasApartment={false}
-        />
-        <ApplicationsModal
-          isOpen={modals.applications}
-          closeModal={() => handleModalClose('applications')}
-        />
-      </NoApartmentView>
-    );
-  }
-
-  // Regular dashboard view for tenants with apartments
   return (
     <div className="flex flex-col lg:flex-row">
       <TenantSideNav 
@@ -246,15 +210,31 @@ const TenantDashboard = () => {
           <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
             <h3 className="text-lg lg:text-xl font-bold text-white">Payment Status</h3>
             <div className="mt-4 space-y-4">
-              <div className="bg-gray-800 p-4 rounded-lg">
-                <p className="text-white">Room: {currentApartment.room}</p>
-                <p className="text-green-400 font-semibold">
-                  Rent: ₱{currentApartment.rent?.toLocaleString()}/month
-                </p>
-                <p className="text-gray-400">
-                  Next Due Date: {currentApartment.nextDueDate ? formatDate(currentApartment.nextDueDate) : 'Not set'}
-                </p>
-              </div>
+              {currentApartment ? (
+                <>
+                  <div className="bg-gray-800 p-4 rounded-lg">
+                    <p className="text-white">Room: {currentApartment.room}</p>
+                    <p className="text-green-400 font-semibold">
+                      Rent: ₱{currentApartment.rent?.toLocaleString()}/month
+                    </p>
+                    <p className="text-gray-400">
+                      Next Due Date: {currentApartment?.nextDueDate ? 
+                        formatDate(currentApartment.nextDueDate) : 
+                        "Not set"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>No active lease found</p>
+                  <button 
+                    onClick={() => handleModalOpen('browseApartments')}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                  >
+                    Browse Apartments
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -268,8 +248,14 @@ const TenantDashboard = () => {
           <div className="bg-blue-900 p-4 rounded-lg text-white text-center">
             <h4 className="text-lg font-bold">Due Date</h4>
             <p className="text-sm mt-2">
-              {currentApartment?.nextDueDate ? formatDate(currentApartment.nextDueDate) : 'Not set'}
+              {currentApartment?.nextDueDate ? 
+                formatDate(currentApartment.nextDueDate) : 
+                "Not set"}
             </p>
+          </div>
+          <div className="bg-green-600 p-4 rounded-lg text-white text-center">
+            <h4 className="text-lg font-bold">Contract Status</h4>
+            <p className="text-sm mt-2">Active</p>
           </div>
         </div>
 
@@ -303,8 +289,6 @@ const TenantDashboard = () => {
         <BrowseApartmentsModal
           isOpen={modals.browseApartments}
           closeModal={() => handleModalClose('browseApartments')}
-          apartments={availableApartments || []}
-          hasApartment={true}
         />
         <ApplicationsModal
           isOpen={modals.applications}
