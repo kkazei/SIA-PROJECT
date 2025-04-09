@@ -8,6 +8,7 @@ import path from "path";
 import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
+import qrRoutes from "./routes/qr.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
 import tenantRoutes from "./routes/tenant.route.js";
 import userRoutes from "./routes/user.route.js";
@@ -63,6 +64,7 @@ setupUploadDirectories();
 app.use("/api/auth", authRoutes);
 app.use("/api/apartments", apartmentRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/qr", qrRoutes);  // Add QR routes
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { useTenantStore } from "../../store/tenantStore";
 import { useApartmentStore } from "../../store/apartmentStore";
+import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 import LandlordSideNav from "../../components/layout/LandlordSideNav";
-import TenantModal from "../../components/TenantModal"; // Import the TenantModal
+import TenantModal from "../../components/TenantModal";
 import { motion } from "framer-motion";
 
 const TenantPage = () => {
@@ -20,9 +21,17 @@ const TenantPage = () => {
     loading,
     error,
     fetchTenants,
-    uploadPaymentQR,
     clearMessages,
   } = useTenantStore();
+  
+  // Import the createQRImage function from the QR image store
+  const { 
+    createQRImage, 
+    loading: qrLoading, 
+    error: qrError,
+    message: qrMessage,
+    clearMessage 
+  } = useQRImageStore();
 
   const { getApartments, fetchUnassignedTenants } = useApartmentStore();
 
@@ -30,9 +39,10 @@ const TenantPage = () => {
   useEffect(() => {
     fetchTenants();
     return () => {
-      clearMessages(); // Clean up on unmount
+      clearMessages(); // Clean up tenant store messages
+      clearMessage(); // Clean up QR store messages
     };
-  }, [fetchTenants, clearMessages]);
+  }, [fetchTenants, clearMessages, clearMessage]);
 
   // Filter tenants based on search term
   const filteredTenants = tenants.filter(
@@ -52,8 +62,20 @@ const TenantPage = () => {
       return;
     }
 
+    if (!paymentDetails || paymentDetails.trim() === '') {
+      alert("Please enter payment details.");
+      return;
+    }
+
     try {
-      await uploadPaymentQR(selectedFile, paymentDetails);
+      // Create form data for QR image upload
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      formData.append('details', paymentDetails);
+      
+      // Use the createQRImage function from the QR image store
+      await createQRImage(formData);
+      
       alert("Payment QR uploaded successfully!");
       setShowModal(false);
       setSelectedFile(null);

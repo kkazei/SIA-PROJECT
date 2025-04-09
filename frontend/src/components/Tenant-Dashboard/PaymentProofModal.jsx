@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 
 const PaymentProofModal = ({
   isOpen,
   closeModal,
   selectedFile,
-  setSelectedFile, // Add this prop
+  setSelectedFile,
   referenceNumber,
   setReferenceNumber,
   paymentQR,
@@ -12,6 +13,16 @@ const PaymentProofModal = ({
 }) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
+  
+  // Change getQRImages to getTenantQRImages which is designed for tenants
+  const { qrImages, loading, getTenantQRImages } = useQRImageStore();
+
+  // Fetch tenant-specific QR images when the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      getTenantQRImages();
+    }
+  }, [isOpen, getTenantQRImages]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -53,6 +64,79 @@ const PaymentProofModal = ({
     };
   }, [preview]);
 
+  // QR Code Section - Fixed image loading issues
+  const renderQRSection = () => {
+    if (loading) {
+      return (
+        <div className="bg-gray-50 rounded-lg p-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading payment QR codes...</p>
+        </div>
+      );
+    }
+
+    if (qrImages && qrImages.length > 0) {
+      // Use the most recent QR image
+      const latestQR = qrImages[0];
+      
+      // Format the image path properly
+      let imagePath = latestQR.image_path;
+      
+      // Log the image path for debugging
+      console.log("QR Image Path:", imagePath);
+      
+      // Add the base URL if it's a relative path and doesn't already have it
+      const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000' : '';
+      if (imagePath && !imagePath.startsWith('http') && !imagePath.startsWith(BASE_URL)) {
+        imagePath = `${BASE_URL}${imagePath}`;
+        console.log("Updated QR Image Path:", imagePath);
+      }
+      
+      return (
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="text-center">
+            <h4 className="font-semibold text-lg mb-4">Payment QR Code</h4>
+            <div className="bg-white p-4 rounded-lg shadow-sm inline-block">
+              {imagePath ? (
+                <img 
+                  src={imagePath} 
+                  alt="Payment QR Code" 
+                  className="h-48 w-48 object-contain"
+                  onError={(e) => {
+                    console.log("QR image failed to load:", imagePath);
+                    // Replace with a generic QR code or placeholder
+                    e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-size='20' text-anchor='middle' fill='%23999' dominant-baseline='middle'%3EQR Image%3C/text%3E%3C/svg%3E";
+                    e.target.onerror = null; // Prevent infinite loop
+                  }}
+                />
+              ) : (
+                <div className="h-48 w-48 flex items-center justify-center bg-gray-100">
+                  <span className="text-gray-400">No QR image available</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 text-sm bg-white p-4 rounded-lg shadow-sm">
+              <p className="text-gray-700">
+                {latestQR.details || "Scan this QR code to make payment"}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback when no QR images are available
+    return (
+      <div className="bg-gray-50 rounded-lg p-6 text-center">
+        <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p className="text-gray-900 font-medium">No payment QR code available</p>
+        <p className="text-sm text-gray-500 mt-1">Please contact your landlord for payment instructions</p>
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = (e) => {
@@ -78,34 +162,8 @@ const PaymentProofModal = ({
         {/* Content */}
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* QR Code Section */}
-            {paymentQR ? (
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="text-center">
-                  <h4 className="font-semibold text-lg mb-4">Payment QR Code</h4>
-                  <div className="bg-white p-4 rounded-lg shadow-sm inline-block">
-                    <img 
-                      src={paymentQR.imageUrl} 
-                      alt="Payment QR Code" 
-                      className="h-48 w-48 object-contain"
-                    />
-                  </div>
-                  {paymentQR.details && (
-                    <div className="mt-4 text-sm bg-white p-4 rounded-lg shadow-sm">
-                      <p className="text-gray-700">{paymentQR.details}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="text-gray-900 font-medium">No payment QR code available</p>
-                <p className="text-sm text-gray-500 mt-1">Please contact your landlord for payment instructions</p>
-              </div>
-            )}
+            {/* QR Code Section - Replace with our new render function */}
+            {renderQRSection()}
 
             {/* Payment Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
