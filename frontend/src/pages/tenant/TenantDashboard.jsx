@@ -4,6 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
 import { useInquiryStore } from "../../store/inquiryStore";
+import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 import TenantSideNav from "../../components/layout/TenantSideNav";
 import { 
   FaFileInvoiceDollar, 
@@ -70,6 +71,7 @@ const TenantDashboard = () => {
     loading: inquiriesLoading,
     error: inquiriesError
   } = useInquiryStore();
+  const { qrImages, loading: qrLoading, getTenantQRImages } = useQRImageStore(); // Add QR image state and functions
 
   // Keep all your existing handlers and functions
   const handleModalOpen = (modalId) => {
@@ -102,13 +104,13 @@ const TenantDashboard = () => {
     logout();
   };
 
-  // Keep your existing useEffects
+  // Keep your existing useEffects and add QR image fetching
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
         const apartmentData = await getTenantApartment();
         
-        setPaymentQR(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Tenant:${user?.id || "unknown"}`);
+        await getTenantQRImages(); // Fetch QR images
         
         const announcementsData = await getTenantAnnouncements();
         setAnnouncements(announcementsData || []);
@@ -123,7 +125,7 @@ const TenantDashboard = () => {
     };
 
     fetchTenantData();
-  }, [getTenantApartment, getTenantAnnouncements, user?.id]);
+  }, [getTenantApartment, getTenantAnnouncements, getTenantQRImages, user?.id]);
 
   // Keep all your other functions
   const handleFileChange = (event) => {
@@ -154,6 +156,60 @@ const TenantDashboard = () => {
       setError("Failed to submit payment. Please try again.");
       return { success: false };
     }
+  };
+
+  const renderQRImage = () => {
+    if (qrLoading) {
+      return (
+        <div className="w-32 h-32 bg-white p-2 rounded-lg mb-3 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (qrImages && qrImages.length > 0) {
+      const latestQR = qrImages[0];
+      let imagePath = latestQR.image_path;
+      const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000' : '';
+      if (imagePath && !imagePath.startsWith('http') && !imagePath.startsWith(BASE_URL)) {
+        imagePath = `${BASE_URL}${imagePath}`;
+      }
+      
+      return (
+        <div className="bg-white p-2 rounded-lg mb-3">
+          {imagePath ? (
+            <img 
+              src={imagePath} 
+              alt="Payment QR Code" 
+              className="w-32 h-32 object-contain"
+              onError={(e) => {
+                console.log("QR image failed to load:", imagePath);
+                e.target.src = paymentQR || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-size='20' text-anchor='middle' fill='%23999' dominant-baseline='middle'%3EQR Image%3C/text%3E%3C/svg%3E";
+                e.target.onerror = null;
+              }}
+            />
+          ) : (
+            paymentQR ? <img src={paymentQR} alt="Payment QR Code" className="w-32 h-32 object-contain" /> : (
+              <div className="w-32 h-32 flex items-center justify-center bg-gray-100">
+                <span className="text-gray-400 text-sm text-center">No QR code available</span>
+              </div>
+            )
+          )}
+        </div>
+      );
+    }
+
+    return paymentQR ? (
+      <img 
+        src={paymentQR} 
+        alt="Payment QR Code" 
+        className="w-32 h-32 bg-white p-2 rounded-lg mb-3"
+      />
+    ) : (
+      <div className="w-32 h-32 bg-white p-2 rounded-lg mb-3 flex items-center justify-center">
+        <span className="text-gray-500 text-sm">No QR available</span>
+      </div>
+    );
   };
 
   // Loading state - updated to match DashboardPage style
@@ -428,13 +484,7 @@ const TenantDashboard = () => {
               <p className="text-gray-400 text-sm mb-4">Scan the QR code or make a payment directly</p>
               
               <div className="flex flex-col items-center">
-                {paymentQR && (
-                  <img 
-                    src={paymentQR} 
-                    alt="Payment QR Code" 
-                    className="w-32 h-32 bg-white p-2 rounded-lg mb-3"
-                  />
-                )}
+                {renderQRImage()}
                 
                 <button
                   onClick={() => handleModalOpen('payments')}

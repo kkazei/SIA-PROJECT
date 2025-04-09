@@ -46,7 +46,7 @@ app.use(passport.session());
 
 // Set up file upload directories
 const setupUploadDirectories = () => {
-  const dirs = ['uploads', 'uploads/qr-codes', 'uploads/maintenance', 'uploads/posts'];
+  const dirs = ['uploads', 'uploads/maintenance', 'uploads/posts'];
   dirs.forEach(dir => {
     const fullPath = path.join(__dirname, dir);
     if (!fs.existsSync(fullPath)) {
