@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQRImageStore } from "../../store/qrImageStore";
+import { usePaymentStore } from "../../store/paymentStore";
 import axios from "axios"; // Import axios for API calls
 
 const PaymentProofModal = ({
@@ -128,8 +129,33 @@ const PaymentProofModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate file and reference number
     if (!selectedFile || !referenceNumber.trim()) {
       setSubmitError("Please provide both a reference number and payment screenshot");
+      return;
+    }
+    
+    // Validate tenant details
+    if (!tenantDetails) {
+      setSubmitError("Missing tenant details. Please refresh the page.");
+      return;
+    }
+    
+    // Validate required tenant information
+    if (!tenantDetails.userId) {
+      setSubmitError("Missing tenant ID. Please refresh the page or contact support.");
+      return;
+    }
+    
+    if (!tenantDetails.apartmentId) {
+      setSubmitError("Missing apartment ID. Please refresh the page or contact support.");
+      return;
+    }
+    
+    // Validate payment amount
+    const paymentAmount = parseFloat(tenantDetails?.rent || 0);
+    if (paymentAmount <= 0) {
+      setSubmitError("Invalid payment amount. Please contact support.");
       return;
     }
     
@@ -137,41 +163,53 @@ const PaymentProofModal = ({
     setSubmitError(null);
     
     try {
+      // Log full details for debugging
+      console.log("Payment submission - full details:", {
+        tenant_id: tenantDetails.userId,
+        tenant_fullname: tenantDetails.fullName,
+        apartment_id: tenantDetails.apartmentId,
+        apartment_name: tenantDetails.apartmentName,
+        amount: paymentAmount,
+        reference_number: referenceNumber,
+        file: selectedFile ? `${selectedFile.name} (${selectedFile.size} bytes)` : null
+      });
+      
+      // Create FormData for submission
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("reference_number", referenceNumber);
-      formData.append("tenant_id", tenantDetails?.userId || "");
-      formData.append("apartment_id", tenantDetails?.apartmentId || "");
-      formData.append("amount", tenantDetails?.rent || 0);
-      formData.append("tenant_fullname", tenantDetails?.fullName || "");
+      formData.append("tenant_id", String(tenantDetails.userId));
+      formData.append("apartment_id", String(tenantDetails.apartmentId));
+      formData.append("amount", String(paymentAmount));
+      formData.append("tenant_fullname", String(tenantDetails.fullName || ""));
       
-      const uploadResponse = await axios.post("/api/uploads/payment-proof", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      // Get the payment store and submit
+      const paymentStore = usePaymentStore.getState();
+      const response = await paymentStore.submitPaymentProof(formData);
       
-      if (uploadResponse.data && uploadResponse.data.filePath) {
-        const invoiceResponse = await axios.post("/api/invoices", {
-          tenant_id: tenantDetails?.userId,
-          apartment_id: tenantDetails?.apartmentId,
-          amount: tenantDetails?.rent,
-          reference_number: referenceNumber,
-          tenant_fullname: tenantDetails?.fullName,
-          image_path: uploadResponse.data.filePath
-        });
-        
-        alert("Payment proof submitted successfully!");
-        handleRemoveFile();
-        setReferenceNumber("");
-        closeModal();
-      }
+      alert("Payment proof submitted successfully!");
+      handleRemoveFile();
+      setReferenceNumber("");
+      closeModal();
     } catch (error) {
       console.error("Error submitting payment:", error);
-      setSubmitError(
-        error.response?.data?.message || 
-        "Failed to submit payment. Please try again."
-      );
+      
+      // Enhanced error display
+      let errorMessage = "Failed to submit payment. Please try again.";
+      
+      if (error.response?.data) {
+        if (error.response.data.errors) {
+          const errors = error.response.data.errors;
+          errorMessage = "Validation errors: " + 
+            Object.entries(errors)
+              .map(([field, msg]) => `${field}: ${msg}`)
+              .join(", ");
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      setSubmitError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

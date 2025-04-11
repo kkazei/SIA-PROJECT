@@ -41,6 +41,7 @@ const TenantDashboard = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [paymentQR, setPaymentQR] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [structuredTenantDetails, setStructuredTenantDetails] = useState(null); // Structured tenant details
 
   // Your existing unified modal state
   const [modals, setModals] = useState({
@@ -83,6 +84,11 @@ const TenantDashboard = () => {
     }
     if (modalId === 'inquiries') {
       loadTenantInquiries();
+    }
+    // Reset payment form when opening payment modal
+    if (modalId === 'payments') {
+      setSelectedFile(null);
+      setReferenceNumber("");
     }
   };
 
@@ -127,6 +133,20 @@ const TenantDashboard = () => {
     fetchTenantData();
   }, [getTenantApartment, getTenantAnnouncements, getTenantQRImages, user?.id]);
 
+  // Update when user or apartment data changes
+  useEffect(() => {
+    if (user && currentApartment) {
+      setStructuredTenantDetails({
+        userId: user.id,
+        fullName: user.name,
+        email: user.email,
+        apartmentId: currentApartment._id,
+        apartmentName: currentApartment.room || "Unknown Room",
+        rent: currentApartment.rent || 0
+      });
+    }
+  }, [user, currentApartment]);
+
   // Keep all your other functions
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -139,6 +159,13 @@ const TenantDashboard = () => {
 
   const submitPayment = async (data) => {
     try {
+      // Log the information being sent (for debugging)
+      console.log("Submitting payment with data:", {
+        tenantDetails: structuredTenantDetails,
+        referenceNumber: data.referenceNumber,
+        fileInfo: selectedFile ? { name: selectedFile.name, size: selectedFile.size } : null
+      });
+      
       const newPayment = {
         _id: `pay${Date.now()}`,
         amount: currentApartment.rent,
@@ -150,9 +177,10 @@ const TenantDashboard = () => {
       
       setPaymentHistory(prev => [newPayment, ...prev]);
       setSuccess("Payment proof submitted successfully!");
-      handleModalClose('paymentProof');
+      handleModalClose('payments');
       return { success: true };
     } catch (error) {
+      console.error("Payment submission error:", error);
       setError("Failed to submit payment. Please try again.");
       return { success: false };
     }
@@ -565,11 +593,10 @@ const TenantDashboard = () => {
           closeModal={() => handleModalClose('payments')}
           selectedFile={selectedFile}
           setSelectedFile={setSelectedFile}
-          handleFileChange={handleFileChange}
           referenceNumber={referenceNumber}
           setReferenceNumber={setReferenceNumber}
           paymentQR={paymentQR}
-          submitPayment={submitPayment}
+          tenantDetails={structuredTenantDetails}
           apartment={currentApartment}
         />
 

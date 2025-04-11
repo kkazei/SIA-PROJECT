@@ -17,6 +17,7 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
+import paymentRoutes from "./routes/payment.route.js";
 
 dotenv.config();
 
@@ -46,7 +47,7 @@ app.use(passport.session());
 
 // Set up file upload directories
 const setupUploadDirectories = () => {
-  const dirs = ['uploads', 'uploads/maintenance', 'uploads/posts'];
+  const dirs = ['uploads', 'uploads/maintenance', 'uploads/posts', 'uploads/payment_proofs'];
   dirs.forEach(dir => {
     const fullPath = path.join(__dirname, dir);
     if (!fs.existsSync(fullPath)) {
@@ -74,6 +75,10 @@ app.use("/api/applications", applicationRoutes); // Add this line
 console.log('Setting up inquiry routes...');
 app.use('/api/inquiries', inquiryRoute);
 console.log('Inquiry routes set up successfully');
+
+// Use payment routes
+app.use('/api/payments', paymentRoutes);
+console.log('Payment routes initialized');
 
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
