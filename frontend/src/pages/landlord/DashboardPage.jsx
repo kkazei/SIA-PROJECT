@@ -107,11 +107,17 @@ const DashboardPage = () => {
                     isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
                 }`}
             >
-                <div className='bg-white shadow-md rounded-lg p-4 lg:p-6 mt-0'>
-                    <h2 className='text-xl lg:text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
-                    <p className='text-gray-600'>{formatDate(new Date())}</p>
+                <div
+                    className="bg-white shadow-md rounded-lg p-4 lg:p-6 mt-16 lg:mt-0" // Adjust margin-top for mobile view
+                >
+                    <h2 className="text-xl lg:text-2xl font-bold text-gray-800">
+                        Welcome, {user?.name || 'Landlord'}
+                    </h2>
+                    <p className="text-gray-600">{formatDate(new Date())}</p>
                 </div>
 
+                
+                
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
                     <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
                         <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>

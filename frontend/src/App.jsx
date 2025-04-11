@@ -146,9 +146,7 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <LandlordLayout>
-                                    <TenantPage />
-                                </LandlordLayout>
+                                <TenantPage /> {/* Remove LandlordLayout wrapper */}
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
