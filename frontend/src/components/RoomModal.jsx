@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApartmentStore } from '../store/apartmentStore';
+import MapView from './MapView'; // Import the MapView component
+import AddressAutocomplete from './AddressAutocomplete'; // Import the new component
 
 const RoomModal = ({ isOpen, onClose }) => {
     const { createApartment, isLoading, error, message, clearMessages } = useApartmentStore();
@@ -17,7 +19,7 @@ const RoomModal = ({ isOpen, onClose }) => {
         },
     });
     const [formError, setFormError] = useState('');
-    const [activeTab, setActiveTab] = useState('basic'); // 'basic', 'features', 'images'
+    const [activeTab, setActiveTab] = useState('basic'); // 'basic', 'features', 'images', 'map'
     const [images, setImages] = useState([]);
     const [previewUrls, setPreviewUrls] = useState([]);
 
@@ -108,6 +110,13 @@ const RoomModal = ({ isOpen, onClose }) => {
         }
     };
 
+    // Add a handler for address selection from autocomplete
+    const handleAddressSelect = (addressData) => {
+        setFormData(prev => ({
+            ...prev,
+            address: addressData
+        }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -190,6 +199,16 @@ const RoomModal = ({ isOpen, onClose }) => {
                         onClick={() => setActiveTab('features')}
                     >
                         Features
+                    </button>
+                    <button 
+                        className={`px-4 py-2 font-medium text-sm ${
+                            activeTab === 'map' 
+                                ? 'text-green-500 border-b-2 border-green-500' 
+                                : 'text-gray-400 hover:text-white'
+                        }`}
+                        onClick={() => setActiveTab('map')}
+                    >
+                        Map
                     </button>
                     <button 
                         className={`px-4 py-2 font-medium text-sm ${
@@ -315,6 +334,69 @@ const RoomModal = ({ isOpen, onClose }) => {
                         </div>
                     )}
 
+                    {/* Map Tab */}
+                    {activeTab === 'map' && (
+                        <div className="my-4">
+                            <p className="text-white mb-2">Apartment Location</p>
+                            <p className="text-gray-400 text-sm mb-4">
+                                Search for an address or manually enter the details below.
+                            </p>
+                            
+                            {/* Address search autocomplete */}
+                            <div className="mb-4">
+                                <label className="block text-white mb-1">Search Address</label>
+                                <AddressAutocomplete 
+                                    onAddressSelect={handleAddressSelect}
+                                    initialValue=""
+                                />
+                            </div>
+                            
+                            {/* Display map based on the current address */}
+                            <div className="h-64 w-full mb-4">
+                                <MapView address={formData.address} height="100%" />
+                            </div>
+                            
+                            {/* Manual address fields */}
+                            <p className="text-white mt-4 mb-2">Or Enter Address Manually</p>
+                            <div className="grid grid-cols-1 gap-3">
+                                <input 
+                                    type="text" 
+                                    name="address.street"
+                                    value={formData.address.street} 
+                                    onChange={handleChange} 
+                                    className="w-full p-2 border rounded bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                    placeholder="Street Address" 
+                                />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input 
+                                        type="text" 
+                                        name="address.city"
+                                        value={formData.address.city} 
+                                        onChange={handleChange} 
+                                        className="w-full p-2 border rounded bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                        placeholder="City" 
+                                    />
+                                    <input 
+                                        type="text" 
+                                        name="address.state"
+                                        value={formData.address.state} 
+                                        onChange={handleChange} 
+                                        className="w-full p-2 border rounded bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                        placeholder="Province/Region" 
+                                    />
+                                </div>
+                                <input 
+                                    type="text" 
+                                    name="address.zipCode"
+                                    value={formData.address.zipCode} 
+                                    onChange={handleChange} 
+                                    className="w-full p-2 border rounded bg-gray-800 text-white border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500" 
+                                    placeholder="ZIP Code" 
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Images Tab */}
                     {activeTab === 'images' && (
                         <div>
@@ -383,7 +465,7 @@ const RoomModal = ({ isOpen, onClose }) => {
                             <button 
                                 type="button"
                                 onClick={() => {
-                                    const tabs = ['basic', 'features', 'images'];
+                                    const tabs = ['basic', 'features', 'map', 'images'];
                                     const currentIndex = tabs.indexOf(activeTab);
                                     setActiveTab(tabs[currentIndex - 1]);
                                 }}
@@ -398,7 +480,7 @@ const RoomModal = ({ isOpen, onClose }) => {
                                 <button 
                                     type="button"
                                     onClick={() => {
-                                        const tabs = ['basic', 'features', 'images'];
+                                        const tabs = ['basic', 'features', 'map', 'images'];
                                         const currentIndex = tabs.indexOf(activeTab);
                                         setActiveTab(tabs[currentIndex + 1]);
                                     }}
