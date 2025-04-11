@@ -12,12 +12,29 @@ import {
 } from 'react-icons/fa';
 
 const LandlordSideNav = ({ onToggle }) => {
-  const [collapsed, setCollapsed] = useState(true);
+  // Change this to false for expanded by default on desktop
+  const [collapsed, setCollapsed] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  // For mobile visibility
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
+
+  // Set initial state based on screen size
+  useEffect(() => {
+    // Only collapse by default on small screens
+    const handleResize = () => {
+      setCollapsed(window.innerWidth < 1024);
+    };
+    
+    // Set initial state
+    handleResize();
+    
+    // Update on resize
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Close mobile sidebar when route changes
   useEffect(() => {
