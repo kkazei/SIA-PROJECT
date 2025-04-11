@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -11,14 +11,25 @@ import {
   FaSignOutAlt,
   FaChevronRight,
   FaChevronLeft,
-  FaSearch
+  FaSearch,
+  FaMoneyBillWave
 } from 'react-icons/fa';
 
 const TenantSideNav = ({ onToggle, onModalOpen }) => {
-  const [collapsed, setCollapsed] = useState(true);
+  // Initialize collapsed state from localStorage
+  const [collapsed, setCollapsed] = useState(() => {
+    const savedState = localStorage.getItem('tenant-sidebar-collapsed');
+    return savedState === null ? true : JSON.parse(savedState);
+  });
+
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
+
+  // Sync state with parent component on mount
+  useEffect(() => {
+    if (onToggle) onToggle(collapsed);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -26,8 +37,11 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
   };
 
   const toggleSidebar = () => {
-    setCollapsed(!collapsed);
-    if (onToggle) onToggle(!collapsed);
+    const newState = !collapsed;
+    setCollapsed(newState);
+    // Save to localStorage
+    localStorage.setItem('tenant-sidebar-collapsed', JSON.stringify(newState));
+    if (onToggle) onToggle(newState);
   };
 
   const navItems = [
