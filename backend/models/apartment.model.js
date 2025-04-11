@@ -37,9 +37,9 @@ const apartmentSchema = new mongoose.Schema({
         state: { type: String },
         zipCode: { type: String },
         country: { type: String, default: 'Philippines' },
-        coordinates: {
-            lat: { type: Number },
-            lng: { type: Number }
+        location: {
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]
         }
       },
       images: [{
@@ -71,6 +71,6 @@ const apartmentSchema = new mongoose.Schema({
 // Add an index for faster queries
 apartmentSchema.index({ landlord_id: 1 });
 apartmentSchema.index({ status: 1 });
-apartmentSchema.index({ "address.coordinates": "2dsphere" }); // Add geospatial index
+apartmentSchema.index({ "address.location": "2dsphere" }); // Update geospatial index
 
 export const Apartment = mongoose.model("Apartment", apartmentSchema);

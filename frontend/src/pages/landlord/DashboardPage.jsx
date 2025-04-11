@@ -11,6 +11,7 @@ import AnnouncementModal from '../../components/AnnouncementModal';
 import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
 import ApplicationModal from './ApplicationModal'; // Import the modal
+import ApartmentDetails from '../../components/ApartmentDetails'; // Import the ApartmentDetails component
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -26,6 +27,8 @@ const DashboardPage = () => {
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     const [isApplicationModalOpen, setApplicationModalOpen] = useState(false);
+    const [selectedApartment, setSelectedApartment] = useState(null);
+    const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
     const navigate = useNavigate();  
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Track sidebar state
 
@@ -94,6 +97,18 @@ const DashboardPage = () => {
             }
         }
     };    
+
+    // Function to handle viewing apartment details
+    const handleViewApartmentDetails = (apartment) => {
+        setSelectedApartment(apartment);
+        setDetailsModalOpen(true);
+    };
+
+    // Function to close details modal
+    const closeDetailsModal = () => {
+        setDetailsModalOpen(false);
+        setSelectedApartment(null);
+    };
 
     return (
         <div className="flex flex-col lg:flex-row">
@@ -255,6 +270,14 @@ const DashboardPage = () => {
                                             <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
                                         </div>
                                         
+                                        {/* Add View Details Button */}
+                                        <button 
+                                            onClick={() => handleViewApartmentDetails(apartment)}
+                                            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md transition-colors text-sm font-medium"
+                                        >
+                                            View Apartment Details
+                                        </button>
+                                        
                                         {/* Tenant Information */}
                                         {apartment.status === 'occupied' && apartment.tenant_id && (
                                             <div className="mt-4 pt-3 border-t border-gray-700">
@@ -296,6 +319,34 @@ const DashboardPage = () => {
                     )}
                 </div>
                 
+                {/* Apartment Details Modal */}
+                {isDetailsModalOpen && selectedApartment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                        <div className="relative bg-gray-900 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <button 
+                                onClick={closeDetailsModal}
+                                className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                                aria-label="Close"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <div className="p-6">
+                                <ApartmentDetails apartment={selectedApartment} />
+                                <div className="mt-6 flex justify-center">
+                                    <button 
+                                        onClick={closeDetailsModal}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
                 <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
                 <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />

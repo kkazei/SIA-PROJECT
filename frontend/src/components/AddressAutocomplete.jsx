@@ -33,9 +33,24 @@ const AddressAutocomplete = ({ onAddressSelect, initialValue = '' }) => {
 
         setIsLoading(true);
         try {
+            // Direct call to Nominatim with proper headers
             const response = await fetch(
-                `/nominatim/search?format=json&q=${encodeURIComponent(searchText)}&limit=5&addressdetails=1`
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchText)}&limit=5&addressdetails=1`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'YourApp/1.0',  // Required by Nominatim policy
+                        'Referer': window.location.origin  // Adding referrer for tracking
+                    },
+                    mode: 'cors'  // Explicitly request CORS
+                }
             );
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            
             const data = await response.json();
             
             // Format suggestions
@@ -58,6 +73,7 @@ const AddressAutocomplete = ({ onAddressSelect, initialValue = '' }) => {
             setShowSuggestions(true);
         } catch (error) {
             console.error('Error fetching address suggestions:', error);
+            setSuggestions([]);
         } finally {
             setIsLoading(false);
         }
@@ -108,7 +124,8 @@ const AddressAutocomplete = ({ onAddressSelect, initialValue = '' }) => {
             {showSuggestions && suggestions.length > 0 && (
                 <div 
                     ref={suggestionsRef}
-                    className="absolute z-10 w-full bg-gray-800 border border-gray-700 rounded mt-1 max-h-60 overflow-y-auto"
+                    className="absolute z-50 w-full bg-gray-800 border border-gray-700 rounded mt-1 max-h-60 overflow-y-auto shadow-lg"
+                    style={{ zIndex: 9999 }} /* Add explicit z-index */
                 >
                     {suggestions.map((suggestion, index) => (
                         <div

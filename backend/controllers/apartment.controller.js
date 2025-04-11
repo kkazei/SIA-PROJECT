@@ -144,28 +144,26 @@ export const createApartment = async (req, res) => {
             const geoResults = await geocoder.geocode(addressString);
             
             if (geoResults && geoResults.length > 0) {
-                coordinates = {
-                    lat: geoResults[0].latitude,
-                    lng: geoResults[0].longitude
+                // Store coordinates in GeoJSON format [longitude, latitude]
+                addressData.location = {
+                    type: 'Point',
+                    coordinates: [geoResults[0].longitude, geoResults[0].latitude]
                 };
-                console.log(`Geocoded address: ${addressString}`, coordinates);
+                console.log(`Geocoded address: ${addressString}`, addressData.location);
             }
         } catch (geoError) {
             console.error('Geocoding error:', geoError);
             // Continue without coordinates if geocoding fails
         }
 
-        // Create apartment object with coordinates
+        // Create apartment object with coordinates in GeoJSON format
         const apartment = new Apartment({
             room,
             rent,
             description,
             bedrooms,
             bathrooms,
-            address: {
-                ...addressData,
-                coordinates
-            },
+            address: addressData,
             landlord_id: req.user.id,
             status: 'available'
         });

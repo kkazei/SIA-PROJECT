@@ -30,14 +30,23 @@ const MapView = ({ address, height = '300px' }) => {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // If we have coordinates from the address, use them directly
-        if (address?.coordinates?.lat && address?.coordinates?.lng) {
-            const { lat, lng } = address.coordinates;
+        // Check for GeoJSON location format first
+        if (address?.location?.coordinates && address.location.coordinates.length === 2) {
+            // GeoJSON format is [longitude, latitude]
+            const [lng, lat] = address.location.coordinates;
             map.setView([lat, lng], 15);
             L.marker([lat, lng]).addTo(map);
             return;
         } 
         
+        // Fallback to old format for backward compatibility
+        if (address?.coordinates?.lat && address?.coordinates?.lng) {
+            const { lat, lng } = address.coordinates;
+            map.setView([lat, lng], 15);
+            L.marker([lat, lng]).addTo(map);
+            return;
+        }
+
         // Otherwise, geocode the address if we have address components
         const addressComponents = [
             address?.street,
@@ -50,17 +59,33 @@ const MapView = ({ address, height = '300px' }) => {
         if (addressComponents.length > 1) {
             const addressStr = addressComponents.join(', ');
             
-            // Use Nominatim for geocoding
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressStr)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        const { lat, lon } = data[0];
-                        map.setView([lat, lon], 15);
-                        L.marker([lat, lon]).addTo(map);
-                    }
-                })
-                .catch(error => console.error('Geocoding error:', error));
+            // Use Nominatim for geocoding with proper headers
+            fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressStr)}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'YourApp/1.0',  // Required by Nominatim policy
+                        'Referer': window.location.origin
+                    },
+                    mode: 'cors'
+                }
+            )
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.length > 0) {
+                    const { lat, lon } = data[0];
+                    map.setView([lat, lon], 15);
+                    L.marker([lat, lon]).addTo(map);
+                }
+            })
+            .catch(error => console.error('Geocoding error:', error));
         }
 
         // Clean up on unmount
@@ -73,7 +98,16 @@ const MapView = ({ address, height = '300px' }) => {
     }, [address]);
 
     return (
-        <div ref={mapContainerRef} style={{ height, width: '100%', borderRadius: '0.375rem' }}></div>
+        <div 
+            ref={mapContainerRef} 
+            style={{ 
+                height, 
+                width: '100%', 
+                borderRadius: '0.375rem',
+                position: 'relative',
+                zIndex: 1 // Lower z-index for the map container
+            }}
+        ></div>
     );
 };
 

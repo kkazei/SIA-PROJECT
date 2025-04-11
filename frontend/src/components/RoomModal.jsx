@@ -342,8 +342,8 @@ const RoomModal = ({ isOpen, onClose }) => {
                                 Search for an address or manually enter the details below.
                             </p>
                             
-                            {/* Address search autocomplete */}
-                            <div className="mb-4">
+                            {/* Put address search in a separate div with position relative */}
+                            <div className="mb-8 relative" style={{ zIndex: 40 }}>
                                 <label className="block text-white mb-1">Search Address</label>
                                 <AddressAutocomplete 
                                     onAddressSelect={handleAddressSelect}
@@ -351,8 +351,8 @@ const RoomModal = ({ isOpen, onClose }) => {
                                 />
                             </div>
                             
-                            {/* Display map based on the current address */}
-                            <div className="h-64 w-full mb-4">
+                            {/* Display map with lower z-index */}
+                            <div className="h-64 w-full mb-4 relative" style={{ zIndex: 30 }}>
                                 <MapView address={formData.address} height="100%" />
                             </div>
                             
