@@ -11,7 +11,8 @@ const PaymentProofModal = ({
   referenceNumber,
   setReferenceNumber,
   paymentQR,
-  tenantDetails
+  tenantDetails,
+  onPaymentSuccess // New prop for handling successful payments
 }) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
@@ -186,6 +187,16 @@ const PaymentProofModal = ({
       // Get the payment store and submit
       const paymentStore = usePaymentStore.getState();
       const response = await paymentStore.submitPaymentProof(formData);
+      
+      // Refresh payment history after successful submission
+      if (tenantDetails?.userId) {
+        await paymentStore.getTenantPayments(tenantDetails.userId);
+      }
+      
+      // Call the success callback if provided
+      if (onPaymentSuccess && typeof onPaymentSuccess === 'function') {
+        onPaymentSuccess(response.payment);
+      }
       
       alert("Payment proof submitted successfully!");
       handleRemoveFile();

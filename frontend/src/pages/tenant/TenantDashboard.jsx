@@ -5,6 +5,7 @@ import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
 import { useInquiryStore } from "../../store/inquiryStore";
 import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
+import { usePaymentStore } from "../../store/paymentStore"; // Import payment store
 import TenantSideNav from "../../components/layout/TenantSideNav";
 import { 
   FaFileInvoiceDollar, 
@@ -73,6 +74,7 @@ const TenantDashboard = () => {
     error: inquiriesError
   } = useInquiryStore();
   const { qrImages, loading: qrLoading, getTenantQRImages } = useQRImageStore(); // Add QR image state and functions
+  const { payments, getTenantPayments } = usePaymentStore(); // Add payment store hooks
 
   // Keep all your existing handlers and functions
   const handleModalOpen = (modalId) => {
@@ -146,6 +148,38 @@ const TenantDashboard = () => {
       });
     }
   }, [user, currentApartment]);
+
+  // Add effect to fetch payments when user ID is available
+  useEffect(() => {
+    if (user?.id) {
+      getTenantPayments(user.id);
+    }
+  }, [user?.id, getTenantPayments]);
+
+  // Handle successful payment submission
+  const handlePaymentSuccess = async (newPayment) => {
+    // Show success message
+    setSuccess("Payment proof submitted successfully!");
+    
+    // Refresh payment history
+    if (user?.id) {
+      await getTenantPayments(user.id);
+    }
+  };
+
+  // Format date for display
+  const formatPaymentDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString || 'Unknown date';
+    }
+  };
 
   // Keep all your other functions
   const handleFileChange = (event) => {
@@ -529,13 +563,14 @@ const TenantDashboard = () => {
               <p className="text-gray-400 text-sm mb-4">View your previous payments and status</p>
               
               <div>
-                {paymentHistory && paymentHistory.length > 0 ? (
+                {payments && payments.length > 0 ? (
                   <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                    {paymentHistory.slice(0, 3).map(payment => (
+                    {payments.slice(0, 3).map(payment => (
                       <div key={payment._id} className="bg-gray-700 rounded p-3 flex justify-between items-center">
                         <div>
-                          <p className="text-white text-sm">{formatDate(payment.paymentDate)}</p>
+                          <p className="text-white text-sm">{formatPaymentDate(payment.createdAt)}</p>
                           <p className="text-green-400">₱{payment.amount?.toLocaleString()}</p>
+                          <p className="text-xs text-gray-300">#{payment.reference_number}</p>
                         </div>
                         <div className={`px-2 py-1 rounded-full text-xs ${
                           payment.status === 'approved' ? 'bg-green-900 text-green-300' :
@@ -598,6 +633,7 @@ const TenantDashboard = () => {
           paymentQR={paymentQR}
           tenantDetails={structuredTenantDetails}
           apartment={currentApartment}
+          onPaymentSuccess={handlePaymentSuccess}
         />
 
         <BrowseApartmentsModal
