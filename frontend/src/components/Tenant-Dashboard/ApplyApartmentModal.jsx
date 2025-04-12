@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useApplicationStore } from "../../store/applicationStore";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
   const [moveInDate, setMoveInDate] = useState("");
@@ -37,12 +38,27 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
         additionalComments
       });
       
+      // Show success alert
+      Swal.fire({
+        title: "Application Submitted!",
+        text: "The landlord will review your application and notify you of their decision.",
+        icon: "success",
+        confirmButtonText: "OK",
+      });
+
       // Close modal after successful submission
       setTimeout(() => {
         closeModal();
       }, 2000);
     } catch (err) {
-      // Error is handled by the store
+      // Show error alert
+      Swal.fire({
+        title: "Submission Failed",
+        text: "Failed to submit your application. Please try again later.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+
       console.error("Failed to submit application:", err);
     }
   };

@@ -105,7 +105,7 @@ const TenantPage = () => {
       >
         {/* Title and Search Bar */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full mb-6">
-          <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 lg:mb-0">
+          <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 lg:mb-0 text-center lg:text-left w-full lg:w-auto">
             Tenant Management
           </h2>
           <div className="flex flex-col sm:flex-row w-full lg:w-auto space-y-2 sm:space-y-0 sm:space-x-4">

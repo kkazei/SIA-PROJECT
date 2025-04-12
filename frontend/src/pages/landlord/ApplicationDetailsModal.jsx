@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, processingStatus }) => {
   const [rejectionReason, setRejectionReason] = useState('');
@@ -11,6 +12,43 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const handleReject = async () => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You are about to reject this application.",
+      icon: "warning",
+      input: "text",
+      inputPlaceholder: "Enter rejection reason (optional)",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, reject it!",
+    });
+
+    if (result.isConfirmed) {
+      const rejectionReason = result.value || "No reason provided";
+      await handleProcess(application, "rejected", rejectionReason);
+      Swal.fire("Rejected!", "The application has been rejected.", "success");
+    }
+  };
+
+  const handleApprove = async () => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You are about to approve this application.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, approve it!",
+    });
+
+    if (result.isConfirmed) {
+      await handleProcess(application, "approved");
+      Swal.fire("Approved!", "The application has been approved.", "success");
+    }
   };
 
   if (!isOpen || !application) return null;
@@ -61,7 +99,7 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
           {application.status === 'pending' && (
             <>
               <button
-                onClick={() => handleProcess(application, 'rejected', rejectionReason)}
+                onClick={handleReject}
                 disabled={processingStatus.status}
                 className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
               >
@@ -75,7 +113,7 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
                 )}
               </button>
               <button
-                onClick={() => handleProcess(application, 'approved')}
+                onClick={handleApprove}
                 disabled={processingStatus.status}
                 className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
               >

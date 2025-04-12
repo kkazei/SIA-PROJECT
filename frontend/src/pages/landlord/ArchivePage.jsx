@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useMaintenanceStore } from '../../store/maintenanceStore';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 const ArchivePage = () => {
   const { 
@@ -40,25 +41,47 @@ const ArchivePage = () => {
 
   const handleRestore = async (id) => {
     try {
-      if (window.confirm("Are you sure you want to restore this maintenance record?")) {
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "This will restore the maintenance record to the active list.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, restore it!",
+      });
+
+      if (result.isConfirmed) {
         console.log("Restoring maintenance with ID:", id);
         await restoreArchive(id);
+        Swal.fire("Restored!", "The maintenance record has been restored.", "success");
       }
     } catch (error) {
       console.error("Error restoring maintenance record:", error);
-      toast.error("Failed to restore record");
+      Swal.fire("Error!", "Failed to restore the record.", "error");
     }
   };
 
   const handlePermanentDelete = async (id) => {
     try {
-      if (window.confirm("Are you sure you want to permanently delete this record? This action cannot be undone.")) {
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "This action cannot be undone!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, delete it!",
+      });
+
+      if (result.isConfirmed) {
         console.log("Permanently deleting maintenance with ID:", id);
         await permanentlyDeleteMaintenance(id);
+        Swal.fire("Deleted!", "The maintenance record has been permanently deleted.", "success");
       }
     } catch (error) {
       console.error("Error deleting maintenance record:", error);
-      toast.error("Failed to delete record");
+      Swal.fire("Error!", "Failed to delete the record.", "error");
     }
   };
 

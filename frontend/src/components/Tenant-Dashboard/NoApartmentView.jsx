@@ -10,105 +10,58 @@ import {
   FaSearchLocation,
   FaClipboardCheck
 } from "react-icons/fa";
+import NoApartmentSideNavBar from "./NoApartmentSideNavBar";
+
+// Custom hook to detect screen size
+const useMediaQuery = (query) => {
+  const [matches, setMatches] = useState(window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [query]);
+
+  return matches;
+};
 
 const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogout, children }) => {
   const { tenantApplications, fetchTenantApplications, loading } = useApplicationStore();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Track sidebar state
+  const isMobile = useMediaQuery("(max-width: 1024px)"); // Detect mobile view
 
-  // Fetch tenant's applications when component mounts
   useEffect(() => {
     fetchTenantApplications();
   }, [fetchTenantApplications]);
 
-  // Count pending applications
   const pendingCount = tenantApplications.filter(app => app.status === "pending").length;
-  
+
+  const handleSidebarToggle = (collapsed) => {
+    setIsSidebarCollapsed(collapsed);
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex">
-      {/* Left Sidebar */}
-      <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-        <div className="p-5 border-b border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <FaBuilding className="text-white" />
-            </div>
-            <h1 className="text-lg font-bold">ApartmentFinder</h1>
-          </div>
-        </div>
-        
-        <div className="flex-1 p-4">
-          <p className="text-sm text-gray-400 mb-3">MAIN MENU</p>
-          
-          <button 
-            onClick={() => setActiveTab("dashboard")}
-            className={`w-full flex items-center py-2 px-3 rounded-lg mb-2 ${
-              activeTab === "dashboard" 
-                ? "bg-blue-600 text-white" 
-                : "text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            <FaHome className="mr-3" /> Dashboard
-          </button>
-          
-          <button 
-            onClick={() => {
-              setActiveTab("browse");
-              onBrowseClick();
-            }}
-            className={`w-full flex items-center py-2 px-3 rounded-lg mb-2 ${
-              activeTab === "browse" 
-                ? "bg-blue-600 text-white" 
-                : "text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            <FaSearchLocation className="mr-3" /> Browse Apartments
-          </button>
-          
-          <button 
-            onClick={() => {
-              setActiveTab("applications");
-              onApplicationsClick();
-            }}
-            className={`w-full flex items-center py-2 px-3 rounded-lg mb-2 ${
-              activeTab === "applications" 
-                ? "bg-blue-600 text-white" 
-                : "text-gray-300 hover:bg-gray-700"
-            } relative`}
-          >
-            <FaClipboardList className="mr-3" /> My Applications
-            {pendingCount > 0 && (
-              <span className="absolute right-2 top-2 bg-blue-500 text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {pendingCount}
-              </span>
-            )}
-          </button>
-        </div>
-        
-        <div className="p-4 border-t border-gray-700">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
-              {userName.charAt(0).toUpperCase()}
-            </div>
-            <div className="ml-3">
-              <p className="font-medium">{userName}</p>
-              <p className="text-xs text-gray-400">New Tenant</p>
-            </div>
-          </div>
-          
-          <button 
-            onClick={onLogout}
-            className="w-full flex items-center justify-center py-2 text-red-400 hover:text-red-300 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors"
-          >
-            <FaSignOutAlt className="mr-2" />
-            Logout
-          </button>
-        </div>
-      </div>
-      
+      {/* Sidebar */}
+      <NoApartmentSideNavBar
+        userName={userName}
+        onBrowseClick={onBrowseClick}
+        onApplicationsClick={onApplicationsClick}
+        onLogout={onLogout}
+        pendingCount={pendingCount}
+        onSidebarToggle={handleSidebarToggle} // Pass the callback
+      />
+
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div
+        className={`flex-1 overflow-auto transition-all duration-300 ${
+          !isMobile && (isSidebarCollapsed ? "ml-20" : "ml-64") // Adjust margin only in desktop view
+        } ${isMobile ? "pt-20" : ""}`} // Slightly reduce padding in mobile view
+      >
         <header className="bg-gray-800 border-b border-gray-700 p-6">
-          <h1 className="text-2xl font-bold">Welcome to Your Tenant Portal</h1>
+          <h1 className="text-2xl font-bold">Welcome Tenant!</h1>
         </header>
         
         <div className="p-6">
@@ -123,7 +76,7 @@ const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogou
                 You're just a few steps away from finding your new home. Let's get started with your apartment journey.
               </p>
               
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <button 
                   onClick={onBrowseClick}
                   className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
@@ -146,7 +99,7 @@ const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogou
             </div>
           </div>
           
-          {/* Process Steps */}
+          {/* Rest of the content */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <FaRegLightbulb className="mr-2 text-blue-400" /> Your Apartment Journey

@@ -164,7 +164,11 @@ const InquiriesPage = () => {
           isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
         }`}
       >
-        <div className="bg-white shadow-md rounded-lg p-4 lg:p-6">
+        <div
+          className={`bg-white shadow-md rounded-lg p-4 lg:p-6 ${
+            window.innerWidth < 1024 ? 'mt-12' : '' // Add margin-top only for mobile screens
+          }`}
+        >
           <h2 className="text-xl lg:text-2xl font-bold text-gray-800">Tenant Inquiries</h2>
           <p className="text-gray-600">Manage and respond to tenant inquiries</p>
         </div>
