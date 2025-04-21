@@ -74,16 +74,30 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
 
   // Handle viewing payment proof
   const handleViewProof = (proofUrl) => {
-    // Assume proofUrl is the full path from the database
-    setCurrentProof(proofUrl);
+    // Make sure we have the full URL with API base
+    const API_BASE_URL = import.meta.env.MODE === 'development' 
+      ? 'http://localhost:5000' 
+      : '';
+    
+    // Process the URL to ensure it has the full path
+    const fullUrl = proofUrl.startsWith('http') 
+      ? proofUrl 
+      : `${API_BASE_URL}${proofUrl}`;
+    
+    console.log("Opening proof URL:", fullUrl);
+    setCurrentProof(fullUrl);
     setProofModalOpen(true);
   };
 
   // Handle payment approval
   const handleApprovePayment = async (paymentId) => {
     setIsApproving(true);
+    console.log("Approving payment ID:", paymentId);
+    
     try {
       const success = await approvePayment(paymentId, "Payment approved by landlord");
+      
+      console.log("Approval result:", success);
       
       if (success) {
         // Update the local payment history to reflect the change
@@ -94,12 +108,15 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
               : payment
           )
         );
+        
+        // Optional: Show success message
+        alert("Payment approved successfully");
       } else {
         throw new Error('Failed to approve payment');
       }
     } catch (err) {
       console.error("Error approving payment:", err);
-      alert("Failed to approve payment: " + (err.message));
+      alert("Failed to approve payment: " + (err.message || "Unknown error"));
     } finally {
       setIsApproving(false);
     }
@@ -503,9 +520,9 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                                 </span>
                               </td>
                               <td className="py-2 px-4 border-b">
-                                {payment.image_path ? (
+                                {payment.image_path || payment.proofUrl ? (
                                   <button 
-                                    onClick={() => handleViewProof(payment.image_path)}
+                                    onClick={() => handleViewProof(payment.image_path || payment.proofUrl)}
                                     className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
                                   >
                                     View

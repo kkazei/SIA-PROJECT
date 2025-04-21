@@ -6,6 +6,13 @@ const API_BASE_URL = import.meta.env.MODE === 'development'
   ? 'http://localhost:5000' 
   : '';
 
+// Helper function to process image paths - ADDED THIS FUNCTION
+const processImagePath = (path) => {
+  if (!path) return null;
+  if (typeof path === 'string' && path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
+
 const usePaymentStore = create((set) => ({
   payments: [],
   selectedPayment: null,
@@ -71,7 +78,7 @@ const usePaymentStore = create((set) => ({
     }
   },
   
-  // Get tenant payments
+  // Get tenant payments - MODIFIED TO PROCESS PROOF URLS
   getTenantPayments: async (tenantId) => {
     set({ loading: true, error: null });
     
@@ -80,12 +87,19 @@ const usePaymentStore = create((set) => ({
         withCredentials: true
       });
       
+      // Process payment proof URLs
+      const processedPayments = (response.data.payments || []).map(payment => ({
+        ...payment,
+        // Create a new property instead of modifying the existing one
+        displayUrl: processImagePath(payment.image_path || payment.proofUrl)
+      }));
+      
       set({ 
-        payments: response.data.payments || [],
+        payments: processedPayments,
         loading: false
       });
       
-      return response.data.payments;
+      return processedPayments;
     } catch (error) {
       console.error('Error fetching tenant payments:', error);
       
@@ -99,7 +113,7 @@ const usePaymentStore = create((set) => ({
     }
   },
   
-  // Get payment details by ID
+  // Get payment details by ID - MODIFIED TO PROCESS PROOF URL
   getPaymentById: async (paymentId) => {
     set({ loading: true, error: null });
     
@@ -108,12 +122,18 @@ const usePaymentStore = create((set) => ({
         withCredentials: true
       });
       
+      // Process payment proof URL
+      const processedPayment = response.data.payment ? {
+        ...response.data.payment,
+        proofUrl: processImagePath(response.data.payment.proofUrl)
+      } : null;
+      
       set({ 
-        selectedPayment: response.data.payment,
+        selectedPayment: processedPayment,
         loading: false
       });
       
-      return response.data.payment;
+      return processedPayment;
     } catch (error) {
       console.error('Error fetching payment details:', error);
       
@@ -123,6 +143,38 @@ const usePaymentStore = create((set) => ({
       });
       
       throw error;
+    }
+  },
+  
+  // Approve payment - ADD withCredentials: true 
+  approvePayment: async (paymentId, remarks) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/payments/${paymentId}`, {
+        status: 'approved',
+        admin_remarks: remarks || 'Payment approved'
+      }, { withCredentials: true }); // ADDED credentials
+      
+      console.log('Payment approved:', response.data);
+      return true;
+    } catch (error) {
+      console.error('Error approving payment:', error);
+      return false;
+    }
+  },
+  
+  // Reject payment - ADD withCredentials: true
+  rejectPayment: async (paymentId, remarks) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/payments/${paymentId}`, {
+        status: 'rejected',
+        admin_remarks: remarks || 'Payment rejected'
+      }, { withCredentials: true }); // ADDED credentials
+      
+      console.log('Payment rejected:', response.data);
+      return true;
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      return false;
     }
   },
   
