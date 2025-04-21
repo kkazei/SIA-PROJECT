@@ -4,6 +4,9 @@ import { usePaymentStore } from "../store/paymentStore";
 import { useTenantStore } from "../store/tenantStore";
 import { useLeaseStore } from "../store/leaseStore";
 
+// Import the image path processor from one of the stores
+import { processImagePath } from "../store/paymentStore";
+
 const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const [loading, setLoading] = useState(false);
   const [detailedTenant, setDetailedTenant] = useState(null);
@@ -74,16 +77,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
 
   // Handle viewing payment proof
   const handleViewProof = (proofUrl) => {
-    // Make sure we have the full URL with API base
-    const API_BASE_URL = import.meta.env.MODE === 'development' 
-      ? 'http://localhost:5000' 
-      : '';
-    
-    // Process the URL to ensure it has the full path
-    const fullUrl = proofUrl.startsWith('http') 
-      ? proofUrl 
-      : `${API_BASE_URL}${proofUrl}`;
-    
+    const fullUrl = processImagePath(proofUrl);
     console.log("Opening proof URL:", fullUrl);
     setCurrentProof(fullUrl);
     setProofModalOpen(true);

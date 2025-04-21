@@ -188,4 +188,4 @@ const usePaymentStore = create((set) => ({
   }
 }));
 
-export { usePaymentStore };
+export { usePaymentStore, processImagePath };

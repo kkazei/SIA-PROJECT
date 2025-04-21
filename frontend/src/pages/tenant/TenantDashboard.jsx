@@ -5,7 +5,7 @@ import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
 import { useInquiryStore } from "../../store/inquiryStore";
 import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
-import { usePaymentStore } from "../../store/paymentStore"; // Import payment store
+import { usePaymentStore, processImagePath } from "../../store/paymentStore"; // Import processImagePath helper
 import TenantSideNav from "../../components/layout/TenantSideNav";
 import { 
   FaFileInvoiceDollar, 
@@ -245,11 +245,8 @@ const TenantDashboard = () => {
 
     if (qrImages && qrImages.length > 0) {
       const latestQR = qrImages[0];
-      let imagePath = latestQR.image_path;
-      const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000' : '';
-      if (imagePath && !imagePath.startsWith('http') && !imagePath.startsWith(BASE_URL)) {
-        imagePath = `${BASE_URL}${imagePath}`;
-      }
+      // Use processImagePath instead of manually constructing URLs
+      const imagePath = processImagePath(latestQR.image_path);
       
       return (
         <div className="bg-white p-2 rounded-lg mb-3">
@@ -472,7 +469,7 @@ const TenantDashboard = () => {
                 <div className="h-32 bg-gray-700 rounded-lg overflow-hidden">
                   {currentApartment?.images && currentApartment.images.length > 0 ? (
                     <img
-                      src={currentApartment.images[0]}
+                      src={processImagePath(currentApartment.images[0])}
                       alt={`${currentApartment.room}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {

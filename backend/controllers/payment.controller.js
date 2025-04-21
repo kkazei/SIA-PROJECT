@@ -1,4 +1,5 @@
 import Payment from '../models/payment.model.js';
+import { Apartment } from "../models/apartment.model.js";
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -208,6 +209,46 @@ export const updatePaymentStatus = async (req, res) => {
         success: false,
         message: 'Payment not found'
       });
+    }
+    
+    // If payment is approved, update the due date (extend by 1 month)
+    if (status === 'approved') {
+      // Find the apartment associated with this payment
+      const apartment = await Apartment.findById(payment.apartment_id);
+      
+      if (apartment) {
+        // Calculate new due date (current due date + 1 month)
+        let newDueDate;
+        
+        // Check if paymentInfo and nextDueDate exist and if the date is in the future
+        if (apartment.paymentInfo && 
+            apartment.paymentInfo.nextDueDate && 
+            new Date(apartment.paymentInfo.nextDueDate) > new Date()) {
+          // If there's a future due date, add a month to it
+          newDueDate = new Date(apartment.paymentInfo.nextDueDate);
+        } else {
+          // If due date is in the past or not set, start from current date
+          newDueDate = new Date();
+        }
+        
+        // Add one month to the date
+        newDueDate.setMonth(newDueDate.getMonth() + 1);
+        
+        // Update the apartment with the new due date inside paymentInfo
+        await Apartment.findByIdAndUpdate(
+          payment.apartment_id,
+          { 
+            'paymentInfo.nextDueDate': newDueDate,
+            'paymentInfo.lastPaymentDate': new Date(),
+            'paymentInfo.paymentStatus': 'paid'
+          },
+          { new: true }
+        );
+        
+        console.log(`Payment approved: Due date extended to ${newDueDate.toISOString().split('T')[0]} for apartment ${apartment._id}`);
+      } else {
+        console.warn(`Apartment ${payment.apartment_id} not found for payment ${payment._id}`);
+      }
     }
     
     res.status(200).json({
