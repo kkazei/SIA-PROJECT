@@ -19,6 +19,8 @@ import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
 import leaseRoutes from './routes/lease.route.js';
+import adminRoutes from './routes/admin.route.js';
+
 
 dotenv.config();
 
@@ -71,6 +73,8 @@ app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
 app.use("/api/applications", applicationRoutes); // Add this line
+app.use('/api/admin', adminRoutes);
+
 
 // Add this before mounting the route
 console.log('Setting up inquiry routes...');
