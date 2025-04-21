@@ -10,6 +10,13 @@ const API_URL = `${BASE_URL}/api/leases`;
 // Set axios to include credentials in requests
 axios.defaults.withCredentials = true;
 
+// Helper function to process file paths (similar to the one in apartmentStore)
+const processFilePath = (path) => {
+  if (!path) return null;
+  if (typeof path === 'string' && path.startsWith('http')) return path;
+  return `${BASE_URL}${path}`;
+};
+
 export const useLeaseStore = create((set, get) => ({
   leaseDocuments: [],
   selectedDocument: null,
@@ -25,12 +32,18 @@ export const useLeaseStore = create((set, get) => ({
         withCredentials: true
       });
       
+      // Process file paths for each document - FIXED: using filePath instead of fileUrl
+      const processedDocuments = response.data.data.map(doc => ({
+        ...doc,
+        fileUrl: processFilePath(doc.filePath) // Changed from doc.fileUrl to doc.filePath
+      }));
+      
       set({
-        leaseDocuments: response.data.data,
+        leaseDocuments: processedDocuments,
         loading: false
       });
       
-      return response.data.data;
+      return processedDocuments;
     } catch (error) {
       console.error("Error fetching lease documents:", error);
       set({
@@ -52,14 +65,19 @@ export const useLeaseStore = create((set, get) => ({
         withCredentials: true
       });
 
-      // Add the new document to the list
+      // Process the file path and add to the list - FIXED: using filePath
+      const processedDocument = {
+        ...response.data.document,
+        fileUrl: processFilePath(response.data.document.filePath) // Changed from fileUrl to filePath
+      };
+
       set(state => ({
-        leaseDocuments: [...state.leaseDocuments, response.data.document],
+        leaseDocuments: [...state.leaseDocuments, processedDocument],
         loading: false,
         message: 'Lease document uploaded successfully'
       }));
 
-      return response.data.document;
+      return processedDocument;
     } catch (error) {
       console.error("Error uploading lease document:", error);
       set({
@@ -102,12 +120,18 @@ export const useLeaseStore = create((set, get) => ({
         withCredentials: true
       });
 
+      // Process the file path - FIXED: using filePath
+      const processedDocument = {
+        ...response.data.data,
+        fileUrl: processFilePath(response.data.data.filePath) // Changed from fileUrl to filePath
+      };
+
       set({
-        selectedDocument: response.data.data,
+        selectedDocument: processedDocument,
         loading: false
       });
 
-      return response.data.data;
+      return processedDocument;
     } catch (error) {
       console.error("Error fetching lease document:", error);
       set({

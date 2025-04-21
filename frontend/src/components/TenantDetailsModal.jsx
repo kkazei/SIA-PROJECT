@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePaymentStore } from "../store/paymentStore";
 import { useTenantStore } from "../store/tenantStore";
 import { useLeaseStore } from "../store/leaseStore";
-import axios from "axios";
 
 const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const [loading, setLoading] = useState(false);
@@ -21,7 +20,8 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const [leaseUploadMessage, setLeaseUploadMessage] = useState(null);
 
   // Use our stores
-  const { getTenantPayments } = usePaymentStore();
+  const { getTenantPayments, approvePayment, rejectPayment } = usePaymentStore();
+  const { getTenantById } = useTenantStore();
   const {
     leaseDocuments,
     loading: leaseLoading,
@@ -30,10 +30,6 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
     uploadLeaseDocument,
     deleteLeaseDocument,
   } = useLeaseStore();
-
-  // Define our API base URL
-  const API_BASE_URL =
-    import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
 
   // Fetch detailed tenant info, payment history, and lease documents when a tenant is selected
   useEffect(() => {
@@ -54,26 +50,23 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
     setError(null);
 
     try {
-      // Fetch detailed tenant information directly from API
-      const response = await axios.get(`${API_BASE_URL}/api/tenants/${tenant._id}`, {
-        withCredentials: true,
-      });
-
-      if (response.data && response.data.success) {
-        setDetailedTenant(response.data.data);
+      // Fetch detailed tenant information via tenant store
+      const tenantData = await getTenantById(tenant._id);
+      if (tenantData) {
+        setDetailedTenant(tenantData);
       } else {
-        throw new Error(response.data?.message || "Failed to load tenant details");
+        throw new Error("Failed to load tenant details");
       }
 
-      // Get tenant payment history
+      // Get tenant payment history via payment store
       const payments = await getTenantPayments(tenant._id);
       setPaymentHistory(payments || []);
 
-      // Get tenant lease documents using our new store
+      // Get tenant lease documents via lease store
       await fetchTenantLeases(tenant._id);
     } catch (err) {
       console.error("Error fetching tenant details:", err);
-      setError(err.response?.data?.message || err.message || "Failed to load tenant details");
+      setError(err.message || "Failed to load tenant details");
     } finally {
       setLoading(false);
     }
@@ -81,7 +74,8 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
 
   // Handle viewing payment proof
   const handleViewProof = (proofUrl) => {
-    setCurrentProof(`${API_BASE_URL}${proofUrl}`);
+    // Assume proofUrl is the full path from the database
+    setCurrentProof(proofUrl);
     setProofModalOpen(true);
   };
 
@@ -89,13 +83,9 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const handleApprovePayment = async (paymentId) => {
     setIsApproving(true);
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/api/payments/${paymentId}`,
-        { status: "approved", admin_remarks: "Payment approved by landlord" },
-        { withCredentials: true }
-      );
+      const success = await approvePayment(paymentId, "Payment approved by landlord");
       
-      if (response.data && response.data.success) {
+      if (success) {
         // Update the local payment history to reflect the change
         setPaymentHistory(prevPayments => 
           prevPayments.map(payment => 
@@ -105,11 +95,11 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
           )
         );
       } else {
-        throw new Error(response.data?.message || 'Failed to approve payment');
+        throw new Error('Failed to approve payment');
       }
     } catch (err) {
       console.error("Error approving payment:", err);
-      alert("Failed to approve payment: " + (err.response?.data?.message || err.message));
+      alert("Failed to approve payment: " + (err.message));
     } finally {
       setIsApproving(false);
     }
@@ -119,13 +109,9 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const handleRejectPayment = async (paymentId) => {
     setIsRejecting(true);
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/api/payments/${paymentId}`,
-        { status: "rejected", admin_remarks: "Payment rejected by landlord" },
-        { withCredentials: true }
-      );
+      const success = await rejectPayment(paymentId, "Payment rejected by landlord");
       
-      if (response.data && response.data.success) {
+      if (success) {
         // Update the local payment history to reflect the change
         setPaymentHistory(prevPayments => 
           prevPayments.map(payment => 
@@ -135,11 +121,11 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
           )
         );
       } else {
-        throw new Error(response.data?.message || 'Failed to reject payment');
+        throw new Error('Failed to reject payment');
       }
     } catch (err) {
       console.error("Error rejecting payment:", err);
-      alert("Failed to reject payment: " + (err.response?.data?.message || err.message));
+      alert("Failed to reject payment: " + (err.message));
     } finally {
       setIsRejecting(false);
     }
@@ -208,7 +194,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
       console.error("Error uploading lease document:", err);
       setLeaseUploadMessage({
         type: "error",
-        text: err.response?.data?.message || err.message || "Failed to upload document",
+        text: err.message || "Failed to upload document",
       });
     } finally {
       setIsUploadingLease(false);
@@ -235,7 +221,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
 
   // Function to view lease document
   const handleViewLease = (documentPath) => {
-    setCurrentProof(`${API_BASE_URL}${documentPath}`);
+    setCurrentProof(documentPath);
     setProofModalOpen(true);
   };
 
@@ -322,7 +308,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                     <div className="w-32 h-32 rounded-full bg-blue-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden mx-auto md:mx-0">
                       {displayTenant.avatar ? (
                         <img
-                          src={`${API_BASE_URL}${displayTenant.avatar}`}
+                          src={displayTenant.avatar}
                           alt={displayTenant.name || "Tenant"}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -376,7 +362,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                   </div>
                 </div>
 
-                {/* Lease Documents Section - Updated to use our store */}
+                {/* Lease Documents Section - Using our store */}
                 <div className="border-t pt-6 mb-6">
                   <h4 className="font-semibold text-lg mb-4">Lease Documents</h4>
 
@@ -399,11 +385,11 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                               <div key={doc._id} className="border rounded-lg p-3 flex justify-between items-center">
                                 <div>
                                   <p className="font-medium">{doc.description || "Lease Document"}</p>
-                                  <p className="text-sm text-gray-500">Uploaded: {formatDate(doc.uploadDate)}</p>
+                                  <p className="text-sm text-gray-500">Uploaded: {formatDate(doc.createdAt)}</p>
                                 </div>
                                 <div className="flex space-x-2">
                                   <button
-                                    onClick={() => handleViewLease(doc.filePath)}
+                                    onClick={() => handleViewLease(doc.fileUrl)}
                                     className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
                                   >
                                     View
@@ -477,7 +463,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                   </div>
                 </div>
 
-                {/* Payment History - RESTORED */}
+                {/* Payment History */}
                 <div className="border-t pt-6">
                   <h4 className="font-semibold text-lg mb-4">Payment History</h4>
                   <div className="overflow-x-auto">
@@ -592,7 +578,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
         )}
       </AnimatePresence>
       
-      {/* Document/Proof Modal - RESTORED */}
+      {/* Document/Proof Modal */}
       {proofModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-[60] bg-black bg-opacity-75">
           <div className="bg-white rounded-lg p-4 max-w-3xl max-h-[90vh] overflow-auto relative">

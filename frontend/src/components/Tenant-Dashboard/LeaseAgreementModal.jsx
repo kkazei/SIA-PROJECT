@@ -5,22 +5,38 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
   const [activeTab, setActiveTab] = useState("details");
-  const { leaseDocuments, fetchTenantLeases, loading, error } = useLeaseStore();
-  const [proofModalOpen, setProofModalOpen] = useState(false);
-  const [currentProof, setCurrentProof] = useState(null);
+  const { leaseDocuments, fetchTenantLeases, loading, error, clearMessages } = useLeaseStore();
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [viewMode, setViewMode] = useState("list"); // "list" or "preview"
   
-  // Define our API base URL
-  const API_BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
-  
   useEffect(() => {
-    if (isOpen && apartment?.tenantId) {
-      console.log("Fetching lease documents for tenant:", apartment.tenantId);
-      fetchTenantLeases(apartment.tenantId)
-        .catch(err => console.error("Error fetching lease documents:", err));
+    if (isOpen && apartment) {
+      // Check both possible tenant ID locations
+      const tenantId = apartment.tenantId || apartment.tenant_id || apartment._id;
+      
+      if (tenantId) {
+        console.log("Fetching lease documents for tenant ID:", tenantId);
+        fetchTenantLeases(tenantId)
+          .then(docs => {
+            console.log("Fetched lease documents:", docs);
+          })
+          .catch(err => console.error("Error fetching lease documents:", err));
+      } else {
+        console.error("No tenant ID found in apartment object:", apartment);
+      }
     }
-  }, [isOpen, apartment?.tenantId, fetchTenantLeases]);
+    
+    return () => {
+      clearMessages();
+    };
+  }, [isOpen, apartment, fetchTenantLeases, clearMessages]);
+
+  // Log apartment object to help debugging
+  useEffect(() => {
+    if (isOpen && apartment) {
+      console.log("Apartment object in LeaseAgreementModal:", apartment);
+    }
+  }, [isOpen, apartment]);
 
   if (!isOpen) return null;
 
@@ -38,8 +54,6 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
   };
 
   const formatAddress = (address) => {
-    console.log("Address data to format:", address);
-    
     if (!address) return "N/A";
     
     // Handle address as a simple string
@@ -68,7 +82,6 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
         if (address.country) parts.push(address.country);
       }
       
-      // If we found address parts, join them
       if (parts.length > 0) {
         return parts.join(', ');
       }
@@ -80,50 +93,42 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
         }
       }
       
-      // If we've tried everything, show as JSON
       return JSON.stringify(address);
     }
     
     return "Address details not available";
   };
   
-  const handleDownload = (documentUrl, filename) => {
-    const BASE_URL = import.meta.env.MODE === "development" 
-      ? "http://localhost:5000" 
-      : "";
-    
-    // Handle paths that start with a slash properly
-    const fullUrl = documentUrl.startsWith('http') 
-      ? documentUrl 
-      : `${BASE_URL}${documentUrl.startsWith('/') ? documentUrl : `/${documentUrl}`}`;
+  // Updated to use fileUrl from the store-processed document
+  const handleDownload = (document, filename) => {
+    if (!document || !document.fileUrl) {
+      console.error("Invalid document or missing fileUrl:", document);
+      return;
+    }
     
     const link = document.createElement('a');
-    link.href = fullUrl;
+    link.href = document.fileUrl;
     link.download = filename || 'lease-document.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Function to view lease document
-  const handleViewLease = (documentPath) => {
-    console.log("Viewing document:", documentPath);
+  // Updated to use fileUrl from the store-processed document
+  const handleViewLease = (document) => {
+    if (!document || !document.fileUrl) {
+      console.error("Invalid document or missing fileUrl:", document);
+      return;
+    }
     
-    // Fix path handling to match exactly what works in TenantDetailsModal
-    const fullPath = documentPath.startsWith('/') 
-      ? `${API_BASE_URL}${documentPath}` 
-      : `${API_BASE_URL}/${documentPath}`;
-    
-    console.log("Full URL:", fullPath);
-    
-    // Set selected document and change view mode
-    setSelectedDocument(fullPath);
+    console.log("Viewing document with URL:", document.fileUrl);
+    setSelectedDocument(document);
     setViewMode("preview");
   };
 
   // Function to determine document icon
   const getDocumentIcon = (filePath) => {
-    if (!filePath) return <FaFileContract />;
+    if (!filePath) return <FaFileContract className="text-blue-400" />;
     
     const ext = filePath.split('.').pop().toLowerCase();
     
@@ -204,8 +209,6 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                   <p className="text-gray-400">No lease information available.</p>
                 ) : (
                   <>
-
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Property Details Section */}
                       <div>
@@ -235,29 +238,23 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                                   <p>{apartment.address}</p>
                                 ) : (
                                   <>
-                                    {/* Street */}
                                     {(apartment.address.street || (apartment.address.location && apartment.address.location.street)) && (
                                       <p className="mb-0.5">
                                         {apartment.address.street || apartment.address.location?.street}
                                       </p>
                                     )}
                                     
-                                    {/* City, State ZIP on same line */}
                                     <p className="mb-0.5">
-                                      {/* City */}
                                       {(apartment.address.city || (apartment.address.location && apartment.address.location.city)) && 
                                         apartment.address.city || apartment.address.location?.city}
                                       
-                                      {/* State */}
                                       {(apartment.address.state || (apartment.address.location && apartment.address.location.state)) && 
                                         `, ${apartment.address.state || apartment.address.location?.state}`}
                                       
-                                      {/* ZIP Code */}
                                       {(apartment.address.zipCode || (apartment.address.location && apartment.address.location.zipCode)) && 
                                         ` ${apartment.address.zipCode || apartment.address.location?.zipCode}`}
                                     </p>
                                     
-                                    {/* Country on its own line */}
                                     {(apartment.address.country || (apartment.address.location && apartment.address.location.country)) && (
                                       <p className="mt-0.5 font-medium">
                                         {apartment.address.country || apartment.address.location?.country}
@@ -325,7 +322,7 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                           <div className="flex items-center">
                             {apartment.landlord_id.avatar ? (
                               <img 
-                                src={`${API_BASE_URL}${apartment.landlord_id.avatar}`}
+                                src={apartment.landlord_id.avatar}
                                 alt={apartment.landlord_id.name}
                                 className="w-12 h-12 rounded-full mr-4 object-cover"
                                 onError={(e) => {
@@ -437,13 +434,13 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                             </div>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleViewLease(doc.filePath)}
+                                onClick={() => handleViewLease(doc)}
                                 className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded flex items-center"
                               >
                                 <FaEye className="mr-1" /> View
                               </button>
                               <button
-                                onClick={() => handleDownload(doc.filePath, doc.description || "lease-document")}
+                                onClick={() => handleDownload(doc, doc.description || "lease-document")}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded flex items-center"
                               >
                                 <FaDownload className="mr-1" /> Download
@@ -476,24 +473,24 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                     </button>
 
                     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                      {selectedDocument ? (
-                        selectedDocument.toLowerCase().endsWith('.pdf') ? (
+                      {selectedDocument && selectedDocument.fileUrl ? (
+                        selectedDocument.fileUrl.toLowerCase().endsWith('.pdf') ? (
                           <iframe
-                            src={selectedDocument}
+                            src={selectedDocument.fileUrl}
                             className="w-full h-[60vh]"
                             title="PDF Document"
                           />
                         ) : (
                           <div className="flex justify-center p-4">
                             <img
-                              src={selectedDocument}
+                              src={selectedDocument.fileUrl}
                               alt="Document"
                               className="max-w-full h-auto"
                               onLoad={() => console.log("Image loaded successfully")}
                               onError={(e) => {
                                 console.error("Image failed to load:", e);
-                                // Try alternative URL format as a last resort
-                                e.target.src = selectedDocument.replace(API_BASE_URL, API_BASE_URL + "/");
+                                e.target.onerror = null;
+                                e.target.src = "https://via.placeholder.com/400x300?text=Document+Preview+Unavailable";
                               }}
                             />
                           </div>
@@ -506,16 +503,18 @@ const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
                     </div>
 
                     {/* Direct link as fallback */}
-                    <div className="mt-4 text-center">
-                      <a
-                        href={selectedDocument}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        <FaExternalLinkAlt className="mr-2" /> Open document in new tab
-                      </a>
-                    </div>
+                    {selectedDocument && selectedDocument.fileUrl && (
+                      <div className="mt-4 text-center">
+                        <a
+                          href={selectedDocument.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          <FaExternalLinkAlt className="mr-2" /> Open document in new tab
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
