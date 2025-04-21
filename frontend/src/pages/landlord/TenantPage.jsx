@@ -5,6 +5,7 @@ import { useApartmentStore } from "../../store/apartmentStore";
 import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 import LandlordSideNav from "../../components/layout/LandlordSideNav";
 import TenantModal from "../../components/TenantModal";
+import TenantDetailsModal from "../../components/TenantDetailsModal";
 import { motion } from "framer-motion";
 
 const TenantPage = () => {
@@ -14,6 +15,8 @@ const TenantPage = () => {
   const [collapsed, setCollapsed] = useState(true); // Track sidebar state
   const [selectedFile, setSelectedFile] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState("");
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [showTenantModal, setShowTenantModal] = useState(false);
 
   const { user } = useAuthStore();
   const {
@@ -85,6 +88,12 @@ const TenantPage = () => {
     }
   };
 
+  // Function to handle clicking on a tenant card
+  const handleTenantClick = (tenant) => {
+    setSelectedTenant(tenant);
+    setShowTenantModal(true);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row">
       {/* Sidebar */}
@@ -153,6 +162,7 @@ const TenantPage = () => {
                   <div
                     key={tenant._id}
                     className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition duration-300 cursor-pointer"
+                    onClick={() => handleTenantClick(tenant)}
                   >
                     <div className="flex flex-col items-center">
                       {/* Avatar */}
@@ -254,6 +264,13 @@ const TenantPage = () => {
             </div>
           </div>
         )}
+
+        {/* Tenant Details Modal */}
+        <TenantDetailsModal
+          isOpen={showTenantModal}
+          onClose={() => setShowTenantModal(false)}
+          tenant={selectedTenant}
+        />
       </motion.div>
     </div>
   );

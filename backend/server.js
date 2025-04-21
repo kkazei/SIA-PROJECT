@@ -18,6 +18,7 @@ import session from "express-session";
 import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
+import leaseRoutes from './routes/lease.route.js';
 
 dotenv.config();
 
@@ -79,6 +80,9 @@ console.log('Inquiry routes set up successfully');
 // Use payment routes
 app.use('/api/payments', paymentRoutes);
 console.log('Payment routes initialized');
+
+// Use lease routes
+app.use('/api/leases', leaseRoutes);
 
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
