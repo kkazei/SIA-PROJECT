@@ -1,321 +1,537 @@
 import React, { useState, useEffect } from "react";
 import { useLeaseStore } from "../../store/leaseStore";
-import { useAuthStore } from "../../store/authStore";
+import { FaFileContract, FaDownload, FaSpinner, FaEye, FaFilePdf, FaFileWord, FaFileExcel, FaFileImage, FaFile, FaExternalLinkAlt } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
-const LeaseAgreementModal = ({ isOpen, closeModal }) => {
-  const [currentDocIndex, setCurrentDocIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState(null); // Add debug state
-  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key
+const LeaseAgreementModal = ({ isOpen, closeModal, apartment }) => {
+  const [activeTab, setActiveTab] = useState("details");
+  const { leaseDocuments, fetchTenantLeases, loading, error } = useLeaseStore();
   const [proofModalOpen, setProofModalOpen] = useState(false);
   const [currentProof, setCurrentProof] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [viewMode, setViewMode] = useState("list"); // "list" or "preview"
+  
+  // Define our API base URL
+  const API_BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
+  
+  useEffect(() => {
+    if (isOpen && apartment?.tenantId) {
+      console.log("Fetching lease documents for tenant:", apartment.tenantId);
+      fetchTenantLeases(apartment.tenantId)
+        .catch(err => console.error("Error fetching lease documents:", err));
+    }
+  }, [isOpen, apartment?.tenantId, fetchTenantLeases]);
 
-  const { user } = useAuthStore();
-  const { 
-    leaseDocuments, 
-    fetchTenantLeases, 
-    loading: storeLoading, 
-    error: storeError 
-  } = useLeaseStore();
+  if (!isOpen) return null;
 
-  const API_BASE_URL = import.meta.env.MODE === 'development' 
-    ? 'http://localhost:5000' 
-    : '';
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not available";
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (err) {
+      return "Invalid date";
+    }
+  };
 
-  // Function to refresh lease documents
-  const refreshLeases = () => {
-    console.log("Manually refreshing leases...");
-    setRefreshKey(prev => prev + 1);
-    setLoading(true);
+  const formatAddress = (address) => {
+    console.log("Address data to format:", address);
+    
+    if (!address) return "N/A";
+    
+    // Handle address as a simple string
+    if (typeof address === 'string') {
+      return address;
+    }
+    
+    // Handle address as an object
+    if (typeof address === 'object') {
+      const parts = [];
+      
+      // Check for nested location object structure
+      if (address.location && typeof address.location === 'object') {
+        if (address.location.street) parts.push(address.location.street);
+        if (address.location.city) parts.push(address.location.city);
+        if (address.location.state) parts.push(address.location.state);
+        if (address.location.zipCode) parts.push(address.location.zipCode);
+        if (address.location.country) parts.push(address.location.country);
+      } 
+      // Check for direct property structure
+      else {
+        if (address.street) parts.push(address.street);
+        if (address.city) parts.push(address.city);
+        if (address.state) parts.push(address.state);
+        if (address.zipCode) parts.push(address.zipCode);
+        if (address.country) parts.push(address.country);
+      }
+      
+      // If we found address parts, join them
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+      
+      // Last resort: If there's any string property, return it
+      for (const key in address) {
+        if (typeof address[key] === 'string') {
+          return address[key];
+        }
+      }
+      
+      // If we've tried everything, show as JSON
+      return JSON.stringify(address);
+    }
+    
+    return "Address details not available";
+  };
+  
+  const handleDownload = (documentUrl, filename) => {
+    const BASE_URL = import.meta.env.MODE === "development" 
+      ? "http://localhost:5000" 
+      : "";
+    
+    // Handle paths that start with a slash properly
+    const fullUrl = documentUrl.startsWith('http') 
+      ? documentUrl 
+      : `${BASE_URL}${documentUrl.startsWith('/') ? documentUrl : `/${documentUrl}`}`;
+    
+    const link = document.createElement('a');
+    link.href = fullUrl;
+    link.download = filename || 'lease-document.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Function to view lease document
   const handleViewLease = (documentPath) => {
-    setCurrentProof(`${API_BASE_URL}${documentPath}`);
-    setProofModalOpen(true);
+    console.log("Viewing document:", documentPath);
+    
+    // Fix path handling to match exactly what works in TenantDetailsModal
+    const fullPath = documentPath.startsWith('/') 
+      ? `${API_BASE_URL}${documentPath}` 
+      : `${API_BASE_URL}/${documentPath}`;
+    
+    console.log("Full URL:", fullPath);
+    
+    // Set selected document and change view mode
+    setSelectedDocument(fullPath);
+    setViewMode("preview");
   };
 
-  // This effect runs when the modal is opened or refreshKey changes
-  useEffect(() => {
-    if (isOpen && user?._id) {
-      setLoading(true);
-      setError(null);
-      
-      // Log the fetching process for debugging
-      console.log("Fetching lease documents for user:", user._id);
-      
-      // Reset the current document index to show the newest document first
-      setCurrentDocIndex(0);
-      
-      // Fetch lease documents when modal opens
-      fetchTenantLeases(user._id)
-        .then((docs) => {
-          console.log("Lease documents fetched:", docs?.length || 0, "documents");
-          if (docs?.length > 0) {
-            console.log("First document:", docs[0]);
-          }
-          // Set debug info to display in UI
-          setDebugInfo({
-            userId: user._id,
-            docsCount: docs?.length || 0,
-            firstDocPath: docs?.[0]?.filePath || "No path",
-            timestamp: new Date().toISOString()
-          });
-        })
-        .catch(err => {
-          console.error("Error fetching lease documents:", err);
-          setError(err.message || "Failed to load lease documents");
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  // Function to determine document icon
+  const getDocumentIcon = (filePath) => {
+    if (!filePath) return <FaFileContract />;
+    
+    const ext = filePath.split('.').pop().toLowerCase();
+    
+    switch (ext) {
+      case 'pdf':
+        return <FaFilePdf className="text-red-400" />;
+      case 'doc':
+      case 'docx':
+        return <FaFileWord className="text-blue-400" />;
+      case 'xls':
+      case 'xlsx':
+        return <FaFileExcel className="text-green-400" />;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return <FaFileImage className="text-purple-400" />;
+      default:
+        return <FaFile className="text-gray-400" />;
     }
-  }, [isOpen, user, fetchTenantLeases, refreshKey]); // refreshKey triggers re-fetch
-
-  // Clean up when the modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      // No need to reset the store here as it's shared with TenantDetailsModal
-    }
-  }, [isOpen]);
-
-  // Function to determine if a file is PDF
-  const isPdf = (filePath) => {
-    return filePath?.toLowerCase().endsWith('.pdf');
   };
 
-  // Safe accessor for current document
-  const getCurrentDocument = () => {
-    if (!leaseDocuments || leaseDocuments.length === 0 || currentDocIndex >= leaseDocuments.length) {
-      return null;
-    }
-    return leaseDocuments[currentDocIndex];
+  // Function to go back to documents list
+  const backToDocumentsList = () => {
+    setViewMode("list");
+    setSelectedDocument(null);
   };
-
-  const currentDocument = getCurrentDocument();
-
-  if (!isOpen) return null;
-
-  // Combine loading states
-  const isLoading = loading || storeLoading;
-  // Combine error states
-  const displayError = error || storeError;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden">
-        <div className="flex justify-between items-center bg-gray-900 text-white px-6 py-4">
-          <h3 className="text-xl font-medium">Lease Agreement</h3>
-          <div className="flex items-center space-x-3">
-            {/* Make the refresh button more prominent */}
-            <button 
-              onClick={refreshLeases}
-              className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
-              title="Refresh Lease Documents"
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 transition-opacity">
+          <div className="absolute inset-0 bg-gray-900 opacity-75"></div>
+        </div>
+        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div className="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+          <div className="bg-gray-900 px-4 py-5 flex justify-between items-center border-b border-gray-700">
+            <div className="flex items-center">
+              <FaFileContract className="text-blue-400 mr-2 text-xl" />
+              <h3 className="text-xl font-medium text-white">Lease Agreement</h3>
+            </div>
+            <button
+              onClick={closeModal}
+              className="text-gray-400 hover:text-white"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
-            <button onClick={closeModal} className="text-white hover:text-gray-300">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-        </div>
 
-        <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-          {/* Debug info section with timestamp to verify refreshes */}
-          {debugInfo && (
-            <div className="mb-4 p-2 border border-blue-200 bg-blue-50 text-blue-800 text-xs rounded">
-              <p>Debug: User ID: {debugInfo.userId}</p>
-              <p>Documents loaded: {debugInfo.docsCount}</p>
-              <p>First doc path: {debugInfo.firstDocPath}</p>
-              <p>Last refresh: {debugInfo.timestamp}</p>
-            </div>
-          )}
+          <div className="flex border-b border-gray-700">
+            <button
+              onClick={() => setActiveTab("details")}
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === "details"
+                  ? "text-blue-500 border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Lease Details
+            </button>
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === "documents"
+                  ? "text-blue-500 border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Documents
+            </button>
+          </div>
 
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-              <p className="mt-2 text-gray-600">Loading lease agreement...</p>
-            </div>
-          ) : displayError ? (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              <p>{displayError}</p>
-            </div>
-          ) : !leaseDocuments || leaseDocuments.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              {/* No documents UI */}
-              <div className="mb-4">
-                <svg 
-                  className="mx-auto h-12 w-12 text-gray-400" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-                  />
-                </svg>
+          <div className="px-4 py-5 text-white">
+            {activeTab === "details" && (
+              <div className="space-y-4">
+                {!apartment ? (
+                  <p className="text-gray-400">No lease information available.</p>
+                ) : (
+                  <>
+
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Property Details Section */}
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Property Details</h4>
+                        <div className="bg-gray-700 p-4 rounded-md">
+                          <p className="mb-2">
+                            <span className="text-gray-400">Property: </span>
+                            <span className="text-white font-medium">{apartment.room || "N/A"}</span>
+                          </p>
+                          <p className="mb-2">
+                            <span className="text-gray-400">Type: </span>
+                            <span className="text-white font-medium">{apartment.propertyType || "Residential"}</span>
+                          </p>
+                          <p className="mb-2">
+                            <span className="text-gray-400">Bedrooms: </span>
+                            <span className="text-white font-medium">{apartment.bedrooms || "N/A"}</span>
+                          </p>
+                          <p className="mb-2">
+                            <span className="text-gray-400">Bathrooms: </span>
+                            <span className="text-white font-medium">{apartment.bathrooms || "N/A"}</span>
+                          </p>
+                          <div className="mb-2">
+                            <span className="text-gray-400 block mb-1">Address:</span>
+                            {apartment.address ? (
+                              <div className="text-white pl-1">
+                                {typeof apartment.address === 'string' ? (
+                                  <p>{apartment.address}</p>
+                                ) : (
+                                  <>
+                                    {/* Street */}
+                                    {(apartment.address.street || (apartment.address.location && apartment.address.location.street)) && (
+                                      <p className="mb-0.5">
+                                        {apartment.address.street || apartment.address.location?.street}
+                                      </p>
+                                    )}
+                                    
+                                    {/* City, State ZIP on same line */}
+                                    <p className="mb-0.5">
+                                      {/* City */}
+                                      {(apartment.address.city || (apartment.address.location && apartment.address.location.city)) && 
+                                        apartment.address.city || apartment.address.location?.city}
+                                      
+                                      {/* State */}
+                                      {(apartment.address.state || (apartment.address.location && apartment.address.location.state)) && 
+                                        `, ${apartment.address.state || apartment.address.location?.state}`}
+                                      
+                                      {/* ZIP Code */}
+                                      {(apartment.address.zipCode || (apartment.address.location && apartment.address.location.zipCode)) && 
+                                        ` ${apartment.address.zipCode || apartment.address.location?.zipCode}`}
+                                    </p>
+                                    
+                                    {/* Country on its own line */}
+                                    {(apartment.address.country || (apartment.address.location && apartment.address.location.country)) && (
+                                      <p className="mt-0.5 font-medium">
+                                        {apartment.address.country || apartment.address.location?.country}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 italic">No address provided</span>
+                            )}
+                          </div>
+                          {apartment.description && (
+                            <div className="mt-3 pt-3 border-t border-gray-600">
+                              <p className="text-gray-400 mb-1">Description:</p>
+                              <p className="text-white">{apartment.description}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lease Terms Section */}
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Lease Terms</h4>
+                        <div className="bg-gray-700 p-4 rounded-md">
+                          <p className="mb-2">
+                            <span className="text-gray-400">Monthly Rent: </span>
+                            <span className="text-green-400 font-medium">₱{apartment.rent?.toLocaleString() || "N/A"}</span>
+                          </p>
+                          <p className="mb-2">
+                            <span className="text-gray-400">Move-In Date: </span>
+                            <span className="text-white font-medium">{formatDate(apartment.moveInDate || apartment.createdAt)}</span>
+                          </p>
+                          {apartment.paymentInfo?.nextDueDate && (
+                            <p className="mb-2">
+                              <span className="text-gray-400">Next Payment Due: </span>
+                              <span className="text-white font-medium">{formatDate(apartment.paymentInfo.nextDueDate)}</span>
+                            </p>
+                          )}
+                          <p className="mb-2">
+                            <span className="text-gray-400">Security Deposit: </span>
+                            <span className="text-white font-medium">₱{(apartment.securityDeposit || apartment.rent)?.toLocaleString() || "N/A"}</span>
+                          </p>
+                          {apartment.paymentInfo?.paymentStatus && (
+                            <p className="mb-2">
+                              <span className="text-gray-400">Payment Status: </span>
+                              <span className={`font-medium px-2 py-0.5 rounded ${
+                                apartment.paymentInfo.paymentStatus === 'paid' ? 'bg-green-800 text-green-200' :
+                                apartment.paymentInfo.paymentStatus === 'pending' ? 'bg-yellow-800 text-yellow-200' :
+                                'bg-red-800 text-red-200'
+                              }`}>
+                                {apartment.paymentInfo.paymentStatus.charAt(0).toUpperCase() + apartment.paymentInfo.paymentStatus.slice(1)}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Landlord Information Section */}
+                    {apartment.landlord_id && (
+                      <div className="mt-4">
+                        <h4 className="text-lg font-semibold mb-2">Landlord Information</h4>
+                        <div className="bg-gray-700 p-4 rounded-md">
+                          <div className="flex items-center">
+                            {apartment.landlord_id.avatar ? (
+                              <img 
+                                src={`${API_BASE_URL}${apartment.landlord_id.avatar}`}
+                                alt={apartment.landlord_id.name}
+                                className="w-12 h-12 rounded-full mr-4 object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "https://via.placeholder.com/40?text=User";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-4">
+                                {apartment.landlord_id.name?.charAt(0).toUpperCase() || "L"}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-white font-medium">{apartment.landlord_id.name || "Landlord"}</p>
+                              {apartment.landlord_id.email && (
+                                <p className="text-sm text-gray-400">{apartment.landlord_id.email}</p>
+                              )}
+                              {apartment.landlord_id.phone && (
+                                <p className="text-sm text-gray-400">{apartment.landlord_id.phone}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Terms & Conditions Section */}
+                    <div className="mt-4">
+                      <h4 className="text-lg font-semibold mb-2">Terms & Conditions</h4>
+                      <div className="bg-gray-700 p-4 rounded-md">
+                        <div className="max-h-60 overflow-y-auto">
+                          <p className="mb-4">
+                            <span className="font-semibold">1. Payment Terms:</span> Rent is due on the 1st of each month. 
+                            Late payments are subject to a penalty fee of 5% of the rental amount per day of delay.
+                          </p>
+                          <p className="mb-4">
+                            <span className="font-semibold">2. Security Deposit:</span> The security deposit is refundable within 
+                            30 days after moving out, subject to deductions for damages beyond normal wear and tear.
+                          </p>
+                          <p className="mb-4">
+                            <span className="font-semibold">3. Maintenance:</span> Tenant is responsible for minor repairs and 
+                            regular maintenance. Major repairs are the landlord's responsibility.
+                          </p>
+                          <p className="mb-4">
+                            <span className="font-semibold">4. Utilities:</span> Tenant is responsible for all utility payments 
+                            including electricity, water, and internet.
+                          </p>
+                          <p className="mb-4">
+                            <span className="font-semibold">5. House Rules:</span> Quiet hours from 10 PM to 7 AM. 
+                            No unauthorized modifications to the property. No pets without prior approval.
+                          </p>
+                          {apartment.leaseTerms && (
+                            <p className="mb-4">{apartment.leaseTerms}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Property Images Section */}
+                    {apartment.images && apartment.images.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold mb-2">Property Images</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {apartment.images.map((image, index) => (
+                            <div key={index} className="bg-gray-700 p-2 rounded-md">
+                              <img 
+                                src={image} 
+                                alt={`Property ${index + 1}`}
+                                className="w-full h-40 object-cover rounded"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "https://via.placeholder.com/300x200?text=Image+Not+Available";
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              <p className="text-gray-500">No lease agreement available</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Contact your landlord for more information
-              </p>
-              {/* Info about where to upload leases */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                <p>Your landlord can upload lease documents from the tenant management section.</p>
-                <p className="mt-2">If documents were recently uploaded, click the Refresh button above.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              {/* Document navigation */}
-              {leaseDocuments.length > 1 && (
-                <div className="flex items-center justify-between w-full mb-4 px-4">
-                  <button 
-                    onClick={() => setCurrentDocIndex(prev => Math.max(0, prev - 1))}
-                    disabled={currentDocIndex === 0}
-                    className={`px-4 py-2 rounded ${
-                      currentDocIndex === 0 
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                    }`}
-                  >
-                    Previous
-                  </button>
-                  <span className="text-gray-600">
-                    Document {currentDocIndex + 1} of {leaseDocuments.length}
-                  </span>
-                  <button 
-                    onClick={() => setCurrentDocIndex(prev => Math.min(leaseDocuments.length - 1, prev + 1))}
-                    disabled={currentDocIndex === leaseDocuments.length - 1}
-                    className={`px-4 py-2 rounded ${
-                      currentDocIndex === leaseDocuments.length - 1 
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                    }`}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-              
-              {/* Current document display - with improved error handling */}
-              {currentDocument ? (
-                <div className="w-full border rounded-lg overflow-hidden">
-                  <div className="bg-gray-100 py-2 px-4 font-medium text-gray-700">
-                    {currentDocument.description || "Lease Document"}
-                    <span className="text-sm text-gray-500 ml-2">
-                      (Uploaded: {new Date(currentDocument.uploadDate).toLocaleDateString()})
-                    </span>
+            )}
+
+            {activeTab === "documents" && (
+              <div>
+                {loading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <FaSpinner className="animate-spin text-blue-500 text-2xl" />
                   </div>
-                  
-                  {isPdf(currentDocument.filePath) ? (
-                    <div className="h-[60vh]">
-                      <iframe
-                        src={`${API_BASE_URL}${currentDocument.filePath}`}
-                        className="w-full h-full"
-                        title="Lease Document"
-                      ></iframe>
+                ) : error ? (
+                  <div className="text-red-500 text-center py-4">{error}</div>
+                ) : viewMode === "list" ? (
+                  // Show document list
+                  leaseDocuments && leaseDocuments.length > 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-gray-400 text-sm">The following lease documents are available:</p>
+                      <div className="grid grid-cols-1 gap-4">
+                        {leaseDocuments.map((doc) => (
+                          <div key={doc._id} className="bg-gray-700 p-4 rounded-lg flex justify-between items-center">
+                            <div className="flex items-center">
+                              {getDocumentIcon(doc.filePath)}
+                              <div className="ml-3">
+                                <p className="font-medium text-white">{doc.description || "Lease Document"}</p>
+                                <p className="text-sm text-gray-400">
+                                  Uploaded: {formatDate(doc.uploadDate || doc.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleViewLease(doc.filePath)}
+                                className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded flex items-center"
+                              >
+                                <FaEye className="mr-1" /> View
+                              </button>
+                              <button
+                                onClick={() => handleDownload(doc.filePath, doc.description || "lease-document")}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded flex items-center"
+                              >
+                                <FaDownload className="mr-1" /> Download
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-4">
-                      <img
-                        src={`${API_BASE_URL}${currentDocument.filePath}`}
-                        alt="Lease Document"
-                        className="max-h-[60vh] object-contain"
-                        onError={(e) => {
-                          console.error("Image failed to load:", `${API_BASE_URL}${currentDocument.filePath}`);
-                          e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/400x600?text=Image+Not+Found";
-                          e.target.classList.add("border", "border-red-300");
-                        }}
-                      />
-                      <p className="mt-2 text-sm text-gray-500">
-                        Image URL: {API_BASE_URL}{currentDocument.filePath}
+                    <div className="text-center py-10">
+                      <FaFileContract className="mx-auto text-4xl text-gray-500 mb-3" />
+                      <p className="text-gray-400">No lease documents available.</p>
+                      <p className="text-gray-500 text-sm mt-2">
+                        Your landlord has not uploaded any lease documents yet.
                       </p>
                     </div>
-                  )}
-                  
-                  <div className="bg-gray-50 p-3 text-sm text-gray-500">
-                    <p>Uploaded: {new Date(currentDocument.uploadDate).toLocaleDateString()}</p>
-                  </div>
-                  <button
-                    onClick={() => handleViewLease(currentDocument.filePath)}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    View Document
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 p-4 rounded">
-                  Document not available. Please try again.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-gray-50 px-6 py-3 flex justify-end">
-          {currentDocument && (
-            <a
-              href={`${API_BASE_URL}${currentDocument.filePath}`}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mr-3"
-            >
-              Download
-            </a>
-          )}
-          <button
-            onClick={closeModal}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-
-      {/* Document/Proof Modal */}
-      {proofModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-[60] bg-black bg-opacity-75">
-          <div className="bg-white rounded-lg p-4 max-w-3xl max-h-[90vh] overflow-auto relative">
-            <button 
-              onClick={() => setProofModalOpen(false)}
-              className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="mt-6 flex justify-center">
-              {currentProof ? (
-                currentProof.endsWith('.pdf') ? (
-                  <iframe 
-                    src={currentProof} 
-                    className="w-full h-[70vh]" 
-                    title="Document Viewer"
-                  />
+                  )
                 ) : (
-                  <img src={currentProof} alt="Document" className="max-w-full h-auto" />
-                )
-              ) : (
-                <p className="text-center text-gray-500">Document not available</p>
-              )}
-            </div>
+                  // Show document preview - directly embedded in the page
+                  <div>
+                    <button
+                      onClick={backToDocumentsList}
+                      className="mb-4 flex items-center text-blue-400 hover:text-blue-300"
+                    >
+                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Back to documents
+                    </button>
+
+                    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                      {selectedDocument ? (
+                        selectedDocument.toLowerCase().endsWith('.pdf') ? (
+                          <iframe
+                            src={selectedDocument}
+                            className="w-full h-[60vh]"
+                            title="PDF Document"
+                          />
+                        ) : (
+                          <div className="flex justify-center p-4">
+                            <img
+                              src={selectedDocument}
+                              alt="Document"
+                              className="max-w-full h-auto"
+                              onLoad={() => console.log("Image loaded successfully")}
+                              onError={(e) => {
+                                console.error("Image failed to load:", e);
+                                // Try alternative URL format as a last resort
+                                e.target.src = selectedDocument.replace(API_BASE_URL, API_BASE_URL + "/");
+                              }}
+                            />
+                          </div>
+                        )
+                      ) : (
+                        <div className="p-4 text-center text-gray-500">
+                          Unable to load document preview
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Direct link as fallback */}
+                    <div className="mt-4 text-center">
+                      <a
+                        href={selectedDocument}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        <FaExternalLinkAlt className="mr-2" /> Open document in new tab
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gray-900 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-700">
+            <button
+              onClick={closeModal}
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+            >
+              Close
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

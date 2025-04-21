@@ -27,8 +27,22 @@ import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistor
 import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
 import BrowseApartmentsModal from "../../components/Tenant-Dashboard/BrowseApartmentsModal";
 import ApplicationsModal from "../../components/Tenant-Dashboard/ApplicationsModal";
-import { formatDate } from "../../components/utils/date";
 import NoApartmentView from "../../components/Tenant-Dashboard/NoApartmentView";
+
+// Improve the formatDate function where it's defined
+const formatDate = (dateString) => {
+  if (!dateString) return "Not available";
+  try {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (err) {
+    console.error("Date formatting error:", err);
+    return "Invalid date";
+  }
+};
 
 const TenantDashboard = () => {
   // State declarations - keep your existing state
@@ -508,7 +522,11 @@ const TenantDashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6">
           <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
             <h4 className='text-sm lg:text-lg font-bold'>
-              {formatDate(currentApartment?.moveInDate || new Date())}
+              {currentApartment?.moveInDate 
+                ? formatDate(currentApartment.moveInDate) 
+                : currentApartment?.createdAt 
+                  ? formatDate(currentApartment.createdAt) 
+                  : "Not set"}
             </h4>
             <p className='text-xs lg:text-base'>Move-in Date</p>
           </div>
