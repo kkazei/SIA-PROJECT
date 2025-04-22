@@ -79,7 +79,9 @@ npm install
 ## 📦 Configure Environment Variables
 
 *Example of env*
-PORT=3000
+PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=google_secret
+
