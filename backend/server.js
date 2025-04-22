@@ -72,7 +72,7 @@ app.use("/api/qr", qrRoutes);  // Add QR routes
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
-app.use("/api/applications", applicationRoutes); // Add this line
+app.use("/api/applications", applicationRoutes); 
 app.use('/api/admin', adminRoutes);
 
 
