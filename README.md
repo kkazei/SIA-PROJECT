@@ -25,19 +25,32 @@ RentFlow is a full-stack MERN application built to streamline and automate renta
 ## 🔐 Features
 
 - 🧑‍💼 **Admin Portal**
+  - System Statistics Dashboard
+  - User Management (Create, View, Edit, Delete)
+  - Manual User Verification
+  - Password Reset Capabilities
+  - Cross-Property Oversight
+  - Global Announcement Management
+  - Financial Operations Overview
+  - System Configuration & Settings
+
+- 🧑‍💼 **Landlord Portal**
+  - Apartment Listing
   - Tenant Management
   - Lease and Unit Tracking
   - Maintenance Request Logging
   - Billing System
 
 - 🧍‍♂️ **Tenant Portal**
+  - Browse Available Apartments (New Tenants)
   - View Lease Info
+  - View Announcements
   - Submit Maintenance Requests
   - View Bills & Payment Status
 
 - 🛡 **Authentication & Authorization**
   - Google Login
-  - Role-Based Access Control (Admin & Tenant)
+  - Role-Based Access Control (Admin, Landlord & Tenant)
   - JWT-Protected Routes
 
 - 📊 **Modular API**
