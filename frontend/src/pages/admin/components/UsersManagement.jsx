@@ -142,10 +142,11 @@ const UsersManagement = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 
+                      ${!user.role ? 'bg-gray-100 text-gray-800' :
+                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 
                         user.role === 'landlord' ? 'bg-green-100 text-green-800' : 
                         'bg-blue-100 text-blue-800'}`}>
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Unknown'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
