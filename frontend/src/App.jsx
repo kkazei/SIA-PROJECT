@@ -10,13 +10,15 @@ import OAuthSuccess from './pages/auth/OAuthSuccess';
 import DashboardPage from './pages/landlord/DashboardPage';
 import TenantDashboard from './pages/tenant/TenantDashboard';
 import RoleSelection from './pages/auth/RoleSelection';
-import TenantPage from './pages/landlord/TenantPage'; // Import the TenantPage component
-import Announcement from './pages/landlord/Announcement'; // Import the Announcement component
-import MaintenancePage from './pages/landlord/MaintenancePage'; // Import the MaintenancePage component
-import ArchivePage from './pages/landlord/ArchivePage'; // Import the ArchivePage component
-import LandlordLayout from './components/layout/LandlordLayout'; // Import the LandlordLayout component
-import LandlordApplications from "./pages/landlord/LandlordApplications"; // Import the LandlordApplications component
-import InquiryPage from "./pages/landlord/InquiriesPage"; // Import the InquiryPage component
+import TenantPage from './pages/landlord/TenantPage'; 
+import Announcement from './pages/landlord/Announcement'; 
+import MaintenancePage from './pages/landlord/MaintenancePage'; 
+import ArchivePage from './pages/landlord/ArchivePage'; 
+import LandlordLayout from './components/layout/LandlordLayout'; 
+import LandlordApplications from "./pages/landlord/LandlordApplications"; 
+import InquiryPage from "./pages/landlord/InquiriesPage"; 
+// Import Admin components
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 import { useAuthStore } from './store/authStore';
 import { useEffect } from 'react';
@@ -49,8 +51,10 @@ const ProtectedRoute = ({ children }) => {
 const RoleBasedRoute = ({ children }) => {
     const { user } = useAuthStore();
     
-    // If user is a landlord, redirect to landlord dashboard
-    if (user.role === 'landlord') {
+    // Add admin role check
+    if (user.role === 'admin') {
+        return <Navigate to='/admin/dashboard' replace />;
+    } else if (user.role === 'landlord') {
         return <Navigate to='/landlord/dashboard' replace />;
     } else if (user.role === 'tenant') {
         return <Navigate to='/tenant/dashboard' replace />;
@@ -84,13 +88,29 @@ const TenantRoute = ({ children }) => {
     return children;
 };
 
+// For admin routes, ensure only admins can access
+const AdminRoute = ({ children }) => {
+    const { user } = useAuthStore();
+    
+    // If not an admin, redirect to home
+    if (user.role !== 'admin') {
+        return <Navigate to='/' replace />;
+    }
+    
+    return children;
+};
+
 // redirect authenticated users to the appropriate dashboard
 const RedirectAuthenticatedUser = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
 
     if (isAuthenticated && (user.isVerified || user.googleId)) {
+        // If user is admin, redirect to admin dashboard
+        if (user.role === 'admin') {
+            return <Navigate to='/admin/dashboard' replace />;
+        }
         // If user is landlord, redirect to landlord dashboard
-        if (user.role === 'landlord') {
+        else if (user.role === 'landlord') {
             return <Navigate to='/landlord/dashboard' replace />;
         }
         // If user is tenant, redirect to tenant dashboard
@@ -130,6 +150,19 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                
+                {/* Admin Routes */}
+                <Route
+                    path='/admin/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <AdminRoute>
+                                <AdminDashboard />
+                            </AdminRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
                 {/* Landlord Routes */}
                 <Route
                     path='/landlord/dashboard'
@@ -146,9 +179,7 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <LandlordLayout>
-                                    <TenantPage />
-                                </LandlordLayout>
+                                <TenantPage /> {/* Remove LandlordLayout wrapper */}
                             </LandlordRoute>
                         </ProtectedRoute>
                     }

@@ -1,22 +1,37 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useQRImageStore } from "../../store/qrImageStore";
+import { usePaymentStore } from "../../store/paymentStore";
+import axios from "axios"; // Import axios for API calls
 
 const PaymentProofModal = ({
   isOpen,
   closeModal,
   selectedFile,
-  setSelectedFile, // Add this prop
+  setSelectedFile,
   referenceNumber,
   setReferenceNumber,
   paymentQR,
-  tenantDetails
+  tenantDetails,
+  onPaymentSuccess // New prop for handling successful payments
 }) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Add loading state
+  const [submitError, setSubmitError] = useState(null); // Add error state
+  
+  const { qrImages, loading, getTenantQRImages } = useQRImageStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      getTenantQRImages();
+      setSubmitError(null);
+    }
+  }, [isOpen, getTenantQRImages]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      if (file.size > 10 * 1024 * 1024) {
         alert('File size should not exceed 10MB');
         return;
       }
@@ -27,7 +42,7 @@ const PaymentProofModal = ({
         return;
       }
 
-      setSelectedFile(file); // Use setSelectedFile instead of handleFileChange
+      setSelectedFile(file);
       const objectUrl = URL.createObjectURL(file);
       setPreview(objectUrl);
     }
@@ -37,14 +52,13 @@ const PaymentProofModal = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setSelectedFile(null); // Use setSelectedFile instead of handleFileChange
+    setSelectedFile(null);
     if (preview) {
       URL.revokeObjectURL(preview);
       setPreview(null);
     }
   };
 
-  // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
       if (preview) {
@@ -53,61 +67,198 @@ const PaymentProofModal = ({
     };
   }, [preview]);
 
-  if (!isOpen) return null;
+  const renderQRSection = () => {
+    if (loading) {
+      return (
+        <div className="bg-gray-50 rounded-lg p-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading payment QR codes...</p>
+        </div>
+      );
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would implement the upload functionality
-    alert("Payment proof submitted successfully!");
-    closeModal();
+    if (qrImages && qrImages.length > 0) {
+      const latestQR = qrImages[0];
+      let imagePath = latestQR.image_path;
+      const BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000' : '';
+      if (imagePath && !imagePath.startsWith('http') && !imagePath.startsWith(BASE_URL)) {
+        imagePath = `${BASE_URL}${imagePath}`;
+      }
+      
+      return (
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="text-center">
+            <h4 className="font-semibold text-lg mb-4">Payment QR Code</h4>
+            <div className="bg-white p-4 rounded-lg shadow-sm inline-block">
+              {imagePath ? (
+                <img 
+                  src={imagePath} 
+                  alt="Payment QR Code" 
+                  className="h-48 w-48 object-contain"
+                  onError={(e) => {
+                    e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-size='20' text-anchor='middle' fill='%23999' dominant-baseline='middle'%3EQR Image%3C/text%3E%3C/svg%3E";
+                    e.target.onerror = null;
+                  }}
+                />
+              ) : (
+                <div className="h-48 w-48 flex items-center justify-center bg-gray-100">
+                  <span className="text-gray-400">No QR image available</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 text-sm bg-white p-4 rounded-lg shadow-sm">
+              <p className="text-gray-700">
+                {latestQR.details || "Scan this QR code to make payment"}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-50 rounded-lg p-6 text-center">
+        <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p className="text-gray-900 font-medium">No payment QR code available</p>
+        <p className="text-sm text-gray-500 mt-1">Please contact your landlord for payment instructions</p>
+      </div>
+    );
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate file and reference number
+    if (!selectedFile || !referenceNumber.trim()) {
+      setSubmitError("Please provide both a reference number and payment screenshot");
+      return;
+    }
+    
+    // Validate tenant details
+    if (!tenantDetails) {
+      setSubmitError("Missing tenant details. Please refresh the page.");
+      return;
+    }
+    
+    // Validate required tenant information
+    if (!tenantDetails.userId) {
+      setSubmitError("Missing tenant ID. Please refresh the page or contact support.");
+      return;
+    }
+    
+    if (!tenantDetails.apartmentId) {
+      setSubmitError("Missing apartment ID. Please refresh the page or contact support.");
+      return;
+    }
+    
+    // Validate payment amount
+    const paymentAmount = parseFloat(tenantDetails?.rent || 0);
+    if (paymentAmount <= 0) {
+      setSubmitError("Invalid payment amount. Please contact support.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      // Log full details for debugging
+      console.log("Payment submission - full details:", {
+        tenant_id: tenantDetails.userId,
+        tenant_fullname: tenantDetails.fullName,
+        apartment_id: tenantDetails.apartmentId,
+        apartment_name: tenantDetails.apartmentName,
+        amount: paymentAmount,
+        reference_number: referenceNumber,
+        file: selectedFile ? `${selectedFile.name} (${selectedFile.size} bytes)` : null
+      });
+      
+      // Create FormData for submission
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("reference_number", referenceNumber);
+      formData.append("tenant_id", String(tenantDetails.userId));
+      formData.append("apartment_id", String(tenantDetails.apartmentId));
+      formData.append("amount", String(paymentAmount));
+      formData.append("tenant_fullname", String(tenantDetails.fullName || ""));
+      
+      // Get the payment store and submit
+      const paymentStore = usePaymentStore.getState();
+      const response = await paymentStore.submitPaymentProof(formData);
+      
+      // Refresh payment history after successful submission
+      if (tenantDetails?.userId) {
+        await paymentStore.getTenantPayments(tenantDetails.userId);
+      }
+      
+      // Call the success callback if provided
+      if (onPaymentSuccess && typeof onPaymentSuccess === 'function') {
+        onPaymentSuccess(response.payment);
+      }
+      
+      alert("Payment proof submitted successfully!");
+      handleRemoveFile();
+      setReferenceNumber("");
+      closeModal();
+    } catch (error) {
+      console.error("Error submitting payment:", error);
+      
+      // Enhanced error display
+      let errorMessage = "Failed to submit payment. Please try again.";
+      
+      if (error.response?.data) {
+        if (error.response.data.errors) {
+          const errors = error.response.data.errors;
+          errorMessage = "Validation errors: " + 
+            Object.entries(errors)
+              .map(([field, msg]) => `${field}: ${msg}`)
+              .join(", ");
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      setSubmitError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden">
-        {/* Header */}
         <div className="flex justify-between items-center bg-gray-900 text-white px-6 py-4">
           <h3 className="text-xl font-medium">Submit Payment Proof</h3>
-          <button onClick={closeModal} className="text-white hover:text-gray-300">
+          <button 
+            onClick={closeModal} 
+            className="text-white hover:text-gray-300"
+            disabled={isSubmitting}
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Content */}
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* QR Code Section */}
-            {paymentQR ? (
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="text-center">
-                  <h4 className="font-semibold text-lg mb-4">Payment QR Code</h4>
-                  <div className="bg-white p-4 rounded-lg shadow-sm inline-block">
-                    <img 
-                      src={paymentQR.imageUrl} 
-                      alt="Payment QR Code" 
-                      className="h-48 w-48 object-contain"
-                    />
-                  </div>
-                  {paymentQR.details && (
-                    <div className="mt-4 text-sm bg-white p-4 rounded-lg shadow-sm">
-                      <p className="text-gray-700">{paymentQR.details}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+              <p className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"></path>
                 </svg>
-                <p className="text-gray-900 font-medium">No payment QR code available</p>
-                <p className="text-sm text-gray-500 mt-1">Please contact your landlord for payment instructions</p>
-              </div>
-            )}
+                {submitError}
+              </p>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {renderQRSection()}
 
-            {/* Payment Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -129,11 +280,11 @@ const PaymentProofModal = ({
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter reference number"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
 
-            {/* Updated File Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Payment Screenshot
@@ -191,19 +342,26 @@ const PaymentProofModal = ({
           </form>
         </div>
 
-        {/* Footer */}
         <div className="bg-gray-50 px-6 py-3 flex justify-end gap-2">
           <button
             onClick={closeModal}
             className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className={`px-4 py-2 rounded text-white flex items-center ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+            disabled={isSubmitting}
           >
-            Submit Payment
+            {isSubmitting && (
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isSubmitting ? 'Submitting...' : 'Submit Payment'}
           </button>
         </div>
       </div>

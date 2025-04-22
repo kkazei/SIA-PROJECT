@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAuthStore } from "../../store/authStore";
 import ApplyApartmentModal from "./ApplyApartmentModal";
+import MapView from "../../components/MapView"; // Import the MapView component
 
 const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = false }) => {
   const [selectedApartment, setSelectedApartment] = useState(null);
@@ -123,6 +124,18 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
                       <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
                     </div>
                     
+                    {/* Add this after the apartment details in the card */}
+                    <div className="h-24 w-full mt-2 mb-2 rounded overflow-hidden border border-gray-200">
+                      {(apartment.address?.location?.coordinates?.length === 2 || 
+                        (apartment.address?.coordinates?.lat && apartment.address?.coordinates?.lng)) ? (
+                        <MapView address={apartment.address} height="100%" />
+                      ) : (
+                        <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                          <p className="text-xs text-gray-400">Map not available</p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Two separate buttons: View Details and Apply */}
                     <div className="flex gap-2 mt-4">
                       <button
@@ -313,6 +326,44 @@ const BrowseApartmentsModal = ({ isOpen, closeModal, apartments, hasApartment = 
                       <p className="text-sm text-gray-500">Status</p>
                       <p className="font-semibold text-green-600">Available</p>
                     </div>
+                  </div>
+                  
+                  {/* Map Section */}
+                  <div className="mb-6">
+                    <h4 className="font-bold text-lg mb-2">Location</h4>
+                    <div className="h-64 w-full rounded overflow-hidden border border-gray-200">
+                      {selectedApartment.address && (
+                        (selectedApartment.address.location?.coordinates?.length === 2 || 
+                         (selectedApartment.address.coordinates?.lat && selectedApartment.address.coordinates?.lng)) ? (
+                          <MapView address={selectedApartment.address} height="100%" />
+                        ) : (
+                          <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                            <div className="text-center p-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <p className="mt-2 text-gray-500">Map location not available</p>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {selectedApartment.address && typeof selectedApartment.address === 'object' ? (
+                        <>
+                          {[
+                            selectedApartment.address.street,
+                            selectedApartment.address.city,
+                            selectedApartment.address.state,
+                            selectedApartment.address.zipCode,
+                            selectedApartment.address.country || 'Philippines'
+                          ].filter(Boolean).join(', ')}
+                        </>
+                      ) : (
+                        "Address information not available"
+                      )}
+                    </p>
                   </div>
                   
                   <div className="mt-6 flex justify-center gap-4">

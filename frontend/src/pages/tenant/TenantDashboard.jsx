@@ -4,6 +4,8 @@ import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAnnouncementStore } from "../../store/announcementStore";
 import { useInquiryStore } from "../../store/inquiryStore";
+import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
+import { usePaymentStore, processImagePath } from "../../store/paymentStore"; // Import processImagePath helper
 import TenantSideNav from "../../components/layout/TenantSideNav";
 import { 
   FaFileInvoiceDollar, 
@@ -25,8 +27,22 @@ import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistor
 import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
 import BrowseApartmentsModal from "../../components/Tenant-Dashboard/BrowseApartmentsModal";
 import ApplicationsModal from "../../components/Tenant-Dashboard/ApplicationsModal";
-import { formatDate } from "../../components/utils/date";
 import NoApartmentView from "../../components/Tenant-Dashboard/NoApartmentView";
+
+// Improve the formatDate function where it's defined
+const formatDate = (dateString) => {
+  if (!dateString) return "Not available";
+  try {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (err) {
+    console.error("Date formatting error:", err);
+    return "Invalid date";
+  }
+};
 
 const TenantDashboard = () => {
   // State declarations - keep your existing state
@@ -40,6 +56,7 @@ const TenantDashboard = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [paymentQR, setPaymentQR] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [structuredTenantDetails, setStructuredTenantDetails] = useState(null); // Structured tenant details
 
   // Your existing unified modal state
   const [modals, setModals] = useState({
@@ -70,6 +87,8 @@ const TenantDashboard = () => {
     loading: inquiriesLoading,
     error: inquiriesError
   } = useInquiryStore();
+  const { qrImages, loading: qrLoading, getTenantQRImages } = useQRImageStore(); // Add QR image state and functions
+  const { payments, getTenantPayments } = usePaymentStore(); // Add payment store hooks
 
   // Keep all your existing handlers and functions
   const handleModalOpen = (modalId) => {
@@ -81,6 +100,11 @@ const TenantDashboard = () => {
     }
     if (modalId === 'inquiries') {
       loadTenantInquiries();
+    }
+    // Reset payment form when opening payment modal
+    if (modalId === 'payments') {
+      setSelectedFile(null);
+      setReferenceNumber("");
     }
   };
 
@@ -102,13 +126,13 @@ const TenantDashboard = () => {
     logout();
   };
 
-  // Keep your existing useEffects
+  // Keep your existing useEffects and add QR image fetching
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
         const apartmentData = await getTenantApartment();
         
-        setPaymentQR(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Tenant:${user?.id || "unknown"}`);
+        await getTenantQRImages(); // Fetch QR images
         
         const announcementsData = await getTenantAnnouncements();
         setAnnouncements(announcementsData || []);
@@ -123,7 +147,53 @@ const TenantDashboard = () => {
     };
 
     fetchTenantData();
-  }, [getTenantApartment, getTenantAnnouncements, user?.id]);
+  }, [getTenantApartment, getTenantAnnouncements, getTenantQRImages, user?.id]);
+
+  // Update when user or apartment data changes
+  useEffect(() => {
+    if (user && currentApartment) {
+      setStructuredTenantDetails({
+        userId: user.id,
+        fullName: user.name,
+        email: user.email,
+        apartmentId: currentApartment._id,
+        apartmentName: currentApartment.room || "Unknown Room",
+        rent: currentApartment.rent || 0
+      });
+    }
+  }, [user, currentApartment]);
+
+  // Add effect to fetch payments when user ID is available
+  useEffect(() => {
+    if (user?.id) {
+      getTenantPayments(user.id);
+    }
+  }, [user?.id, getTenantPayments]);
+
+  // Handle successful payment submission
+  const handlePaymentSuccess = async (newPayment) => {
+    // Show success message
+    setSuccess("Payment proof submitted successfully!");
+    
+    // Refresh payment history
+    if (user?.id) {
+      await getTenantPayments(user.id);
+    }
+  };
+
+  // Format date for display
+  const formatPaymentDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString || 'Unknown date';
+    }
+  };
 
   // Keep all your other functions
   const handleFileChange = (event) => {
@@ -137,6 +207,13 @@ const TenantDashboard = () => {
 
   const submitPayment = async (data) => {
     try {
+      // Log the information being sent (for debugging)
+      console.log("Submitting payment with data:", {
+        tenantDetails: structuredTenantDetails,
+        referenceNumber: data.referenceNumber,
+        fileInfo: selectedFile ? { name: selectedFile.name, size: selectedFile.size } : null
+      });
+      
       const newPayment = {
         _id: `pay${Date.now()}`,
         amount: currentApartment.rent,
@@ -148,12 +225,64 @@ const TenantDashboard = () => {
       
       setPaymentHistory(prev => [newPayment, ...prev]);
       setSuccess("Payment proof submitted successfully!");
-      handleModalClose('paymentProof');
+      handleModalClose('payments');
       return { success: true };
     } catch (error) {
+      console.error("Payment submission error:", error);
       setError("Failed to submit payment. Please try again.");
       return { success: false };
     }
+  };
+
+  const renderQRImage = () => {
+    if (qrLoading) {
+      return (
+        <div className="w-32 h-32 bg-white p-2 rounded-lg mb-3 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (qrImages && qrImages.length > 0) {
+      const latestQR = qrImages[0];
+      // Use processImagePath instead of manually constructing URLs
+      const imagePath = processImagePath(latestQR.image_path);
+      
+      return (
+        <div className="bg-white p-2 rounded-lg mb-3">
+          {imagePath ? (
+            <img 
+              src={imagePath} 
+              alt="Payment QR Code" 
+              className="w-32 h-32 object-contain"
+              onError={(e) => {
+                console.log("QR image failed to load:", imagePath);
+                e.target.src = paymentQR || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-size='20' text-anchor='middle' fill='%23999' dominant-baseline='middle'%3EQR Image%3C/text%3E%3C/svg%3E";
+                e.target.onerror = null;
+              }}
+            />
+          ) : (
+            paymentQR ? <img src={paymentQR} alt="Payment QR Code" className="w-32 h-32 object-contain" /> : (
+              <div className="w-32 h-32 flex items-center justify-center bg-gray-100">
+                <span className="text-gray-400 text-sm text-center">No QR code available</span>
+              </div>
+            )
+          )}
+        </div>
+      );
+    }
+
+    return paymentQR ? (
+      <img 
+        src={paymentQR} 
+        alt="Payment QR Code" 
+        className="w-32 h-32 bg-white p-2 rounded-lg mb-3"
+      />
+    ) : (
+      <div className="w-32 h-32 bg-white p-2 rounded-lg mb-3 flex items-center justify-center">
+        <span className="text-gray-500 text-sm">No QR available</span>
+      </div>
+    );
   };
 
   // Loading state - updated to match DashboardPage style
@@ -340,7 +469,7 @@ const TenantDashboard = () => {
                 <div className="h-32 bg-gray-700 rounded-lg overflow-hidden">
                   {currentApartment?.images && currentApartment.images.length > 0 ? (
                     <img
-                      src={currentApartment.images[0]}
+                      src={processImagePath(currentApartment.images[0])}
                       alt={`${currentApartment.room}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -390,7 +519,11 @@ const TenantDashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6">
           <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
             <h4 className='text-sm lg:text-lg font-bold'>
-              {formatDate(currentApartment?.moveInDate || new Date())}
+              {currentApartment?.moveInDate 
+                ? formatDate(currentApartment.moveInDate) 
+                : currentApartment?.createdAt 
+                  ? formatDate(currentApartment.createdAt) 
+                  : "Not set"}
             </h4>
             <p className='text-xs lg:text-base'>Move-in Date</p>
           </div>
@@ -428,13 +561,7 @@ const TenantDashboard = () => {
               <p className="text-gray-400 text-sm mb-4">Scan the QR code or make a payment directly</p>
               
               <div className="flex flex-col items-center">
-                {paymentQR && (
-                  <img 
-                    src={paymentQR} 
-                    alt="Payment QR Code" 
-                    className="w-32 h-32 bg-white p-2 rounded-lg mb-3"
-                  />
-                )}
+                {renderQRImage()}
                 
                 <button
                   onClick={() => handleModalOpen('payments')}
@@ -451,13 +578,14 @@ const TenantDashboard = () => {
               <p className="text-gray-400 text-sm mb-4">View your previous payments and status</p>
               
               <div>
-                {paymentHistory && paymentHistory.length > 0 ? (
+                {payments && payments.length > 0 ? (
                   <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                    {paymentHistory.slice(0, 3).map(payment => (
+                    {payments.slice(0, 3).map(payment => (
                       <div key={payment._id} className="bg-gray-700 rounded p-3 flex justify-between items-center">
                         <div>
-                          <p className="text-white text-sm">{formatDate(payment.paymentDate)}</p>
+                          <p className="text-white text-sm">{formatPaymentDate(payment.createdAt)}</p>
                           <p className="text-green-400">₱{payment.amount?.toLocaleString()}</p>
+                          <p className="text-xs text-gray-300">#{payment.reference_number}</p>
                         </div>
                         <div className={`px-2 py-1 rounded-full text-xs ${
                           payment.status === 'approved' ? 'bg-green-900 text-green-300' :
@@ -515,12 +643,12 @@ const TenantDashboard = () => {
           closeModal={() => handleModalClose('payments')}
           selectedFile={selectedFile}
           setSelectedFile={setSelectedFile}
-          handleFileChange={handleFileChange}
           referenceNumber={referenceNumber}
           setReferenceNumber={setReferenceNumber}
           paymentQR={paymentQR}
-          submitPayment={submitPayment}
+          tenantDetails={structuredTenantDetails}
           apartment={currentApartment}
+          onPaymentSuccess={handlePaymentSuccess}
         />
 
         <BrowseApartmentsModal

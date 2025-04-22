@@ -3,6 +3,7 @@ import { useMaintenanceStore } from "../../store/maintenanceStore";
 import { useAuthStore } from "../../store/authStore";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 const MaintenancePage = () => {
   const { user } = useAuthStore();
@@ -56,13 +57,29 @@ const MaintenancePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+
     try {
       if (editId) {
-        await updateMaintenance(editId, formData);
-        setEditId(null);
+        const result = await Swal.fire({
+          title: "Are you sure?",
+          text: "You are about to update this maintenance task.",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          confirmButtonText: "Yes, update it!",
+        });
+
+        if (result.isConfirmed) {
+          await updateMaintenance(editId, formData);
+          setEditId(null);
+          Swal.fire("Updated!", "The maintenance task has been updated.", "success");
+        }
       } else {
         await createMaintenance(formData);
+        Swal.fire("Created!", "The maintenance task has been created.", "success");
       }
+
       setFormData({
         start_date: "",
         end_date: "",
@@ -70,10 +87,12 @@ const MaintenancePage = () => {
         expenses: 0,
         status: "pending",
       });
+
       // Refresh statistics after adding/updating
       fetchMaintenanceStats();
     } catch (error) {
       console.error("Error in form submission:", error);
+      Swal.fire("Error!", "Failed to submit the task.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -92,15 +111,26 @@ const MaintenancePage = () => {
 
   const handleArchive = async (id) => {
     try {
-      if (window.confirm("Are you sure you want to archive this maintenance record?")) {
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, archive it!",
+      });
+
+      if (result.isConfirmed) {
         console.log("Archiving maintenance with ID:", id);
         await archiveMaintenance(id);
+        Swal.fire("Archived!", "The maintenance record has been archived.", "success");
         // Refresh data after archiving
         fetchMaintenanceStats();
       }
     } catch (error) {
       console.error("Error archiving maintenance record:", error);
-      toast.error("Failed to archive record");
+      Swal.fire("Error!", "Failed to archive the record.", "error");
     }
   };
 
@@ -119,7 +149,7 @@ const MaintenancePage = () => {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-6">
+    <div className="p-6 flex flex-col gap-6 mt-16 lg:mt-0">
       {/* Statistics Section */}
       {statistics && (
         <div className="bg-gray-900 p-6 rounded-lg shadow-md w-full">
@@ -259,7 +289,7 @@ const MaintenancePage = () => {
             <h2 className="text-xl text-white font-bold">Maintenance Tasks</h2>
             <div className="flex gap-2">
               <Link 
-                to="/landlord/maintenance/archived" 
+                to="/archive" 
                 className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { useTenantStore } from "../../store/tenantStore";
 import { useApartmentStore } from "../../store/apartmentStore";
+import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 import LandlordSideNav from "../../components/layout/LandlordSideNav";
-import TenantModal from "../../components/TenantModal"; // Import the TenantModal
+import TenantModal from "../../components/TenantModal";
+import TenantDetailsModal from "../../components/TenantDetailsModal";
 import { motion } from "framer-motion";
 
 const TenantPage = () => {
@@ -13,6 +15,8 @@ const TenantPage = () => {
   const [collapsed, setCollapsed] = useState(true); // Track sidebar state
   const [selectedFile, setSelectedFile] = useState(null);
   const [paymentDetails, setPaymentDetails] = useState("");
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [showTenantModal, setShowTenantModal] = useState(false);
 
   const { user } = useAuthStore();
   const {
@@ -20,9 +24,17 @@ const TenantPage = () => {
     loading,
     error,
     fetchTenants,
-    uploadPaymentQR,
     clearMessages,
   } = useTenantStore();
+  
+  // Import the createQRImage function from the QR image store
+  const { 
+    createQRImage, 
+    loading: qrLoading, 
+    error: qrError,
+    message: qrMessage,
+    clearMessage 
+  } = useQRImageStore();
 
   const { getApartments, fetchUnassignedTenants } = useApartmentStore();
 
@@ -30,9 +42,10 @@ const TenantPage = () => {
   useEffect(() => {
     fetchTenants();
     return () => {
-      clearMessages(); // Clean up on unmount
+      clearMessages(); // Clean up tenant store messages
+      clearMessage(); // Clean up QR store messages
     };
-  }, [fetchTenants, clearMessages]);
+  }, [fetchTenants, clearMessages, clearMessage]);
 
   // Filter tenants based on search term
   const filteredTenants = tenants.filter(
@@ -52,8 +65,20 @@ const TenantPage = () => {
       return;
     }
 
+    if (!paymentDetails || paymentDetails.trim() === '') {
+      alert("Please enter payment details.");
+      return;
+    }
+
     try {
-      await uploadPaymentQR(selectedFile, paymentDetails);
+      // Create form data for QR image upload
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      formData.append('details', paymentDetails);
+      
+      // Use the createQRImage function from the QR image store
+      await createQRImage(formData);
+      
       alert("Payment QR uploaded successfully!");
       setShowModal(false);
       setSelectedFile(null);
@@ -61,6 +86,12 @@ const TenantPage = () => {
     } catch (error) {
       alert("Failed to upload QR code: " + (error.message || "Unknown error"));
     }
+  };
+
+  // Function to handle clicking on a tenant card
+  const handleTenantClick = (tenant) => {
+    setSelectedTenant(tenant);
+    setShowTenantModal(true);
   };
 
   return (
@@ -83,7 +114,7 @@ const TenantPage = () => {
       >
         {/* Title and Search Bar */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full mb-6">
-          <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 lg:mb-0">
+          <h2 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 lg:mb-0 text-center lg:text-left w-full lg:w-auto">
             Tenant Management
           </h2>
           <div className="flex flex-col sm:flex-row w-full lg:w-auto space-y-2 sm:space-y-0 sm:space-x-4">
@@ -131,6 +162,7 @@ const TenantPage = () => {
                   <div
                     key={tenant._id}
                     className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition duration-300 cursor-pointer"
+                    onClick={() => handleTenantClick(tenant)}
                   >
                     <div className="flex flex-col items-center">
                       {/* Avatar */}
@@ -232,6 +264,13 @@ const TenantPage = () => {
             </div>
           </div>
         )}
+
+        {/* Tenant Details Modal */}
+        <TenantDetailsModal
+          isOpen={showTenantModal}
+          onClose={() => setShowTenantModal(false)}
+          tenant={selectedTenant}
+        />
       </motion.div>
     </div>
   );

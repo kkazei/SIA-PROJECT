@@ -8,6 +8,7 @@ import path from "path";
 import { connectDb } from "./db/connectDb.js";
 import multer from "multer";
 import postRoutes from "./routes/post.route.js";
+import qrRoutes from "./routes/qr.route.js";
 import maintenanceRoutes from "./routes/maintenance.route.js";
 import tenantRoutes from "./routes/tenant.route.js";
 import userRoutes from "./routes/user.route.js";
@@ -16,6 +17,10 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
+import paymentRoutes from "./routes/payment.route.js";
+import leaseRoutes from './routes/lease.route.js';
+import adminRoutes from './routes/admin.route.js';
+
 
 dotenv.config();
 
@@ -45,7 +50,7 @@ app.use(passport.session());
 
 // Set up file upload directories
 const setupUploadDirectories = () => {
-  const dirs = ['uploads', 'uploads/qr-codes', 'uploads/maintenance', 'uploads/posts'];
+  const dirs = ['uploads', 'uploads/maintenance', 'uploads/posts', 'uploads/payment_proofs'];
   dirs.forEach(dir => {
     const fullPath = path.join(__dirname, dir);
     if (!fs.existsSync(fullPath)) {
@@ -63,15 +68,25 @@ setupUploadDirectories();
 app.use("/api/auth", authRoutes);
 app.use("/api/apartments", apartmentRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/qr", qrRoutes);  // Add QR routes
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
-app.use("/api/applications", applicationRoutes); // Add this line
+app.use("/api/applications", applicationRoutes); 
+app.use('/api/admin', adminRoutes);
+
 
 // Add this before mounting the route
 console.log('Setting up inquiry routes...');
 app.use('/api/inquiries', inquiryRoute);
 console.log('Inquiry routes set up successfully');
+
+// Use payment routes
+app.use('/api/payments', paymentRoutes);
+console.log('Payment routes initialized');
+
+// Use lease routes
+app.use('/api/leases', leaseRoutes);
 
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

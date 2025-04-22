@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from "../../store/authStore";
 import { useApartmentStore } from "../../store/apartmentStore";
+import { usePaymentStore } from "../../store/paymentStore";
+import { useMaintenanceStore } from "../../store/maintenanceStore";
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
@@ -11,6 +13,7 @@ import AnnouncementModal from '../../components/AnnouncementModal';
 import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
 import ApplicationModal from './ApplicationModal'; // Import the modal
+import ApartmentDetails from '../../components/ApartmentDetails'; // Import the ApartmentDetails component
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -22,41 +25,127 @@ const DashboardPage = () => {
         isLoading, 
         error 
     } = useApartmentStore();
+    const { payments, getTenantPayments } = usePaymentStore();
+    const { maintenanceRequests, fetchMaintenance } = useMaintenanceStore();
     const [isTenantModalOpen, setTenantModalOpen] = useState(false);
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setAnnouncementModalOpen] = useState(false);
     const [isApplicationModalOpen, setApplicationModalOpen] = useState(false);
+    const [selectedApartment, setSelectedApartment] = useState(null);
+    const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
     const navigate = useNavigate();  
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Track sidebar state
-
-    useEffect(() => {
-        // Fetch apartments when component mounts
-        getApartments();
-    }, [getApartments]);
-
-    const navigateToInquiriesPage = () => navigate('/landlord/inquiries');
-
     const [visibleDataset, setVisibleDataset] = useState(null); 
-
-    const data = {
+    const [chartData, setChartData] = useState({
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         datasets: [
             {
                 label: 'Income',
-                data: [10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000],
-                backgroundColor: 'rgba(34, 197, 94, 0.8)', 
+                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                backgroundColor: 'rgba(34, 197, 94, 0.8)',
                 borderRadius: 5,
-                hidden: visibleDataset === 'Expenses', 
+                hidden: visibleDataset === 'Expenses',
             },
             {
                 label: 'Expenses',
-                data: [5000, 7000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000, 24000, 26000],
-                backgroundColor: 'rgba(30, 41, 59, 0.9)', 
+                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                backgroundColor: 'rgba(30, 41, 59, 0.9)',
                 borderRadius: 5,
-                hidden: visibleDataset === 'Income', 
+                hidden: visibleDataset === 'Income',
             }
         ]
-    };
+    });
+
+    useEffect(() => {
+        // Fetch apartments when component mounts
+        getApartments();
+        // Fetch maintenance requests
+        fetchMaintenance();
+        // Fetch payments (if user is landlord)
+        if (user && user._id) {
+            getTenantPayments(user._id);
+        }
+    }, [getApartments, fetchMaintenance, getTenantPayments, user]);
+
+    const navigateToInquiriesPage = () => navigate('/landlord/inquiries');
+
+    // Process data for chart when payments or maintenance data changes
+    useEffect(() => {
+        // Add console logs to debug the data
+        console.log("Processing chart data:");
+        console.log("Payments:", payments);
+        console.log("Maintenance requests:", maintenanceRequests);
+        
+        if (payments.length === 0 && maintenanceRequests.length === 0) return;
+        
+        // Initialize monthly aggregations
+        const monthlyIncome = Array(12).fill(0);
+        const monthlyExpenses = Array(12).fill(0);
+        const currentYear = new Date().getFullYear();
+        
+        // Process payments data
+        payments.forEach(payment => {
+            const paymentDate = new Date(payment.createdAt);
+            
+            // Only include payments from current year
+            if (paymentDate.getFullYear() === currentYear && payment.status === 'approved') {
+                const month = paymentDate.getMonth();
+                monthlyIncome[month] += payment.amount;
+            }
+        });
+        
+        // Process maintenance expenses - UPDATED to include 'expenses' property
+        maintenanceRequests.forEach(request => {
+            const requestDate = new Date(request.createdAt);
+            
+            // Add 'expenses' to the properties we check
+            const maintenanceCost = request.cost || request.estimatedCost || request.amount || request.expenses || 0;
+            const isCompleted = request.status === 'completed' || request.status === 'resolved';
+            
+            // Only include maintenance from current year with cost and completed status
+            if (requestDate.getFullYear() === currentYear && maintenanceCost > 0 && isCompleted) {
+                const month = requestDate.getMonth();
+                monthlyExpenses[month] += maintenanceCost;
+                console.log(`Added expense for ${month+1}/${currentYear}: ${maintenanceCost}`);
+            }
+        });
+        
+        console.log("Monthly Income:", monthlyIncome);
+        console.log("Monthly Expenses:", monthlyExpenses);
+        
+        // Update chart data
+        setChartData(prevData => ({
+            ...prevData,
+            datasets: [
+                {
+                    ...prevData.datasets[0],
+                    data: monthlyIncome
+                },
+                {
+                    ...prevData.datasets[1],
+                    data: monthlyExpenses
+                }
+            ]
+        }));
+        
+    }, [payments, maintenanceRequests]);
+
+    // Update chart visibility when selection changes
+    useEffect(() => {
+        setChartData(prevData => ({
+            ...prevData,
+            datasets: [
+                {
+                    ...prevData.datasets[0],
+                    hidden: visibleDataset === 'Expenses'
+                },
+                {
+                    ...prevData.datasets[1],
+                    hidden: visibleDataset === 'Income'
+                }
+            ]
+        }));
+    }, [visibleDataset]);
 
     const options = {
         responsive: true,
@@ -95,6 +184,22 @@ const DashboardPage = () => {
         }
     };    
 
+    // Function to handle viewing apartment details
+    const handleViewApartmentDetails = (apartment) => {
+        setSelectedApartment(apartment);
+        setDetailsModalOpen(true);
+    };
+
+    // Function to close details modal
+    const closeDetailsModal = () => {
+        setDetailsModalOpen(false);
+        setSelectedApartment(null);
+    };
+
+    // Calculate total income and expenses for the stats cards
+    const totalIncome = chartData.datasets[0].data.reduce((sum, value) => sum + value, 0);
+    const totalExpenses = chartData.datasets[1].data.reduce((sum, value) => sum + value, 0);
+
     return (
         <div className="flex flex-col lg:flex-row">
             <LandlordSideNav onToggle={setSidebarCollapsed} />
@@ -107,11 +212,17 @@ const DashboardPage = () => {
                     isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
                 }`}
             >
-                <div className='bg-white shadow-md rounded-lg p-4 lg:p-6 mt-0'>
-                    <h2 className='text-xl lg:text-2xl font-bold text-gray-800'>Welcome, {user?.name || 'Landlord'}</h2>
-                    <p className='text-gray-600'>{formatDate(new Date())}</p>
+                <div
+                    className="bg-white shadow-md rounded-lg p-4 lg:p-6 mt-16 lg:mt-0" // Adjust margin-top for mobile view
+                >
+                    <h2 className="text-xl lg:text-2xl font-bold text-gray-800">
+                        Welcome, {user?.name || 'Landlord'}
+                    </h2>
+                    <p className="text-gray-600">{formatDate(new Date())}</p>
                 </div>
 
+                
+                
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
                     <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
                         <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
@@ -144,11 +255,11 @@ const DashboardPage = () => {
                     </div>
 
                     <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
-                        <h3 className="text-lg lg:text-xl font-bold text-white">Overview of 2024</h3>
+                        <h3 className="text-lg lg:text-xl font-bold text-white">Overview of {new Date().getFullYear()}</h3>
                         <div className='mt-4 bg-gray-100 p-2 lg:p-4 rounded-lg shadow-inner'>
                             <p className='text-gray-700 text-center'>Income and Expenses</p>
                             <div className='h-40 lg:h-60'>
-                                <Bar data={data} options={options} />
+                                <Bar data={chartData} options={options} />
                             </div>
                         </div>
                     </div>
@@ -169,15 +280,12 @@ const DashboardPage = () => {
                     </div>
                     <div className='bg-green-500 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
                         <h4 className='text-sm lg:text-lg font-bold'>
-                            ₱{apartments
-                                .filter(apt => apt.status === 'occupied')
-                                .reduce((total, apt) => total + apt.rent, 0)
-                                .toLocaleString()}
+                            ₱{totalIncome.toLocaleString()}
                         </h4>
                         <p className='text-xs lg:text-base'>Total Income</p>
                     </div>
                     <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-sm lg:text-lg font-bold'>₱39,523</h4>
+                        <h4 className='text-sm lg:text-lg font-bold'>₱{totalExpenses.toLocaleString()}</h4>
                         <p className='text-xs lg:text-base'>Total Expenses</p>
                     </div>
                 </div>
@@ -249,6 +357,14 @@ const DashboardPage = () => {
                                             <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
                                         </div>
                                         
+                                        {/* Add View Details Button */}
+                                        <button 
+                                            onClick={() => handleViewApartmentDetails(apartment)}
+                                            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md transition-colors text-sm font-medium"
+                                        >
+                                            View Apartment Details
+                                        </button>
+                                        
                                         {/* Tenant Information */}
                                         {apartment.status === 'occupied' && apartment.tenant_id && (
                                             <div className="mt-4 pt-3 border-t border-gray-700">
@@ -290,6 +406,34 @@ const DashboardPage = () => {
                     )}
                 </div>
                 
+                {/* Apartment Details Modal */}
+                {isDetailsModalOpen && selectedApartment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                        <div className="relative bg-gray-900 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <button 
+                                onClick={closeDetailsModal}
+                                className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                                aria-label="Close"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                            <div className="p-6">
+                                <ApartmentDetails apartment={selectedApartment} />
+                                <div className="mt-6 flex justify-center">
+                                    <button 
+                                        onClick={closeDetailsModal}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <RoomModal isOpen={isRoomModalOpen} onClose={() => setRoomModalOpen(false)} />
                 <TenantModal isOpen={isTenantModalOpen} onClose={() => setTenantModalOpen(false)} />
                 <AnnouncementModal isOpen={isAnnouncementModalOpen} onClose={() => setAnnouncementModalOpen(false)} />

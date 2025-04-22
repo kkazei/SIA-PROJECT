@@ -5,6 +5,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodeGeocoder from 'node-geocoder';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +32,11 @@ export const upload = multer({
             cb(new Error('Only image files are allowed'));
         }
     }
+});
+
+// Initialize geocoder
+const geocoder = nodeGeocoder({
+    provider: 'openstreetmap'
 });
 
 // Get all apartments for a landlord
@@ -119,21 +125,51 @@ export const createApartment = async (req, res) => {
             address
         } = req.body;
 
-        // Create apartment object
+        // Parse address if it's a string
+        let addressData = address;
+        if (typeof address === 'string') {
+            try {
+                addressData = JSON.parse(address);
+            } catch (e) {
+                console.error('Error parsing address:', e);
+                addressData = {};
+            }
+        }
+
+        // Geocode the address
+        let coordinates = {};
+        const addressString = `${addressData.street}, ${addressData.city}, ${addressData.state}, ${addressData.zipCode}, ${addressData.country || 'Philippines'}`;
+        
+        try {
+            const geoResults = await geocoder.geocode(addressString);
+            
+            if (geoResults && geoResults.length > 0) {
+                // Store coordinates in GeoJSON format [longitude, latitude]
+                addressData.location = {
+                    type: 'Point',
+                    coordinates: [geoResults[0].longitude, geoResults[0].latitude]
+                };
+                console.log(`Geocoded address: ${addressString}`, addressData.location);
+            }
+        } catch (geoError) {
+            console.error('Geocoding error:', geoError);
+            // Continue without coordinates if geocoding fails
+        }
+
+        // Create apartment object with coordinates in GeoJSON format
         const apartment = new Apartment({
             room,
             rent,
             description,
             bedrooms,
             bathrooms,
-            address,
+            address: addressData,
             landlord_id: req.user.id,
             status: 'available'
         });
 
         // Handle image uploads
         if (req.files && req.files.length > 0) {
-            // Store image paths directly in the uploads folder, just like posts
             apartment.images = req.files.map(file => `/uploads/${file.filename}`);
             console.log("Saved apartment images:", apartment.images);
         }
@@ -248,12 +284,35 @@ export const updateApartment = async (req, res) => {
             }
 
             if (addressData) {
+                // Geocode the updated address
+                let coordinates = apartment.address?.coordinates || {};
+                const addressString = `${addressData.street || apartment.address?.street || ''}, 
+                                      ${addressData.city || apartment.address?.city || ''}, 
+                                      ${addressData.state || apartment.address?.state || ''}, 
+                                      ${addressData.zipCode || apartment.address?.zipCode || ''}, 
+                                      ${addressData.country || apartment.address?.country || 'Philippines'}`;
+                
+                try {
+                    const geoResults = await geocoder.geocode(addressString);
+                    
+                    if (geoResults && geoResults.length > 0) {
+                        coordinates = {
+                            lat: geoResults[0].latitude,
+                            lng: geoResults[0].longitude
+                        };
+                    }
+                } catch (geoError) {
+                    console.error('Geocoding error:', geoError);
+                    // Continue with existing coordinates if geocoding fails
+                }
+
                 apartment.address = {
                     street: addressData.street || apartment.address?.street || '',
                     city: addressData.city || apartment.address?.city || '',
                     state: addressData.state || apartment.address?.state || '',
                     zipCode: addressData.zipCode || apartment.address?.zipCode || '',
-                    country: addressData.country || apartment.address?.country || 'Philippines'
+                    country: addressData.country || apartment.address?.country || 'Philippines',
+                    coordinates: coordinates
                 };
             }
         }
