@@ -15,12 +15,12 @@ import userRoutes from "./routes/user.route.js";
 import applicationRoutes from "./routes/application.route.js";
 import { fileURLToPath } from "url";
 import session from "express-session";
+import MongoStore from "connect-mongo"; // Add this import
 import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
 import leaseRoutes from './routes/lease.route.js';
 import adminRoutes from './routes/admin.route.js';
-
 
 dotenv.config();
 
@@ -28,18 +28,49 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
+// Add debug for CORS and cookies in production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://sia-project.onrender.com',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+console.log("Allowed CORS origins:", allowedOrigins);
+
+app.use(cors({ 
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log(`Origin blocked: ${origin}`);
+      return callback(null, false);
+    }
+    console.log(`Origin allowed: ${origin}`);
+    return callback(null, true);
+  },
+  credentials: true 
+}));
+
 app.use(express.json()); // to parse json data: req.body
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Configure session middleware (required for Passport)
+// Configure session middleware with MongoDB store
 app.use(session({
-  secret: process.env.JWT_SECRET,
+  secret: process.env.JWT_SECRET || '',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60, // 24 hours in seconds
+    autoRemove: 'native'
+  }),
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
