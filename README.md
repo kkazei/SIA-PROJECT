@@ -6,7 +6,7 @@ RentFlow is a full-stack MERN application built to streamline and automate renta
 
 ## 🚀 Live URL
 
-- 🌐 **API (Backend)**: [https://sia-project-fg0k.onrender.com](https://sia-project-fg0k.onrender.com)
+- 🌐 **API (Backend)**: [https://sia-project-1.onrender.com/](https://sia-project-1.onrender.com/)
 
 ---
 
@@ -89,14 +89,13 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=google_secret
+EMAIL_USER=google_account
+EMAIL_APP_PASSWORD=application_pass
 ```
 
 ---
 
 ## 🚀 Deployment Guide
-
-### Deploying on Render
-
 #### Backend/Frontend Deployment
 
 1. **Connect GitHub Repository**
@@ -135,12 +134,9 @@ GOOGLE_CLIENT_SECRET=google_secret
 
 ---
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
 ## 👨‍💻 Contributors
 
-- [Your Name](https://github.com/kkazei) - Project Lead
+- (https://github.com/kkazei)
+- (https://github.com/PickleC137)
+- (https://github.com/VLADIMIRPUTTIN)
+- (https://github.com/aldrin2002)
