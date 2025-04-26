@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useApplicationStore } from "../../store/applicationStore";
 
 const ApplicationsModal = ({ isOpen, closeModal }) => {
@@ -79,7 +79,11 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Move-in Date</p>
-                        <p>{formatDate(app.details.moveInDate)}</p>
+                        <p>{formatDate(app.moveInDate)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Duration</p>
+                        <p>{app.duration} {app.duration === 1 ? 'month' : 'months'}</p>
                       </div>
                       {app.processedDate && (
                         <div>
@@ -89,10 +93,10 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
                       )}
                     </div>
                     
-                    {app.details.additionalComments && (
+                    {app.additionalComments && (
                       <div className="mt-3">
                         <p className="text-sm font-medium text-gray-500">Your Comments</p>
-                        <p className="text-gray-700">{app.details.additionalComments}</p>
+                        <p className="text-gray-700">{app.additionalComments}</p>
                       </div>
                     )}
                     
