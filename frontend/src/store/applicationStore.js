@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import axios from "axios";
+import { create } from 'zustand';
+import axios from 'axios';
 
 // Define base URLs
 const BASE_URL = import.meta.env.MODE === "development" 
@@ -24,6 +24,11 @@ export const useApplicationStore = create((set, get) => ({
   submitApplication: async (applicationData) => {
     set({ loading: true, error: null, message: null });
     try {
+      // Ensure duration is a number
+      if (applicationData.duration) {
+        applicationData.duration = Number(applicationData.duration);
+      }
+      
       const response = await axios.post(`${API_URL}/submit`, applicationData);
       
       // Add the new application to the tenant applications list
@@ -99,7 +104,7 @@ export const useApplicationStore = create((set, get) => ({
         reason
       });
       
-      // Update the application in the landlord applications list
+      // Update the application in the landlordApplications list
       const updatedApplications = get().landlordApplications.map(app => 
         app._id === applicationId ? response.data.data : app
       );
@@ -112,7 +117,7 @@ export const useApplicationStore = create((set, get) => ({
       
       return response.data.data;
     } catch (error) {
-      console.error(`Error ${status}ing application:`, error);
+      console.error("Error processing application:", error);
       set({
         loading: false,
         error: error.response?.data?.message || `Failed to ${status} application`
@@ -125,20 +130,6 @@ export const useApplicationStore = create((set, get) => ({
   getApplicationById: async (id) => {
     set({ loading: true, error: null });
     try {
-      // First check if we already have the application in state
-      const existingApp = 
-        get().landlordApplications.find(app => app._id === id) || 
-        get().tenantApplications.find(app => app._id === id);
-      
-      if (existingApp) {
-        set({
-          selectedApplication: existingApp,
-          loading: false
-        });
-        return existingApp;
-      }
-      
-      // If not, fetch it from the server
       const response = await axios.get(`${API_URL}/${id}`);
       
       set({
@@ -160,20 +151,16 @@ export const useApplicationStore = create((set, get) => ({
   // Helper function to get application status color
   getStatusColor: (status) => {
     switch (status) {
-      case 'pending':
-        return 'text-yellow-500';
-      case 'approved':
-        return 'text-green-500';
-      case 'rejected':
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
+      case 'pending': return 'yellow';
+      case 'approved': return 'green';
+      case 'rejected': return 'red';
+      default: return 'gray';
     }
   },
   
   // Helper function to format dates nicely
   formatDate: (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return 'Not specified';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
