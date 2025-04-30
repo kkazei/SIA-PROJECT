@@ -6,47 +6,12 @@ import { useState, useEffect } from "react";
 const LandingPage = () => {
     const { isAuthenticated, user } = useAuthStore();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [isInstallable, setIsInstallable] = useState(false);
 
     const images = [
         "image/landing.jpeg",
         "image/landing2.jpeg",
         "image/landing3.jpeg",
     ];
-
-    // PWA installation event handling
-    useEffect(() => {
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            // Stash the event so it can be triggered later
-            setDeferredPrompt(e);
-            // Update UI to show install button
-            setIsInstallable(true);
-        });
-
-        window.addEventListener('appinstalled', () => {
-            // Log install to analytics
-            console.log('PWA was installed');
-            setIsInstallable(false);
-        });
-    }, []);
-
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-        
-        // Show the install prompt
-        deferredPrompt.prompt();
-        
-        // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        
-        // We've used the prompt, and can't use it again, throw it away
-        setDeferredPrompt(null);
-        setIsInstallable(false);
-    };
 
     // Automatically transition to the next image every 5 seconds
     useEffect(() => {
@@ -162,26 +127,12 @@ const LandingPage = () => {
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                             {isAuthenticated ? (
-                                <>
-                                    <Link
-                                        to={getDashboardUrl()}
-                                        className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all text-center"
-                                    >
-                                        Go to Dashboard
-                                    </Link>
-                                    {isInstallable && (
-                                        <button
-                                            onClick={handleInstallClick}
-                                            className="py-3 px-8 border border-green-500 rounded-lg font-bold hover:bg-green-500/10 transition-colors text-center flex items-center gap-2"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L10 11.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v9.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 13.586V4a1 1 0 011-1z" clipRule="evenodd" />
-                                            </svg>
-                                            Install App
-                                        </button>
-                                    )}
-                                </>
+                                <Link
+                                    to={getDashboardUrl()}
+                                    className="py-3 px-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition-all text-center"
+                                >
+                                    Go to Dashboard
+                                </Link>
                             ) : (
                                 <>
                                     <Link
@@ -196,18 +147,6 @@ const LandingPage = () => {
                                     >
                                         Get Started
                                     </Link>
-                                    {isInstallable && (
-                                        <button
-                                            onClick={handleInstallClick}
-                                            className="py-3 px-8 border border-green-500 rounded-lg font-bold hover:bg-green-500/10 transition-colors text-center flex items-center gap-2"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L10 11.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v9.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 13.586V4a1 1 0 011-1z" clipRule="evenodd" />
-                                            </svg>
-                                            Install App
-                                        </button>
-                                    )}
                                 </>
                             )}
                         </div>
@@ -215,7 +154,42 @@ const LandingPage = () => {
                 </div>
             </motion.section>
 
-            {/* Rest of your component */}
+            {/* Features Section */}
+            <section className="py-20 bg-gray-800">
+                <div className="container mx-auto px-6">
+                    <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text">
+                        Explore Our Features
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        {features.map((feature, index) => (
+                            <motion.div
+                                key={index}
+                                className="bg-gray-900 p-8 rounded-xl border border-gray-700 text-center"
+                                whileHover={{ scale: 1.05, boxShadow: "0px 4px 20px rgba(0, 255, 128, 0.3)" }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <div className="bg-green-500/20 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+                                    {feature.icon}
+                                </div>
+                                <h3 className="text-xl font-bold mb-3 text-green-400">{feature.title}</h3>
+                                <p className="text-gray-300">{feature.description}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="bg-gray-900 border-t border-gray-800 py-10">
+                <div className="container mx-auto px-6 text-center">
+                    <div className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-600 text-transparent bg-clip-text mb-4">
+                        RentFlow
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                        &copy; {new Date().getFullYear()} RENTFLOW. All rights reserved.
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 };

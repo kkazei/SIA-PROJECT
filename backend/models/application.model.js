@@ -41,6 +41,7 @@ const applicationSchema = new mongoose.Schema({
   },
   
   // Application details
+  details: {
     moveInDate: {
       type: Date,
       required: true
@@ -52,12 +53,7 @@ const applicationSchema = new mongoose.Schema({
     additionalComments: {
       type: String,
       default: ""
-    },
-
-  duration: {
-    type: Number,
-    required: true,
-    min: 1
+    }
   },
   
   // Date when the application was processed (approved/rejected)

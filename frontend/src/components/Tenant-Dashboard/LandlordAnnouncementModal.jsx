@@ -51,9 +51,9 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-4 border-b flex justify-between bg-gray-900 text-white items-center">
+        <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold">Landlord Announcements</h2>
-          <button onClick={closeModal} className="text-gray-500  hover:text-gray-700">
+          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
             ✖
           </button>
         </div>
@@ -110,7 +110,12 @@ const LandlordAnnouncementModal = ({ isOpen, closeModal }) => {
         </div>
         
         <div className="p-4 border-t">
-
+          <button
+            onClick={closeModal}
+            className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
