@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // Change from 'autoUpdate' to 'prompt' for better control
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'RentFlow',
@@ -25,6 +25,76 @@ export default defineConfig({
           },
         ],
       },
+      // Add proper Service Worker configuration
+      workbox: {
+        // Force the Service Worker to update on new deployments
+        clientsClaim: true,
+        skipWaiting: true,
+        
+        // Don't precache the big JS bundles - let them be handled by runtimeCaching
+        globPatterns: ['**/*.{html,css,ico,png,svg}'],
+        
+        // Configure caching strategies
+        runtimeCaching: [
+          {
+            // Cache JS assets
+            urlPattern: /\.(?:js)$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'js-cache',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 24 * 60 * 60 // 1 day
+              },
+              networkTimeoutSeconds: 10 // Fallback to cache if network is slow
+            }
+          },
+          {
+            // Cache CSS assets
+            urlPattern: /\.(?:css)$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'css-cache'
+            }
+          },
+          {
+            // Cache image assets
+            urlPattern: /\.(?:png|jpg|jpeg|gif|svg|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
+          },
+          {
+            // Cache API calls
+            urlPattern: /^https:\/\/sia-project-fg0k\.onrender\.com\/api/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 5 * 60 // 5 minutes
+              },
+              networkTimeoutSeconds: 10 // Fallback to cache if network is slow
+            }
+          }
+        ]
+      },
+      // Add versioning to enable cache busting
+      injectManifest: {
+        injectionPoint: undefined,
+        rollupFormat: 'iife',
+        maximumFileSizeToCacheInBytes: 3000000
+      },
+      devOptions: {
+        // Enable PWA in development for testing
+        enabled: true,
+        type: 'module'
+      }
     }),
   ],
   build: {
@@ -32,48 +102,28 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core app dependencies
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          
-          // State management
           'state': ['zustand'],
-          
-          // UI/UX related
           'ui-core': ['framer-motion', 'react-icons'],
-          
-          // Data visualization
           'charts': ['chart.js', 'react-chartjs-2'],
-          
-          // Date handling and utilities
           'utils': ['date-fns'],
-          
-          // Network and API related
           'api': ['axios'],
-          
-          // UI notification libraries
           'notifications': ['react-toastify', 'sweetalert2'],
         }
       }
     },
-    // Increase chunk size warning limit to avoid unnecessary warnings
-    chunkSizeWarningLimit: 1000, // 1000 KB
-    
-    // Enable source maps for better debugging in production
-    sourcemap: true,
-    
-    // Optimize CSS
+    chunkSizeWarningLimit: 1000,
+    // Consider disabling sourcemaps in production as they increase bundle size
+    sourcemap: false, // Changed from true to false
     cssCodeSplit: true,
-    
-    // Minify options
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.logs in production
+        drop_console: true,
         drop_debugger: true
       }
     },
   },
-  // Keep your existing proxy configuration
   server: {
     proxy: {
       '/nominatim': {
@@ -87,7 +137,6 @@ export default defineConfig({
       }
     }
   },
-  // Add a configuration for caching and performance
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'framer-motion'],
     exclude: ['@vite/client', '@vite/env']
