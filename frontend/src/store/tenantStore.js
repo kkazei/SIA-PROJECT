@@ -68,23 +68,38 @@ export const useTenantStore = create((set, get) => ({
     }
   },
 
-  // Get details for a specific tenant
-  getTenantById: async (id) => {
+  // Get detailed tenant information with application data
+  getTenantById: async (tenantId) => {
     set({ loading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
+      // Get basic tenant info
+      const tenantResponse = await axios.get(`${API_URL}/${tenantId}`);
+      const tenant = tenantResponse.data.data;
       
-      set({
-        selectedTenant: response.data.data,
-        loading: false
-      });
+      // Get tenant's active application/lease data
+      if (tenant.apartment?._id) {
+        try {
+          const applicationResponse = await axios.get(`${BASE_URL}/api/applications/tenant/${tenantId}/active`);
+          if (applicationResponse.data.success && applicationResponse.data.data) {
+            // Merge application data with tenant data
+            tenant.duration = applicationResponse.data.data.duration;
+            tenant.phoneNumber = applicationResponse.data.data.phoneNumber;
+            tenant.moveInDate = applicationResponse.data.data.moveInDate;
+            tenant.additionalComments = applicationResponse.data.data.additionalComments;
+          }
+        } catch (appError) {
+          console.error("Could not fetch application data:", appError);
+          // Continue with basic tenant data even if application fetch fails
+        }
+      }
       
-      return response.data.data;
+      set({ loading: false });
+      return tenant;
     } catch (error) {
       console.error("Error fetching tenant details:", error);
-      set({
-        loading: false,
-        error: error.response?.data?.message || "Failed to fetch tenant details"
+      set({ 
+        loading: false, 
+        error: error.response?.data?.message || "Failed to fetch tenant details" 
       });
       throw error;
     }

@@ -342,7 +342,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                           <span className="font-medium">Email:</span> {displayTenant.email || "Not provided"}
                         </p>
                         <p className="text-gray-600">
-                          <span className="font-medium">Phone:</span> {displayTenant.phone || "Not provided"}
+                          <span className="font-medium">Phone:</span> {displayTenant.phoneNumber || displayTenant.phone || "Not provided"}
                         </p>
                         <p className="text-gray-600">
                           <span className="font-medium">Member Since:</span> {formatDate(displayTenant.createdAt)}
@@ -360,8 +360,12 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                           {displayTenant.apartment?.rent?.toLocaleString() || "0"}
                         </p>
                         <p className="text-gray-600">
-                          <span className="font-medium">Tenancy Duration:</span> {getTenancyDuration(displayTenant.moveInDate)}
+                          <span className="font-medium">Lease Duration:</span> {displayTenant.duration ? `${displayTenant.duration} ${displayTenant.duration === 1 ? 'month' : 'months'}` : "Not specified"}
                         </p>
+                        <p className="text-gray-600">
+                          <span className="font-medium">Move-in Date:</span> {formatDate(displayTenant.moveInDate) || "Not specified"}
+                        </p>
+
                         <p className="text-gray-600">
                           <span className="font-medium">Status:</span>{" "}
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

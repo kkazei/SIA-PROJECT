@@ -6,6 +6,7 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
   const [moveInDate, setMoveInDate] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [additionalComments, setAdditionalComments] = useState("");
+  const [duration, setDuration] = useState(1); // Add state for duration with default of 1 month
   const [errors, setErrors] = useState({});
 
   const { submitApplication, loading, error, message, clearMessages } = useApplicationStore();
@@ -25,6 +26,10 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
     } else if (!phoneRegex.test(phoneNumber.replace(/[^0-9]/g, ''))) {
       newErrors.phoneNumber = "Please enter a valid phone number (10-11 digits)";
     }
+    // Validate duration
+    if (!duration || duration < 1) {
+      newErrors.duration = "Please enter a valid duration (minimum 1 month)";
+    }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -35,7 +40,8 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
         apartmentId: apartment._id,
         moveInDate,
         phoneNumber,
-        additionalComments
+        additionalComments,
+        duration // Add duration to the submission
       });
       
       // Show success alert
@@ -70,10 +76,8 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
         <div className="flex justify-between items-center bg-gray-900 text-white px-6 py-4">
           <h3 className="text-xl font-medium">Apply for Apartment</h3>
-          <button onClick={closeModal} className="text-white hover:text-gray-300">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button onClick={closeModal} className="text-gray-500  hover:text-gray-700">
+            ✖
           </button>
         </div>
 
@@ -92,6 +96,7 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
               <li>Your first rent payment will be due 1 month after your move-in date</li>
               <li>You can only be assigned to one apartment at a time</li>
               <li>If this application is approved, any other pending applications will be automatically withdrawn</li>
+              <li>Your lease duration will determine your contract length</li>
             </ul>
           </div>
 
@@ -105,7 +110,7 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
                   <p className="font-medium">{message}</p>
                   <p className="text-sm mt-1">
                     The landlord will review your application and notify you of their decision. 
-                    If approved, you'll be expected to move in on {moveInDate ? new Date(moveInDate).toLocaleDateString() : 'your selected date'}.
+                    If approved, you'll be expected to move in on {moveInDate ? new Date(moveInDate).toLocaleDateString() : 'your selected date'} for a duration of {duration} {duration === 1 ? 'month' : 'months'}.
                   </p>
                 </div>
               </div>
@@ -151,6 +156,28 @@ const ApplyApartmentModal = ({ isOpen, closeModal, apartment }) => {
                 First month's rent will be due on {moveInDate ? 
                   new Date(new Date(moveInDate).setMonth(new Date(moveInDate).getMonth() + 1)).toLocaleDateString() : 
                   'the date 1 month after your move-in date'}
+              </p>
+            </div>
+
+            {/* Add duration field */}
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Lease Duration (months)*
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value) || "")}
+                className={`shadow appearance-none border ${
+                  errors.duration ? "border-red-500" : "border-gray-300"
+                } rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline`}
+              />
+              {errors.duration && (
+                <p className="text-red-500 text-xs italic">{errors.duration}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                How many months do you plan to rent this apartment?
               </p>
             </div>
 

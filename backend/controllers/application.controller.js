@@ -1,12 +1,13 @@
+import mongoose from "mongoose";
 import { Application } from "../models/application.model.js";
 import { Apartment } from "../models/apartment.model.js";
 import { User } from "../models/user.model.js";
-import mongoose from "mongoose";
 
 
+// Submit a new application - Tenant
 export const submitApplication = async (req, res) => {
   try {
-    const { apartmentId, moveInDate, phoneNumber, additionalComments } = req.body;
+    const { apartmentId, moveInDate, phoneNumber, additionalComments, duration } = req.body;
     
     // Get tenant ID from authenticated user
     const tenantId = req.user.id;
@@ -16,6 +17,14 @@ export const submitApplication = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "Only tenants can submit applications"
+      });
+    }
+    
+    // Validate duration
+    if (!duration || duration < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be at least 1 month"
       });
     }
     
@@ -53,17 +62,15 @@ export const submitApplication = async (req, res) => {
       });
     }
     
-    // Create new application with both sets of fields
+    // Create new application with fields at root level
     const newApplication = new Application({
       tenant_id: tenantId,
       apartment_id: apartmentId,
       landlord_id: landlordId,
-      details: {
-        moveInDate,
-        phoneNumber,
-        additionalComments: additionalComments || ""
-      },
-      // Add these fields to match the old index in your database
+      moveInDate,
+      phoneNumber,
+      additionalComments: additionalComments || "",
+      duration: Number(duration),
       tenant: tenantId,
       property: apartmentId
     });
@@ -82,7 +89,7 @@ export const submitApplication = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "You already have an application for this apartment"
+        message: "You've already applied for this apartment"
       });
     }
     res.status(500).json({
@@ -129,7 +136,7 @@ export const processApplication = async (req, res) => {
     if (application.landlord_id.toString() !== landlordId) {
       return res.status(403).json({
         success: false,
-        message: "You can only process applications for your own apartments"
+        message: "You can only process applications for your own properties"
       });
     }
     
@@ -146,45 +153,33 @@ export const processApplication = async (req, res) => {
     session.startTransaction();
     
     try {
-      // Update application status
+      // Update application
       application.status = status;
       application.processedDate = new Date();
-      application.processedReason = reason || "";
-      
+      application.processedReason = reason;
       await application.save({ session });
       
       // If approved, update apartment and assign tenant
       if (status === 'approved') {
         const apartment = await Apartment.findById(application.apartment_id);
         
-        // Check if apartment still available
-        if (!apartment || apartment.tenant_id || apartment.status !== 'available') {
-          await session.abortTransaction();
-          return res.status(400).json({
-            success: false,
-            message: "This apartment is no longer available"
-          });
+        if (!apartment) {
+          throw new Error("Apartment not found");
         }
-
-        // Check if tenant already has an assigned apartment
-        const existingAssignment = await Apartment.findOne({
-          tenant_id: application.tenant_id,
-          status: 'occupied'
-        });
-
-        if (existingAssignment) {
-          // This tenant already has an assigned apartment - we should prevent this
-          await session.abortTransaction();
-          return res.status(400).json({
-            success: false,
-            message: "This tenant is already assigned to another apartment"
-          });
-        }
-
-        // Get move-in date from application
-        const moveInDate = new Date(application.details.moveInDate);
         
-        // Calculate payment due date (1 month from move-in date, not today)
+        if (apartment.tenant_id || apartment.status !== 'available') {
+          throw new Error("This apartment is no longer available");
+        }
+        
+        // Get move-in date and duration from application
+        const moveInDate = new Date(application.moveInDate);
+        const duration = application.duration;
+        
+        // Calculate lease end date based on duration
+        const leaseEndDate = new Date(moveInDate);
+        leaseEndDate.setMonth(leaseEndDate.getMonth() + duration);
+        
+        // Calculate payment due date (1 month from move-in date)
         const dueDate = new Date(moveInDate);
         dueDate.setMonth(dueDate.getMonth() + 1);
         
@@ -195,37 +190,24 @@ export const processApplication = async (req, res) => {
           nextDueDate: dueDate,
           lastPaymentDate: null,
           paymentStatus: 'pending',
-          moveInDate: moveInDate // Store the move-in date for reference
+          moveInDate: moveInDate,
+          leaseEndDate: leaseEndDate,
+          leaseDuration: duration
         };
         
         await apartment.save({ session });
         
         // Reject all other pending applications for this apartment
         await Application.updateMany(
-          { 
-            apartment_id: application.apartment_id, 
-            status: 'pending',
-            _id: { $ne: application._id }
-          },
-          { 
-            status: 'rejected',
-            processedDate: new Date(),
-            processedReason: "Another applicant has been selected for this apartment."
-          },
-          { session }
-        );
-        
-        // Also reject all other pending applications from this tenant for other apartments
-        await Application.updateMany(
           {
-            tenant_id: application.tenant_id,
-            status: 'pending',
-            _id: { $ne: application._id }
+            _id: { $ne: applicationId },
+            apartment_id: application.apartment_id,
+            status: 'pending'
           },
           {
             status: 'rejected',
             processedDate: new Date(),
-            processedReason: "You have been assigned to a different apartment."
+            processedReason: 'Another application for this property has been approved'
           },
           { session }
         );
@@ -241,6 +223,7 @@ export const processApplication = async (req, res) => {
       
     } catch (error) {
       await session.abortTransaction();
+      console.error("Transaction error:", error);
       throw error;
     } finally {
       session.endSession();
@@ -264,23 +247,15 @@ export const getLandlordApplications = async (req, res) => {
     if (req.user.role !== 'landlord') {
       return res.status(403).json({
         success: false,
-        message: "Access denied. Only landlords can access this resource."
+        message: "Access restricted to landlords"
       });
     }
     
     // Find all applications for apartments owned by this landlord
-    const applications = await Application.find({ 
-      landlord_id: landlordId 
-    })
-    .populate({
-      path: 'tenant_id',
-      select: 'name email avatar'
-    })
-    .populate({
-      path: 'apartment_id',
-      select: 'room rent status images'
-    })
-    .sort({ createdAt: -1 });
+    const applications = await Application.find({ landlord_id: landlordId })
+      .populate('tenant_id', 'name email profileImage')
+      .populate('apartment_id', 'room rent address images')
+      .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
@@ -289,7 +264,7 @@ export const getLandlordApplications = async (req, res) => {
     });
     
   } catch (error) {
-    console.error("Error fetching landlord applications:", error);
+    console.error("Error getting landlord applications:", error);
     res.status(500).json({
       success: false,
       message: "Server error while fetching applications"
@@ -306,23 +281,15 @@ export const getTenantApplications = async (req, res) => {
     if (req.user.role !== 'tenant') {
       return res.status(403).json({
         success: false,
-        message: "Access denied. Only tenants can access this resource."
+        message: "Access restricted to tenants"
       });
     }
     
-    // Find all applications submitted by this tenant
-    const applications = await Application.find({ 
-      tenant_id: tenantId 
-    })
-    .populate({
-      path: 'apartment_id',
-      select: 'room rent status images address'
-    })
-    .populate({
-      path: 'landlord_id',
-      select: 'name email'
-    })
-    .sort({ createdAt: -1 });
+    // Get all applications by this tenant
+    const applications = await Application.find({ tenant_id: tenantId })
+      .populate('apartment_id', 'room rent address images')
+      .populate('landlord_id', 'name email phoneNumber')
+      .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
@@ -331,10 +298,108 @@ export const getTenantApplications = async (req, res) => {
     });
     
   } catch (error) {
-    console.error("Error fetching tenant applications:", error);
+    console.error("Error getting tenant applications:", error);
     res.status(500).json({
       success: false,
       message: "Server error while fetching applications"
+    });
+  }
+};
+
+export const getApplicationById = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const userId = req.user.id;
+    
+    // Find the application
+    const application = await Application.findById(applicationId)
+      .populate('tenant_id', 'name email profileImage')
+      .populate('landlord_id', 'name email phoneNumber')
+      .populate('apartment_id', 'room rent address images');
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found"
+      });
+    }
+    
+    // Check if user has permission to view this application
+    if (
+      application.tenant_id._id.toString() !== userId && 
+      application.landlord_id._id.toString() !== userId &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to view this application"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: application
+    });
+    
+  } catch (error) {
+    console.error("Error fetching application details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching application details"
+    });
+  }
+};
+
+// Add this new controller function
+
+// Get active/approved application for a specific tenant
+export const getActiveTenantApplication = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    
+    // Find the most recent approved application for this tenant
+    const application = await Application
+      .findOne({ 
+        tenant_id: tenantId, 
+        status: 'approved' 
+      })
+      .sort({ processedDate: -1 })
+      .populate('apartment_id', 'room rent address images');
+    
+    // If no approved application found, check if there's a pending one
+    if (!application) {
+      const pendingApplication = await Application
+        .findOne({ 
+          tenant_id: tenantId, 
+          status: 'pending' 
+        })
+        .sort({ createdAt: -1 })
+        .populate('apartment_id', 'room rent address images');
+        
+      if (!pendingApplication) {
+        return res.status(200).json({
+          success: true,
+          data: null,
+          message: "No active application found for this tenant"
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        data: pendingApplication
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: application
+    });
+    
+  } catch (error) {
+    console.error("Error fetching tenant's active application:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching application"
     });
   }
 };
