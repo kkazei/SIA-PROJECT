@@ -36,22 +36,19 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           
           // State management
-          'state': ['zustand', 'use-immer'],
+          'state': ['zustand'],
           
           // UI/UX related
           'ui-core': ['framer-motion', 'react-icons'],
-          
-          // Form libraries
-          'forms': ['formik', 'yup', 'react-hook-form'],
           
           // Data visualization
           'charts': ['chart.js', 'react-chartjs-2'],
           
           // Date handling and utilities
-          'utils': ['date-fns', 'lodash'],
+          'utils': ['date-fns'],
           
           // Network and API related
-          'api': ['axios', 'swr'],
+          'api': ['axios'],
           
           // UI notification libraries
           'notifications': ['react-toastify', 'sweetalert2'],
