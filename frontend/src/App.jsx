@@ -1,44 +1,49 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import LoginPage from './pages/auth/LoginPage'
-import SignUpPage from "./pages/auth/SignUpPage";
-import EmailVerificationPage from './pages/auth/EmailVerificationPage'
-import ResetPasswordPage from './pages/auth/ResetPasswordPage'
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import { lazy, Suspense, useEffect } from 'react'; // Add lazy and Suspense
 import LoadingSpinner from './components/ui/LoadingSpinner'
-import LandingPage from './pages/LandingPage'
-import OAuthSuccess from './pages/auth/OAuthSuccess';
-import DashboardPage from './pages/landlord/DashboardPage';
-import TenantDashboard from './pages/tenant/TenantDashboard';
-import RoleSelection from './pages/auth/RoleSelection';
-import TenantPage from './pages/landlord/TenantPage'; 
-import Announcement from './pages/landlord/Announcement'; 
-import MaintenancePage from './pages/landlord/MaintenancePage'; 
-import ArchivePage from './pages/landlord/ArchivePage'; 
-import LandlordLayout from './components/layout/LandlordLayout'; 
-import LandlordApplications from "./pages/landlord/LandlordApplications"; 
-import InquiryPage from "./pages/landlord/InquiriesPage"; 
-// Import Admin components
-import AdminDashboard from './pages/admin/AdminDashboard';
-
+import LandingPage from './pages/LandingPage' // Keep this eagerly loaded
 import { useAuthStore } from './store/authStore';
-import { useEffect } from 'react';
 
-// Update the ProtectedRoute component
+// Lazy load authentication pages
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const SignUpPage = lazy(() => import('./pages/auth/SignUpPage'));
+const EmailVerificationPage = lazy(() => import('./pages/auth/EmailVerificationPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const OAuthSuccess = lazy(() => import('./pages/auth/OAuthSuccess'));
+const RoleSelection = lazy(() => import('./pages/auth/RoleSelection'));
+
+// Lazy load landlord pages
+const DashboardPage = lazy(() => import('./pages/landlord/DashboardPage'));
+const TenantPage = lazy(() => import('./pages/landlord/TenantPage'));
+const Announcement = lazy(() => import('./pages/landlord/Announcement'));
+const MaintenancePage = lazy(() => import('./pages/landlord/MaintenancePage'));
+const ArchivePage = lazy(() => import('./pages/landlord/ArchivePage'));
+const LandlordApplications = lazy(() => import('./pages/landlord/LandlordApplications'));
+const InquiryPage = lazy(() => import('./pages/landlord/InquiriesPage'));
+
+// Lazy load tenant pages
+const TenantDashboard = lazy(() => import('./pages/tenant/TenantDashboard'));
+
+// Lazy load admin pages
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+
+// Lazy load layouts
+const LandlordLayout = lazy(() => import('./components/layout/LandlordLayout'));
+
+// Keep the route protection components
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
   
-    // Check if the user is authenticated at all
     if (!isAuthenticated) {
       return <Navigate to='/login' replace />;
     }
   
-    // Get and immediately clear the bypass flag to prevent it from persisting
     const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
     if (bypassVerification) {
       localStorage.removeItem('bypassVerification');
     }
   
-    // Check verification status, skipping for Google users and when bypass flag is set
     const skipVerification = user.googleId || bypassVerification || user.isVerified;
     if (!skipVerification) {
       return <Navigate to='/verify-email' replace />;
@@ -47,11 +52,10 @@ const ProtectedRoute = ({ children }) => {
     return children;
 };
 
-// Route component that checks user role and redirects accordingly
+// Keep the rest of your route protection components unchanged
 const RoleBasedRoute = ({ children }) => {
     const { user } = useAuthStore();
     
-    // Add admin role check
     if (user.role === 'admin') {
         return <Navigate to='/admin/dashboard' replace />;
     } else if (user.role === 'landlord') {
@@ -60,15 +64,12 @@ const RoleBasedRoute = ({ children }) => {
         return <Navigate to='/tenant/dashboard' replace />;
     }
     
-    // For users without a specific role, show the regular home page
     return children;
 };
 
-// For landlord routes, ensure only landlords can access
 const LandlordRoute = ({ children }) => {
     const { user } = useAuthStore();
     
-    // If not a landlord, redirect to home
     if (user.role !== 'landlord') {
         return <Navigate to='/' replace />;
     }
@@ -76,11 +77,9 @@ const LandlordRoute = ({ children }) => {
     return children;
 };
 
-// For tenant routes, ensure only tenants can access
 const TenantRoute = ({ children }) => {
     const { user } = useAuthStore();
     
-    // If not a tenant, redirect to home
     if (user.role !== 'tenant') {
         return <Navigate to='/' replace />;
     }
@@ -88,11 +87,9 @@ const TenantRoute = ({ children }) => {
     return children;
 };
 
-// For admin routes, ensure only admins can access
 const AdminRoute = ({ children }) => {
     const { user } = useAuthStore();
     
-    // If not an admin, redirect to home
     if (user.role !== 'admin') {
         return <Navigate to='/' replace />;
     }
@@ -100,24 +97,17 @@ const AdminRoute = ({ children }) => {
     return children;
 };
 
-// redirect authenticated users to the appropriate dashboard
 const RedirectAuthenticatedUser = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
 
     if (isAuthenticated && (user.isVerified || user.googleId)) {
-        // If user is admin, redirect to admin dashboard
         if (user.role === 'admin') {
             return <Navigate to='/admin/dashboard' replace />;
-        }
-        // If user is landlord, redirect to landlord dashboard
-        else if (user.role === 'landlord') {
+        } else if (user.role === 'landlord') {
             return <Navigate to='/landlord/dashboard' replace />;
-        }
-        // If user is tenant, redirect to tenant dashboard
-        else if (user.role === 'tenant') {
+        } else if (user.role === 'tenant') {
             return <Navigate to='/tenant/dashboard' replace />;
         }
-        // Otherwise redirect to home
         return <Navigate to='/' replace />;
     }
 
@@ -134,11 +124,12 @@ function App() {
     if (isCheckingAuth) return <LoadingSpinner />;
 
     return (
+        // Wrap routes in Suspense to handle lazy loading
+        <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-                <Route
-                    path='/'
-                    element={<LandingPage />}
-                />
+                {/* Landing page - eagerly loaded */}
+                <Route path='/' element={<LandingPage />} />
+                
                 {/* Dashboard for authenticated users */}
                 <Route
                     path='/dashboard'
@@ -174,52 +165,64 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                
+                {/* The rest of your routes remain the same but will now be lazy-loaded */}
                 <Route
                     path='/landlord/tenants'
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <TenantPage /> {/* Remove LandlordLayout wrapper */}
+                                <TenantPage />
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
                 />
+                
                 <Route
                     path='/landlord/announcements'
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <LandlordLayout>
-                                    <Announcement />
-                                </LandlordLayout>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <Announcement />
+                                    </LandlordLayout>
+                                </Suspense>
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
                 />
+                
                 <Route
                     path='/maintenance'
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <LandlordLayout>
-                                    <MaintenancePage />
-                                </LandlordLayout>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <MaintenancePage />
+                                    </LandlordLayout>
+                                </Suspense>
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
                 />
+                
                 <Route
                     path='/archive'
                     element={
                         <ProtectedRoute>
                             <LandlordRoute>
-                                <LandlordLayout>
-                                    <ArchivePage />
-                                </LandlordLayout>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <ArchivePage />
+                                    </LandlordLayout>
+                                </Suspense>
                             </LandlordRoute>
                         </ProtectedRoute>
                     }
                 />
+                
                 <Route
                     path='/landlord/applications'
                     element={
@@ -230,6 +233,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                
                 <Route
                     path='/landlord/inquiries'
                     element={
@@ -240,6 +244,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                
                 {/* Tenant Routes */}
                 <Route
                     path='/tenant/dashboard'
@@ -252,7 +257,7 @@ function App() {
                     }
                 />
               
-
+                {/* Auth Routes */}
                 <Route
                     path='/signup'
                     element={
@@ -290,9 +295,11 @@ function App() {
                 {/* OAuth routes */}
                 <Route path="/oauth-success" element={<OAuthSuccess />} />
                 <Route path="/role-selection" element={<RoleSelection />} />
+                
                 {/* catch all routes */}
                 <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>
+        </Suspense>
     );
 }
 
