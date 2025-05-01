@@ -15,6 +15,7 @@ import userRoutes from "./routes/user.route.js";
 import applicationRoutes from "./routes/application.route.js";
 import { fileURLToPath } from "url";
 import session from "express-session";
+import MongoStore from "connect-mongo"; // Add this import
 import passport from "./config/passport.js";
 import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
@@ -33,13 +34,20 @@ app.use(express.json()); // to parse json data: req.body
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Configure session middleware (required for Passport)
+// Configure session middleware with MongoDB store
 app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60, // 24 hours in seconds
+    autoRemove: 'native'
+  }),
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
