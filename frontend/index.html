@@ -11,12 +11,78 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="RentFlow">
-    <title>
-      Rentflow By Vertex
-    </title>
+    <meta name="description" content="Comprehensive rental property management system">
+    <title>Rentflow By Vertex</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Cross-browser service worker registration -->
+    <script>
+      // Save the current path before page refreshes or closes
+      window.addEventListener('beforeunload', () => {
+        // Don't save login or error pages
+        const pathname = window.location.pathname;
+        if (pathname !== '/' && !pathname.includes('/login') && !pathname.includes('/error')) {
+          sessionStorage.setItem('lastPath', pathname);
+          console.log('Saved path before unload:', pathname);
+        }
+      });
+      
+      // When the page loads, check if we have a saved path
+      document.addEventListener('DOMContentLoaded', () => {
+        const savedPath = sessionStorage.getItem('lastPath');
+        const currentPath = window.location.pathname;
+        
+        // If we're on the home page but had a different path before, redirect
+        if (currentPath === '/' && savedPath && savedPath !== '/' && !savedPath.includes('login')) {
+          console.log(`Restoring previous location: ${savedPath}`);
+          // Use history API instead of window.location for cleaner navigation
+          window.history.replaceState(null, '', savedPath);
+          
+          // Trigger a history event so React router picks up the change
+          try {
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          } catch (e) {
+            console.log('Could not dispatch popstate event, navigation may be delayed');
+          }
+        }
+      });
+      
+      // Register service worker with browser-specific handling
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          const registerSw = async () => {
+            try {
+              const registration = await navigator.serviceWorker.register('/service-worker.js');
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            } catch (error) {
+              console.error('ServiceWorker registration failed: ', error);
+              
+              // Firefox may need a fresh registration attempt
+              if (navigator.userAgent.includes('Firefox')) {
+                try {
+                  // First try to unregister
+                  const registrations = await navigator.serviceWorker.getRegistrations();
+                  for (let reg of registrations) {
+                    await reg.unregister();
+                  }
+                  console.log('Unregistered old service workers, trying again...');
+                  
+                  // Then register again
+                  const newRegistration = await navigator.serviceWorker.register('/service-worker.js');
+                  console.log('ServiceWorker re-registration successful: ', newRegistration.scope);
+                } catch (retryError) {
+                  console.error('Final ServiceWorker registration attempt failed: ', retryError);
+                }
+              }
+            }
+          };
+          
+          registerSw();
+        });
+      }
+    </script>
   </body>
 </html>
