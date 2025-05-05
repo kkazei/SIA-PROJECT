@@ -54,8 +54,23 @@ const ProtectedRoute = ({ children }) => {
 
 // Keep the rest of your route protection components unchanged
 const RoleBasedRoute = ({ children }) => {
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
     
+    // Add safety checks
+    if (!isAuthenticated || !user) {
+        console.log("User not authenticated or user object missing");
+        return <Navigate to='/login' replace />;
+    }
+    
+    // Add logging to see what's happening
+    console.log("Current user role:", user.role);
+    
+    if (!user.role) {
+        console.log("User has no role assigned");
+        return <Navigate to='/role-selection' replace />;
+    }
+    
+    // Rest of your routing logic
     if (user.role === 'admin') {
         return <Navigate to='/admin/dashboard' replace />;
     } else if (user.role === 'landlord') {
@@ -64,6 +79,8 @@ const RoleBasedRoute = ({ children }) => {
         return <Navigate to='/tenant/dashboard' replace />;
     }
     
+    // Fallback - shouldn't reach here if roles are properly set
+    console.warn("User has unrecognized role:", user.role);
     return children;
 };
 
@@ -115,13 +132,20 @@ const RedirectAuthenticatedUser = ({ children }) => {
 };
 
 function App() {
-    const { isCheckingAuth, checkAuth } = useAuthStore();
+    const { isCheckingAuth, checkAuth, user, isAuthenticated } = useAuthStore();
 
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
-
-    if (isCheckingAuth) return <LoadingSpinner />;
+    
+    // Add more detailed loading conditions
+    if (isCheckingAuth || (isAuthenticated && !user)) {
+        console.log("Waiting for auth check or user data...");
+        return <LoadingSpinner />;
+    }
+    
+    // Add debugging in production
+    console.log("Auth state:", { isAuthenticated, userExists: !!user, role: user?.role });
 
     return (
         // Wrap routes in Suspense to handle lazy loading
@@ -135,9 +159,13 @@ function App() {
                     path='/dashboard'
                     element={
                         <ProtectedRoute>
-                            <RoleBasedRoute>
-                                <LandingPage />
-                            </RoleBasedRoute>
+                            {/* Directly redirect based on user role without nested components */}
+                            {({ user }) => {
+                                if (user?.role === 'landlord') return <Navigate to='/landlord/dashboard' replace />;
+                                if (user?.role === 'tenant') return <Navigate to='/tenant/dashboard' replace />;
+                                if (user?.role === 'admin') return <Navigate to='/admin/dashboard' replace />;
+                                return <Navigate to='/' replace />;
+                            }}
                         </ProtectedRoute>
                     }
                 />
