@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { useState, useEffect } from "react";
 
 const LandingPage = () => {
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user, isCheckingAuth } = useAuthStore();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isInstallable, setIsInstallable] = useState(false);
@@ -58,8 +58,8 @@ const LandingPage = () => {
     }, [images.length]);                                                                                            
 
     const getDashboardUrl = () => {
-        // Add loading state check first
-        if (authLoading) {
+        // Use isCheckingAuth instead of authLoading
+        if (isCheckingAuth) {
             return '#'; // Prevent navigation while loading
         }
         
@@ -68,8 +68,8 @@ const LandingPage = () => {
             return '/login'; // Redirect to login if not authenticated
         }
         
-        // Use role to determine dashboard
-        switch(user.role) {
+        // Add null check with optional chaining
+        switch(user?.role) {
             case 'landlord':
                 return '/landlord/dashboard';
             case 'tenant':
