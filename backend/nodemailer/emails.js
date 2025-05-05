@@ -33,12 +33,20 @@ export const sendWelcomeEmail = async (email, name) => {
 
 export const sendPasswordResetEmail = async (email, resetURL) => {
     try {
+        // Fix any URLs that contain "undefined" before sending
+        if (resetURL && resetURL.includes('undefined')) {
+            console.warn('Invalid URL detected in password reset email:', resetURL);
+            // Replace the invalid part with your production domain
+            resetURL = resetURL.replace('http://undefined', 'https://sia-project-a5xr.onrender.com');
+            console.log('URL corrected to:', resetURL);
+        }
+        
         const response = await sendEmail(
             email,
             "Reset your password",
             PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetURL)
         );
-        console.log("Password reset email sent", response);
+        console.log("Password reset email sent with URL:", resetURL);
         return response;
     } catch (error) {
         console.error(`Error sending password reset email`, error);
