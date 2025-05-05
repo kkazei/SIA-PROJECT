@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { useState, useEffect } from "react";
 
 const LandingPage = () => {
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user, isCheckingAuth } = useAuthStore();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isInstallable, setIsInstallable] = useState(false);
@@ -55,13 +55,28 @@ const LandingPage = () => {
         }, 5000); // 5 seconds
 
         return () => clearInterval(interval); // Cleanup on component unmount
-    }, [images.length]);
+    }, [images.length]);                                                                                            
 
     const getDashboardUrl = () => {
-        if (!user) return '/dashboard';
-        if (user.role === 'landlord') return '/landlord/dashboard';
-        if (user.role === 'tenant') return '/tenant/dashboard';
-        return '/dashboard';
+        // Use isCheckingAuth instead of authLoading
+        if (isCheckingAuth) {
+            return '#'; // Prevent navigation while loading
+        }
+        
+        // Check if authenticated first, then check role
+        if (!isAuthenticated || !user) {
+            return '/login'; // Redirect to login if not authenticated
+        }
+        
+        // Add null check with optional chaining
+        switch(user?.role) {
+            case 'landlord':
+                return '/landlord/dashboard';
+            case 'tenant':
+                return '/tenant/dashboard';
+            default:
+                return '/login'; // Safer fallback - no generic dashboard
+        }
     };
 
     // Feature list
