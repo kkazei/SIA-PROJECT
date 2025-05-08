@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useApplicationStore } from "../../store/applicationStore";
 import { 
   FaHome, 
-  FaClipboardList, 
-  FaSignOutAlt,
+  FaClipboardList,
   FaChevronRight,
   FaBuilding,
   FaRegLightbulb,
@@ -29,8 +29,8 @@ const useMediaQuery = (query) => {
 const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogout, children }) => {
   const { tenantApplications, fetchTenantApplications, loading } = useApplicationStore();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Track sidebar state
-  const isMobile = useMediaQuery("(max-width: 1024px)"); // Detect mobile view
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 1024px)");
 
   useEffect(() => {
     fetchTenantApplications();
@@ -43,148 +43,195 @@ const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogou
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex">
-      {/* Sidebar */}
+    <div className="flex flex-col lg:flex-row bg-gradient-to-br from-blue-50 via-indigo-50 to-white min-h-screen">
       <NoApartmentSideNavBar
         userName={userName}
         onBrowseClick={onBrowseClick}
         onApplicationsClick={onApplicationsClick}
         onLogout={onLogout}
         pendingCount={pendingCount}
-        onSidebarToggle={handleSidebarToggle} // Pass the callback
+        onSidebarToggle={handleSidebarToggle}
       />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 overflow-auto transition-all duration-300 ${
-          !isMobile && (isSidebarCollapsed ? "ml-20" : "ml-64") // Adjust margin only in desktop view
-        } ${isMobile ? "pt-20" : ""}`} // Slightly reduce padding in mobile view
+      {/* Main content - updated with enhanced styling */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className={`p-4 lg:p-8 w-full transition-all duration-300 ${
+          isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+        }`}
       >
-        <header className="bg-gray-800 border-b border-gray-700 p-6">
-          <h1 className="text-2xl font-bold">Welcome Tenant!</h1>
-        </header>
-        
-        <div className="p-6">
-          {/* Welcome Card */}
-          <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-xl p-6 mb-8 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full opacity-20 -mr-20 -mt-20"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500 rounded-full opacity-20 -ml-10 -mb-10"></div>
+        {/* Welcome Section - Enhanced with card styling and mobile-friendly spacing */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className='bg-white shadow-xl rounded-xl p-6 border border-blue-100 backdrop-blur-sm bg-opacity-80 mt-24 lg:mt-0'
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className='text-2xl lg:text-3xl font-bold bg-gradient-to-r from-black to-indigo-800 bg-clip-text text-transparent'>
+                Welcome, {userName || 'Tenant'}
+              </h2>
+              <p className='text-gray-600 mt-1'>Find your perfect apartment</p>
+            </div>
+            <div className="hidden md:block">
             
-            <div className="relative z-10">
-              <h2 className="text-3xl font-bold mb-2">Hello, {userName}!</h2>
-              <p className="text-blue-200 mb-6">
-                You're just a few steps away from finding your new home. Let's get started with your apartment journey.
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Apartment Journey - Enhanced with glass morphism and better styling */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className='bg-gradient-to-br from-gray-900 to-indigo-900 shadow-xl rounded-xl mt-6 p-6 border border-indigo-900/20 backdrop-blur-sm'
+        >
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <FaRegLightbulb className="mr-2 text-blue-400" /> Your Apartment Journey
+          </h3>
+          
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Step 1 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gray-800/70 p-5 rounded-xl border border-gray-700 shadow-lg transform transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30"
+            >
+              <div className="rounded-full w-10 h-10 bg-blue-600/70 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
+                <span className="text-white font-bold">1</span>
+              </div>
+              <h4 className="text-lg font-semibold text-white mb-2 text-center">Browse Apartments</h4>
+              <p className="text-gray-300 text-sm mb-4 text-center">
+                Explore available listings and find apartments that match your preferences.
               </p>
-              
-              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <button 
-                  onClick={onBrowseClick}
-                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                >
-                  Browse Apartments <FaChevronRight className="ml-2" />
-                </button>
-                
-                <button 
-                  onClick={onApplicationsClick}
-                  className="px-5 py-2 bg-blue-500 bg-opacity-30 text-white border border-blue-400 rounded-lg hover:bg-opacity-40 transition-colors flex items-center"
-                >
-                  My Applications 
-                  {pendingCount > 0 && (
-                    <span className="ml-2 bg-blue-500 text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          {/* Rest of the content */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <FaRegLightbulb className="mr-2 text-blue-400" /> Your Apartment Journey
-            </h2>
+              <button 
+                onClick={onBrowseClick}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2 px-4 rounded-lg flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-blue-500/30"
+              >
+                Start Browsing <FaChevronRight className="ml-2" />
+              </button>
+            </motion.div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Step 1 */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 relative">
-                <span className="absolute -top-3 -left-3 w-8 h-8 bg-blue-600 rounded-full text-white flex items-center justify-center font-bold">1</span>
-                <h3 className="text-lg font-medium mb-2 mt-2">Browse Apartments</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Explore our available listings and find apartments that match your preferences and budget.
-                </p>
-                <button 
-                  onClick={onBrowseClick}
-                  className="flex items-center text-blue-400 hover:text-blue-300 text-sm"
-                >
-                  Start Browsing <FaChevronRight className="ml-1" />
-                </button>
+            {/* Step 2 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-gray-800/70 p-5 rounded-xl border border-gray-700 shadow-lg transform transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30"
+            >
+              <div className="rounded-full w-10 h-10 bg-indigo-600/70 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-500/20">
+                <span className="text-white font-bold">2</span>
               </div>
-              
-              {/* Step 2 */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 relative">
-                <span className="absolute -top-3 -left-3 w-8 h-8 bg-gray-600 rounded-full text-white flex items-center justify-center font-bold">2</span>
-                <h3 className="text-lg font-medium mb-2 mt-2">Apply for Apartments</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Submit applications for apartments you're interested in. You can apply for multiple units.
-                </p>
-                <div className="text-sm text-gray-500">
-                  {loading ? "Loading applications..." : `${pendingCount} pending applications`}
-                </div>
+              <h4 className="text-lg font-semibold text-white mb-2 text-center">Apply for Apartments</h4>
+              <p className="text-gray-300 text-sm mb-4 text-center">
+                Submit applications for apartments you're interested in renting.
+              </p>
+              <div className="bg-indigo-900/40 text-indigo-200 py-2 px-4 rounded-lg text-center text-sm border border-indigo-700/40">
+                {loading ? "Loading applications..." : `${pendingCount} pending application${pendingCount !== 1 ? 's' : ''}`}
               </div>
-              
-              {/* Step 3 */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 relative">
-                <span className="absolute -top-3 -left-3 w-8 h-8 bg-gray-600 rounded-full text-white flex items-center justify-center font-bold">3</span>
-                <h3 className="text-lg font-medium mb-2 mt-2">Get Approved & Move In</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Once approved, you'll be assigned to your new apartment and can access the full tenant dashboard.
-                </p>
-                <div className="text-sm text-gray-500">Waiting for approval</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Quick Action Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-lg shadow-md p-6 flex items-center">
-              <div className="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center mr-4">
-                <FaSearchLocation className="text-xl text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium mb-1">Find Your New Home</h3>
-                <p className="text-sm text-blue-200 mb-3">Browse our available apartment listings</p>
-                <button 
-                  onClick={onBrowseClick}
-                  className="px-4 py-1.5 bg-blue-600 text-sm text-white rounded-md hover:bg-blue-700"
-                >
-                  Browse Now
-                </button>
-              </div>
-            </div>
+            </motion.div>
             
-            <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-lg shadow-md p-6 flex items-center">
-              <div className="w-12 h-12 rounded-full bg-green-700 flex items-center justify-center mr-4">
-                <FaClipboardCheck className="text-xl text-white" />
+            {/* Step 3 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-gray-800/70 p-5 rounded-xl border border-gray-700 shadow-lg transform transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30"
+            >
+              <div className="rounded-full w-10 h-10 bg-green-600/70 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-500/20">
+                <span className="text-white font-bold">3</span>
               </div>
-              <div className="flex-1">
-                <h3 className="font-medium mb-1">Manage Applications</h3>
-                <p className="text-sm text-green-200 mb-3">
-                  {loading 
-                    ? "Loading applications..." 
-                    : `You have ${pendingCount} pending application${pendingCount !== 1 ? 's' : ''}`}
-                </p>
-                <button 
-                  onClick={onApplicationsClick}
-                  className="px-4 py-1.5 bg-green-600 text-sm text-white rounded-md hover:bg-green-700"
-                >
-                  View Applications
-                </button>
+              <h4 className="text-lg font-semibold text-white mb-2 text-center">Get Approved & Move In</h4>
+              <p className="text-gray-300 text-sm mb-4 text-center">
+                Once approved, you'll access the full tenant dashboard.
+              </p>
+              <div className="bg-green-900/40 text-green-200 py-2 px-4 rounded-lg text-center text-sm border border-green-700/40">
+                Awaiting approval
               </div>
-            </div>
+            </motion.div>
           </div>
+        </motion.div>
+
+        {/* Quick Actions Box - Enhanced with glass morphism and better icons */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6'>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className='bg-gradient-to-br from-blue-600 to-blue-900 text-white p-6 rounded-xl shadow-xl border border-blue-500/20 backdrop-blur-sm'
+          >
+            <div className="rounded-full w-12 h-12 bg-blue-500/30 flex items-center justify-center mb-4">
+              <FaSearchLocation className="text-blue-200 text-xl" />
+            </div>
+            <h3 className="text-xl font-bold">Find Your New Home</h3>
+            <p className="text-blue-200 my-3">Browse our selection of high-quality apartments available for rent</p>
+            
+            <button 
+              onClick={onBrowseClick}
+              className="px-5 py-2 bg-gradient-to-r from-blue-500/80 to-indigo-500/80 hover:from-blue-500 hover:to-indigo-500 transition-all duration-300 text-white rounded-lg flex items-center shadow-md hover:shadow-blue-400/50"
+            >
+              Browse Apartments <FaChevronRight className="ml-2" />
+            </button>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className='bg-gradient-to-br from-green-600 to-green-900 text-white p-6 rounded-xl shadow-xl border border-green-500/20 backdrop-blur-sm'
+          >
+            <div className="rounded-full w-12 h-12 bg-green-500/30 flex items-center justify-center mb-4">
+              <FaClipboardCheck className="text-green-200 text-xl" />
+            </div>
+            <h3 className="text-xl font-bold">Manage Applications</h3>
+            <p className="text-green-200 my-3">
+              {loading 
+                ? "Loading your application status..." 
+                : `Check the status of your ${pendingCount} pending application${pendingCount !== 1 ? 's' : ''}`}
+            </p>
+            
+            <button 
+              onClick={onApplicationsClick}
+              className="px-5 py-2 bg-gradient-to-r from-green-500/80 to-emerald-500/80 hover:from-green-500 hover:to-emerald-500 transition-all duration-300 text-white rounded-lg flex items-center shadow-md hover:shadow-green-400/50"
+            >
+              View Applications {pendingCount > 0 && <span className="ml-2 bg-white text-green-600 rounded-full w-5 h-5 flex items-center justify-center text-xs">{pendingCount}</span>}
+            </button>
+          </motion.div>
         </div>
-      </div>
+
+        {/* Additional information */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className='bg-white shadow-xl rounded-xl p-6 border border-blue-100 backdrop-blur-sm bg-opacity-80 mt-6'
+        >
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to find your perfect apartment?</h3>
+          <p className="text-gray-600 mb-4">
+            Browse our selection of apartments, apply for your favorites, and get approved to move in. 
+            Our tenant portal offers a seamless experience from application to residency.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              onClick={onBrowseClick}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg flex items-center justify-center shadow-md hover:shadow-blue-500/30 transition-all duration-300"
+            >
+              <FaSearchLocation className="mr-2" /> Browse Available Units
+            </button>
+            <button 
+              onClick={onApplicationsClick}
+              className="px-5 py-2.5 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-gray-900 text-white rounded-lg flex items-center justify-center shadow-md hover:shadow-gray-500/30 transition-all duration-300"
+            >
+              <FaClipboardList className="mr-2" /> Check Application Status
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
       
       {/* Child components (modals) */}
       {children}

@@ -104,19 +104,11 @@ const SignUpPage = () => {
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-gray-700"></div>
                             </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-gray-800 text-gray-400">By signing up, you agree to our</span>
-                            </div>
+                            
                         </div>
                         
                         <div className="mt-2 text-center">
-                            <Link to="/terms" className="text-sm text-green-400 hover:text-green-300">
-                                Terms of Service
-                            </Link>
-                            <span className="text-gray-500 mx-2">and</span>
-                            <Link to="/privacy" className="text-sm text-green-400 hover:text-green-300">
-                                Privacy Policy
-                            </Link>
+                           
                         </div>
                     </div>
                 </div>
