@@ -146,13 +146,32 @@ setRole: async (role) => {
 		}
 	},
 
+	// Update in authStore.js
 	checkAuth: async () => {
 		set({ isCheckingAuth: true, error: null });
 		try {
 			const response = await axios.get(`${API_URL}/check-auth`);
-			set({ user: response.data.user, isAuthenticated: true, isCheckingAuth: false });
-		} catch {
-			set({ error: null, isCheckingAuth: false, isAuthenticated: false });
+			
+			// Store user data in state
+			set({ 
+				user: response.data.user, 
+				isAuthenticated: true, 
+				isCheckingAuth: false 
+			});
+			
+			// Return the user data for components that need it
+			return response.data.user;
+		} catch (error) {
+			console.error("Auth check error:", error);
+			set({ 
+				user: null,
+				isAuthenticated: false, 
+				isCheckingAuth: false, 
+				error: null 
+			});
+			
+			// Return null to indicate authentication failed
+			return null;
 		}
 	},
 

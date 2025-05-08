@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'; // Add lazy and Suspense
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import LandingPage from './pages/LandingPage' // Keep this eagerly loaded
@@ -132,29 +132,28 @@ const RedirectAuthenticatedUser = ({ children }) => {
 };
 
 const DashboardRouter = () => {
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
+    const navigate = useNavigate();
     
-    // Log the routing decision for debugging
-    console.log("Dashboard routing for user:", user);
+    useEffect(() => {
+      // Check if user needs role selection
+      if (isAuthenticated && user && (!user.role || user.role === 'unset')) {
+        console.log("User has no role, redirecting to role selection");
+        navigate('/role-selection', { replace: true });
+        return;
+      }
+      
+      // Route based on role
+      if (user?.role === 'landlord') {
+        navigate('/landlord/dashboard', { replace: true });
+      } else if (user?.role === 'tenant') {
+        navigate('/tenant/dashboard', { replace: true });
+      } else if (user?.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }, [user, isAuthenticated, navigate]);
     
-    // Wait until we have the user object
-    if (!user) {
-        console.log("No user object available yet");
-        return <LoadingSpinner />;
-    }
-    
-    // Route based on role
-    if (user.role === 'landlord') {
-        return <Navigate to='/landlord/dashboard' replace />;
-    } else if (user.role === 'tenant') {
-        return <Navigate to='/tenant/dashboard' replace />;
-    } else if (user.role === 'admin') {
-        return <Navigate to='/admin/dashboard' replace />;
-    }
-    
-    // If no valid role found
-    console.warn("User has no recognized role:", user.role);
-    return <Navigate to='/role-selection' replace />;
+    return <LoadingSpinner />;
 };
 
 function App() {
@@ -185,7 +184,7 @@ function App() {
                     path='/dashboard'
                     element={
                         <ProtectedRoute>
-                            <DashboardRouter /> {/* Create this component below */}
+                            <DashboardRouter />
                         </ProtectedRoute>
                     }
                 />
