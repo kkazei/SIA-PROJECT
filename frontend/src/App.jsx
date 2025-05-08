@@ -31,6 +31,9 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 // Lazy load layouts
 const LandlordLayout = lazy(() => import('./components/layout/LandlordLayout'));
 
+// Add import for BrowseApartmentsPage
+const BrowseApartmentsPage = lazy(() => import('./pages/BrowseApartmentsPage'));
+
 // Keep the route protection components
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
@@ -299,6 +302,18 @@ function App() {
                         <ProtectedRoute>
                             <TenantRoute>
                                 <TenantDashboard />
+                            </TenantRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Add BrowseApartmentsPage route */}
+                <Route
+                    path='/tenant/browse-apartments'
+                    element={
+                        <ProtectedRoute>
+                            <TenantRoute>
+                                <BrowseApartmentsPage />
                             </TenantRoute>
                         </ProtectedRoute>
                     }

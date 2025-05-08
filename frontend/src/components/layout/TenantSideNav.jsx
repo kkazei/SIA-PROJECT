@@ -4,31 +4,38 @@ import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaHome,
-  FaClipboardList,
   FaFileContract,
-  FaBullhorn,
-  FaHistory,
-  FaEnvelope,
   FaSignOutAlt,
   FaBars,
   FaTimes,
-  FaSearch,
-  FaMoneyBillWave
+  FaSearch
 } from 'react-icons/fa';
 
 const TenantSideNav = ({ onToggle, onModalOpen }) => {
   // Initialize collapsed state from localStorage
   const [collapsed, setCollapsed] = useState(() => {
     const savedState = localStorage.getItem('tenant-sidebar-collapsed');
-    return savedState === null ? true : JSON.parse(savedState);
+    return savedState === null ? false : JSON.parse(savedState);
   });
 
   // For mobile view
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
+
+  // Set active tab based on location
+  useEffect(() => {
+    if (location.pathname.includes('/tenant/dashboard')) {
+      setActiveTab('dashboard');
+    } else if (location.pathname.includes('/tenant/browse-apartments')) {
+      setActiveTab('browseApartments');
+    } else if (location.hash) {
+      setActiveTab(location.hash.substring(1));
+    }
+  }, [location]);
 
   // Sync state with parent component on mount
   useEffect(() => {
@@ -37,7 +44,7 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
 
   // Close mobile menu when location changes
   useEffect(() => {
-    setMobileOpen(false);
+    setIsSidebarVisible(false);
   }, [location]);
 
   const handleLogout = () => {
@@ -53,10 +60,15 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
     if (onToggle) onToggle(newState);
   };
 
-  const toggleMobileMenu = () => {
-    setMobileOpen(!mobileOpen);
+  const toggleSidebarVisibility = () => {
+    setIsSidebarVisible(!isSidebarVisible);
+    setCollapsed(false);
+    if (onToggle) onToggle(false);
   };
 
+  const isExpanded = !collapsed;
+
+  // Updated nav items - changed browseApartments to use path instead of modal
   const navItems = [
     {
       id: 'dashboard',
@@ -69,41 +81,19 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
       id: 'browseApartments',
       name: 'Browse Apartments',
       icon: <FaSearch size={20} />,
-      modal: true
-    },
-    {
-      id: 'applications',
-      name: 'My Applications',
-      icon: <FaClipboardList size={20} />,
-      modal: true
+      modal: false,
+      path: '/tenant/browse-apartments'
     },
     {
       id: 'lease',
       name: 'Lease Agreement',
       icon: <FaFileContract size={20} />,
       modal: true
-    },
-    {
-      id: 'announcements',
-      name: 'Announcements',
-      icon: <FaBullhorn size={20} />,
-      modal: true,
-    },
-    {
-      id: 'paymentHistory',
-      name: 'Payment History',
-      icon: <FaHistory size={20} />,
-      modal: true
-    },
-    {
-      id: 'inquiries',
-      name: 'Inquiries',
-      icon: <FaEnvelope size={20} />,
-      modal: true
     }
   ];
 
   const handleNavigation = (item) => {
+    setActiveTab(item.id);
     if (item.modal) {
       onModalOpen(item.id);
     } else if (item.path) {
@@ -111,356 +101,172 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
     }
   };
 
-  // Sidebar animation variants
   const sidebarVariants = {
-    expanded: { width: 256, transition: { duration: 0.3, ease: "easeInOut" } },
-    collapsed: { width: 64, transition: { duration: 0.3, ease: "easeInOut" } },
-    mobileOpen: { 
-      x: 0, 
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30 
-      } 
+    expanded: {
+      width: "256px",
+      transition: { duration: 0.3, ease: "easeInOut" }
     },
-    mobileClosed: { 
-      x: "-100%", 
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30 
-      } 
+    collapsed: {
+      width: "80px",
+      transition: { duration: 0.3, ease: "easeInOut" }
     }
-  };
-
-  // Item animation variants
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
   };
 
   return (
     <>
-      {/* Mobile Hamburger Button */}
-      <div className="fixed top-4 left-4 z-50 lg:hidden">
-        <button
-          onClick={toggleMobileMenu}
-          className="p-2 rounded-md bg-gray-900 text-white shadow-lg"
-          aria-label="Toggle Navigation"
-        >
-          <motion.div
-            initial={false}
-            animate={mobileOpen ? "open" : "closed"}
-          >
-            {mobileOpen ? (
-              <FaTimes size={24} />
-            ) : (
-              <FaBars size={24} />
-            )}
-          </motion.div>
-        </button>
-      </div>
+      {/* Mobile Toggle Button */}
+      <button
+        className="fixed z-50 top-4 left-4 bg-blue-900 text-white p-3 rounded-full lg:hidden shadow-md hover:bg-blue-800 transition-all duration-300"
+        onClick={toggleSidebarVisibility}
+        aria-label={isSidebarVisible ? "Close navigation" : "Open navigation"}
+      >
+        {isSidebarVisible ? <FaTimes size={20} /> : <FaBars size={20} />}
+      </button>
 
-      {/* Mobile Navigation Overlay */}
+      {/* Overlay for mobile */}
       <AnimatePresence>
-        {mobileOpen && (
+        {isSidebarVisible && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 lg:hidden"
+            onClick={toggleSidebarVisibility}
+          ></motion.div>
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
+      {/* Sidebar */}
       <motion.div
         variants={sidebarVariants}
         initial={false}
-        animate={collapsed ? "collapsed" : "expanded"}
-        className={`hidden lg:block bg-gray-900 text-white h-screen fixed top-0 left-0 transition-all duration-300 z-40 shadow-xl`}
+        animate={isSidebarVisible || !collapsed ? "expanded" : "collapsed"}
+        className={`fixed top-0 left-0 h-screen z-50 bg-gray-900 border-r border-gray-800 shadow-md transition-transform duration-300 ${
+          isSidebarVisible ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
       >
-        {/* Toggle Button with animated icon */}
-        <div
-          className="absolute top-4 -right-4 bg-gray-900 text-white p-2 rounded-full shadow-md cursor-pointer"
-          onClick={toggleSidebar}
-        >
-          <motion.div
-            animate={{ rotate: collapsed ? 0 : 180 }}
-            transition={{ duration: 0.3 }}
-          >
-            {collapsed ? <FaBars size={20} /> : <FaTimes size={20} />}
-          </motion.div>
-        </div>
-
-        {/* Sidebar Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <motion.img 
-              src="/image/Logo.png" 
-              alt="Logo" 
-              className={`${collapsed ? 'w-10 h-12' : 'w-14 h-16'}`}
-              animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              whileHover={{ scale: 1.1 }}
-            />
+            <button
+              onClick={toggleSidebar}
+              className="focus:outline-none transition-transform hover:scale-110 hidden lg:block"
+              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <div className="p-2 bg-blue-900 rounded-lg shadow-md hover:bg-blue-800 transition-all duration-200">
+                <FaHome className="text-white" />
+              </div>
+            </button>
             <AnimatePresence>
-              {!collapsed && (
-                <motion.span 
-                  className="text-xl font-bold"
+              {isExpanded && (
+                <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center"
                 >
-                  RentFlow
-                </motion.span>
+                  <h1 className="text-lg font-bold text-white">
+                    RentFlow
+                  </h1>
+                  <span className="ml-1 text-xs bg-blue-800 text-white px-1 rounded">Tenant</span>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
+          {/* Mobile close button */}
+          {isSidebarVisible && (
+            <button 
+              onClick={toggleSidebarVisibility} 
+              className="lg:hidden text-gray-400 hover:text-white transition-colors"
+            >
+              <FaTimes size={24} />
+            </button>
+          )}
         </div>
 
-        {/* User Info */}
-        <div className={`p-4 border-b border-gray-700 ${collapsed ? 'hidden' : 'block'} lg:block`}>
-          {user && (
-            <div className="flex items-center space-x-3">
-              {user.avatar ? (
-                <motion.img
-                  src={user.avatar}
-                  alt="User Avatar"
-                  className="w-12 h-12 rounded-full border-2 border-gray-700"
-                  whileHover={{ scale: 1.1, rotate: 10 }}
-                  transition={{ duration: 0.3 }}
-                />
-              ) : (
-                <motion.div 
-                  className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold"
-                  whileHover={{ scale: 1.1, rotate: 10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {user.name ? user.name[0].toUpperCase() : 'T'}
-                </motion.div>
-              )}
+        {/* Simplified Menu Container */}
+        <div className="overflow-y-auto p-3 h-[calc(100vh-160px)]">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleNavigation(item)}
+              className={`w-full flex items-center py-3 px-3 rounded-lg mb-3 transition-all duration-200 group ${
+                activeTab === item.id
+                  ? "bg-blue-900 text-white shadow-md" // Active state
+                  : "text-gray-300 hover:bg-gray-800" // Inactive state
+              }`}
+            >
+              <div className={`mr-3 transition-transform duration-200 ${activeTab === item.id ? 'transform scale-110' : 'group-hover:scale-110'}`}>
+                {item.icon}
+              </div>
+              
               <AnimatePresence>
-                {!collapsed && (
-                  <motion.div
-                    initial={itemVariants.hidden}
-                    animate={itemVariants.visible}
-                    exit={itemVariants.hidden}
-                    transition={{ duration: 0.3 }}
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="whitespace-nowrap font-medium"
                   >
-                    <p className="font-semibold">{user.name || 'Tenant'}</p>
-                    <p className="text-xs text-gray-400">{user.email}</p>
-                  </motion.div>
+                    {item.name}
+                  </motion.span>
                 )}
               </AnimatePresence>
-            </div>
-          )}
+            </button>
+          ))}
         </div>
 
-        {/* Navigation Links */}
-        <nav className="mt-4">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.id}>
-                {item.modal ? (
-                  <button
-                    onClick={() => handleNavigation(item)}
-                    className={`flex items-center px-4 py-3 w-full hover:bg-gray-800 transition-colors ${
-                      location.hash === `#${item.id}` ? 'bg-gray-800 border-l-4 border-blue-500' : ''
-                    }`}
-                  >
-                    <motion.div 
-                      className="mr-3"
-                      whileHover={{ scale: 1.2 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {item.icon}
-                    </motion.div>
-                    <AnimatePresence>
-                      {!collapsed && (
-                        <motion.span
-                          initial={itemVariants.hidden}
-                          animate={itemVariants.visible}
-                          exit={itemVariants.hidden}
-                          transition={{ duration: 0.3 }}
-                        >
-                          {item.name}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </button>
-                ) : (
-                  <NavLink
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-3 hover:bg-gray-800 transition-colors ${
-                        isActive ? 'bg-gray-800 border-l-4 border-blue-500' : ''
-                      }`
-                    }
-                  >
-                    <motion.div 
-                      className="mr-3"
-                      whileHover={{ scale: 1.2 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {item.icon}
-                    </motion.div>
-                    <AnimatePresence>
-                      {!collapsed && (
-                        <motion.span
-                          initial={itemVariants.hidden}
-                          animate={itemVariants.visible}
-                          exit={itemVariants.hidden}
-                          transition={{ duration: 0.3 }}
-                        >
-                          {item.name}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </NavLink>
-                )}
-              </li>
-            ))}
-            <li>
-              <button
-                onClick={handleLogout}
-                className="flex items-center text-left w-full px-4 py-3 hover:bg-red-700 text-red-400 hover:text-white transition-colors"
+        {/* Footer with User Info */}
+        <div className="absolute bottom-0 w-full p-4 border-t border-gray-800 bg-gray-900">
+          <AnimatePresence>
+            {isExpanded && user && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center mb-4 p-2 rounded-lg hover:bg-gray-800 transition-colors"
               >
-                <motion.div 
-                  className="mr-3"
-                  whileHover={{ scale: 1.2, rotate: 10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <FaSignOutAlt size={20} />
-                </motion.div>
-                <AnimatePresence>
-                  {!collapsed && (
-                    <motion.span
-                      initial={itemVariants.hidden}
-                      animate={itemVariants.visible}
-                      exit={itemVariants.hidden}
-                      transition={{ duration: 0.3 }}
-                    >
-                      Logout
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </motion.div>
-
-      {/* Mobile Sidebar */}
-      <motion.div
-        variants={sidebarVariants}
-        initial="mobileClosed"
-        animate={mobileOpen ? "mobileOpen" : "mobileClosed"}
-        className="fixed top-0 left-0 bg-gray-900 text-white h-screen w-64 z-40 shadow-xl lg:hidden"
-      >
-        {/* Mobile Sidebar Header */}
-        <div className="flex justify-between items-center p-4 mt-4 border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            <img src="/image/Logo.png" alt="Logo" className="w-12 h-14" />
-            <span className="text-xl font-bold">RentFlow</span>
-          </div>
-          <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-white">
-            <FaTimes size={24} />
-          </button>
-        </div>
-
-        {/* User Info */}
-        <div className="p-4 border-b border-gray-700">
-          {user && (
-            <div className="flex items-center space-x-3">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt="User Avatar"
-                  className="w-12 h-12 rounded-full border-2 border-gray-700"
-                />
-              ) : (
-                <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
-                  {user.name ? user.name[0].toUpperCase() : 'T'}
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="User Avatar"
+                    className="w-10 h-10 rounded-full border-2 border-blue-700 shadow-md"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-800 flex items-center justify-center text-white font-bold shadow-md">
+                    {user.name ? user.name[0].toUpperCase() : 'T'}
+                  </div>
+                )}
+                <div className="ml-3">
+                  <p className="font-medium text-white">{user.name || 'Tenant'}</p>
+                  <p className="text-xs text-gray-400 truncate max-w-[130px]">{user.email}</p>
                 </div>
-              )}
-              <div>
-                <p className="font-semibold">{user.name || 'Tenant'}</p>
-                <p className="text-xs text-gray-400">{user.email}</p>
-              </div>
-            </div>
-          )}
-        </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Mobile Navigation Links */}
-        <nav className="mt-4">
-          <motion.ul 
-            className="space-y-1"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: {
-                  staggerChildren: 0.1
-                }
-              }
-            }}
-          >
-            {navItems.map((item) => (
-              <motion.li 
-                key={item.id}
-                variants={{
-                  hidden: { x: -20, opacity: 0 },
-                  visible: { x: 0, opacity: 1 }
-                }}
-              >
-                {item.modal ? (
-                  <button
-                    onClick={() => handleNavigation(item)}
-                    className={`flex items-center px-4 py-3 w-full hover:bg-gray-800 transition-colors ${
-                      location.hash === `#${item.id}` ? 'bg-gray-800 border-l-4 border-blue-500' : ''
-                    }`}
-                  >
-                    <div className="mr-3">{item.icon}</div>
-                    <span>{item.name}</span>
-                  </button>
-                ) : (
-                  <NavLink
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-3 hover:bg-gray-800 transition-colors ${
-                        isActive ? 'bg-gray-800 border-l-4 border-blue-500' : ''
-                      }`
-                    }
-                  >
-                    <div className="mr-3">{item.icon}</div>
-                    <span>{item.name}</span>
-                  </NavLink>
-                )}
-              </motion.li>
-            ))}
-            <motion.li
-              variants={{
-                hidden: { x: -20, opacity: 0 },
-                visible: { x: 0, opacity: 1 }
-              }}
+          {isExpanded ? (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center py-2.5 text-white rounded-lg bg-red-700 hover:bg-red-800 transition-all duration-200"
             >
-              <button
-                onClick={handleLogout}
-                className="flex items-center text-left w-full px-4 py-3 hover:bg-red-700 text-red-400 hover:text-white transition-colors"
-              >
-                <div className="mr-3">
-                  <FaSignOutAlt size={20} />
-                </div>
-                <span>Logout</span>
-              </button>
-            </motion.li>
-          </motion.ul>
-        </nav>
+              <FaSignOutAlt className="mr-2" />
+              <span className="font-medium">Logout</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center py-3 text-white bg-red-700 hover:bg-red-800 rounded-lg transition-colors"
+              title="Logout"
+            >
+              <FaSignOutAlt />
+            </button>
+          )}
+        </div>
       </motion.div>
     </>
   );
