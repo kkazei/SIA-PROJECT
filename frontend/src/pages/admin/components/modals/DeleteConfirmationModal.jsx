@@ -1,66 +1,98 @@
 import React from 'react';
-import { FaTrash } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaTrash, FaExclamationTriangle } from 'react-icons/fa';
 
 const DeleteConfirmationModal = ({ user, onConfirm, onCancel }) => {
+  // Backdrop animation
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  };
+
+  // Modal animation
+  const modalVariants = {
+    hidden: { opacity: 0, y: 50, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { delay: 0.1 } }
+  };
+
   return (
-    <div className="fixed inset-0 z-10 overflow-y-auto">
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+    <motion.div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4"
+      initial="hidden"
+      animate="visible"
+      exit="hidden"
+      variants={backdropVariants}
+      onClick={onCancel}
+    >
+      <motion.div 
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-auto overflow-hidden"
+        variants={modalVariants}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-red-600 p-4 text-white">
+          <h3 className="text-xl font-bold flex items-center">
+            <FaTrash className="mr-2" /> Delete User
+          </h3>
         </div>
-
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <FaTrash className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Delete User</h3>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    Are you sure you want to delete {user?.name}? This action cannot be undone.
-                  </p>
-                  {user?.role === 'admin' && (
-                    <p className="mt-2 text-sm text-red-500 font-semibold">
-                      Warning: You are deleting an admin user!
-                    </p>
-                  )}
-                  {user?.role === 'landlord' && (
-                    <p className="mt-2 text-sm text-yellow-600">
-                      Note: This will not delete any apartments or posts created by this landlord.
-                    </p>
-                  )}
-                  {user?.role === 'tenant' && (
-                    <p className="mt-2 text-sm text-yellow-600">
-                      Note: Any apartment associations will need to be updated separately.
-                    </p>
-                  )}
-                </div>
-              </div>
+        
+        <div className="p-6">
+          <div className="flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+              <FaExclamationTriangle className="text-red-600 text-3xl" />
             </div>
           </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          
+          <div className="text-center mb-6">
+            <p className="text-gray-700 dark:text-gray-300 mb-3">
+              Are you sure you want to delete <span className="font-medium">{user?.name}</span>?
+            </p>
+            <p className="text-gray-500 text-sm">This action cannot be undone.</p>
+            
+            {user?.role === 'admin' && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-700 text-sm font-medium flex items-center">
+                  <FaExclamationTriangle className="mr-2" />
+                  Warning: You are deleting an admin user!
+                </p>
+              </div>
+            )}
+            
+            {user?.role === 'landlord' && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-yellow-700 text-sm">
+                  Note: This will not delete any apartments or posts created by this landlord.
+                </p>
+              </div>
+            )}
+            
+            {user?.role === 'tenant' && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-yellow-700 text-sm">
+                  Note: Any apartment associations will need to be updated separately.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-center space-x-3">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              onClick={onConfirm}
-            >
-              Delete
-            </button>
-            <button
-              type="button"
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               onClick={onCancel}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cancel
             </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Yes, Delete
+            </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
