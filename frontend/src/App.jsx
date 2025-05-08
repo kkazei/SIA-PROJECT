@@ -131,32 +131,6 @@ const RedirectAuthenticatedUser = ({ children }) => {
     return children;
 };
 
-const DashboardRouter = () => {
-    const { user } = useAuthStore();
-    
-    // Log the routing decision for debugging
-    console.log("Dashboard routing for user:", user);
-    
-    // Wait until we have the user object
-    if (!user) {
-        console.log("No user object available yet");
-        return <LoadingSpinner />;
-    }
-    
-    // Route based on role
-    if (user.role === 'landlord') {
-        return <Navigate to='/landlord/dashboard' replace />;
-    } else if (user.role === 'tenant') {
-        return <Navigate to='/tenant/dashboard' replace />;
-    } else if (user.role === 'admin') {
-        return <Navigate to='/admin/dashboard' replace />;
-    }
-    
-    // If no valid role found
-    console.warn("User has no recognized role:", user.role);
-    return <Navigate to='/role-selection' replace />;
-};
-
 function App() {
     const { isCheckingAuth, checkAuth, user, isAuthenticated } = useAuthStore();
 
@@ -185,7 +159,13 @@ function App() {
                     path='/dashboard'
                     element={
                         <ProtectedRoute>
-                            <DashboardRouter /> {/* Create this component below */}
+                            {/* Directly redirect based on user role without nested components */}
+                            {({ user }) => {
+                                if (user?.role === 'landlord') return <Navigate to='/landlord/dashboard' replace />;
+                                if (user?.role === 'tenant') return <Navigate to='/tenant/dashboard' replace />;
+                                if (user?.role === 'admin') return <Navigate to='/admin/dashboard' replace />;
+                                return <Navigate to='/' replace />;
+                            }}
                         </ProtectedRoute>
                     }
                 />
