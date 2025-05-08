@@ -246,17 +246,20 @@ export const logout = async (req, res) => {
 export const googleCallback = async (req, res) => {
   try {
     // User is already authenticated by passport at this point
+    const clientURL = process.env.CLIENT_URL || 'https://sia-project-a5xr.onrender.com';
+    
+    // Check if user has a role set
+    const needsRoleSelection = !req.user.role || req.user.role === 'unset';
+    console.log(`Google auth user: ${req.user.email}, needs role selection: ${needsRoleSelection}`);
+    
+    // Generate token with user info
     const token = jwt.sign(
       { id: req.user._id, role: req.user.role },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // For new users who haven't selected their role yet
-    const isNewUser = req.user.createdAt && 
-                     ((new Date() - new Date(req.user.createdAt)) < 1000 * 60); // Created in the last minute
-    
-    // Set cookies
+    // Set cookies with token
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -264,15 +267,18 @@ export const googleCallback = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
-    // Redirect based on whether user is new (needs to select role) or existing
-    if (isNewUser) {
-      res.redirect(`${process.env.CLIENT_URL}/role-selection`);
+    // Redirect based on whether user needs to select a role
+    if (needsRoleSelection) {
+      console.log(`Redirecting to role selection: ${clientURL}/role-selection`);
+      res.redirect(`${clientURL}/role-selection`);
     } else {
-      res.redirect(`${process.env.CLIENT_URL}/dashboard`);
+      console.log(`Redirecting to dashboard: ${clientURL}/dashboard`);
+      res.redirect(`${clientURL}/dashboard`);
     }
   } catch (error) {
     console.error('Google callback error:', error);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`);
+    const clientURL = process.env.CLIENT_URL || 'https://sia-project-a5xr.onrender.com';
+    res.redirect(`${clientURL}/login?error=oauth_failed`);
   }
 };
 

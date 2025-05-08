@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'; // Add lazy and Suspense
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import LandingPage from './pages/LandingPage' // Keep this eagerly loaded
@@ -131,6 +131,31 @@ const RedirectAuthenticatedUser = ({ children }) => {
     return children;
 };
 
+const DashboardRouter = () => {
+    const { user, isAuthenticated } = useAuthStore();
+    const navigate = useNavigate();
+    
+    useEffect(() => {
+      // Check if user needs role selection
+      if (isAuthenticated && user && (!user.role || user.role === 'unset')) {
+        console.log("User has no role, redirecting to role selection");
+        navigate('/role-selection', { replace: true });
+        return;
+      }
+      
+      // Route based on role
+      if (user?.role === 'landlord') {
+        navigate('/landlord/dashboard', { replace: true });
+      } else if (user?.role === 'tenant') {
+        navigate('/tenant/dashboard', { replace: true });
+      } else if (user?.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }, [user, isAuthenticated, navigate]);
+    
+    return <LoadingSpinner />;
+};
+
 function App() {
     const { isCheckingAuth, checkAuth, user, isAuthenticated } = useAuthStore();
 
@@ -159,13 +184,7 @@ function App() {
                     path='/dashboard'
                     element={
                         <ProtectedRoute>
-                            {/* Directly redirect based on user role without nested components */}
-                            {({ user }) => {
-                                if (user?.role === 'landlord') return <Navigate to='/landlord/dashboard' replace />;
-                                if (user?.role === 'tenant') return <Navigate to='/tenant/dashboard' replace />;
-                                if (user?.role === 'admin') return <Navigate to='/admin/dashboard' replace />;
-                                return <Navigate to='/' replace />;
-                            }}
+                            <DashboardRouter />
                         </ProtectedRoute>
                     }
                 />
