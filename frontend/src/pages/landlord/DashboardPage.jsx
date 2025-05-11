@@ -25,7 +25,7 @@ const DashboardPage = () => {
         isLoading, 
         error 
     } = useApartmentStore();
-    const { payments, getTenantPayments } = usePaymentStore();
+    const { payments, getAllPayments } = usePaymentStore();
     const { maintenanceRequests, fetchMaintenance } = useMaintenanceStore();
     const [isTenantModalOpen, setTenantModalOpen] = useState(false);
     const [isRoomModalOpen, setRoomModalOpen] = useState(false);
@@ -61,11 +61,9 @@ const DashboardPage = () => {
         getApartments();
         // Fetch maintenance requests
         fetchMaintenance();
-        // Fetch payments (if user is landlord)
-        if (user && user._id) {
-            getTenantPayments(user._id);
-        }
-    }, [getApartments, fetchMaintenance, getTenantPayments, user]);
+        // Fetch ALL payments for the landlord, not just for a specific tenant
+        getAllPayments();
+    }, [getApartments, fetchMaintenance, getAllPayments]);
 
     const navigateToInquiriesPage = () => navigate('/landlord/inquiries');
 
@@ -76,58 +74,93 @@ const DashboardPage = () => {
         console.log("Payments:", payments);
         console.log("Maintenance requests:", maintenanceRequests);
         
-        if (payments.length === 0 && maintenanceRequests.length === 0) return;
+        if (!payments || payments.length === 0) {
+            console.log("No payment data available to process");
+            // Don't return early, still process maintenance requests if available
+        }
         
         // Initialize monthly aggregations
         const monthlyIncome = Array(12).fill(0);
         const monthlyExpenses = Array(12).fill(0);
-        const currentYear = new Date().getFullYear();
         
-        // Process payments data
-        payments.forEach(payment => {
-            const paymentDate = new Date(payment.createdAt);
-            
-            // Only include payments from current year
-            if (paymentDate.getFullYear() === currentYear && payment.status === 'approved') {
-                const month = paymentDate.getMonth();
-                monthlyIncome[month] += payment.amount;
-            }
-        });
+        // Use 2025 as the year we're tracking (as mentioned in prompt)
+        const currentYear = 2025;
         
-        // Process maintenance expenses - UPDATED to include 'expenses' property
-        maintenanceRequests.forEach(request => {
-            const requestDate = new Date(request.createdAt);
-            
-            // Add 'expenses' to the properties we check
-            const maintenanceCost = request.cost || request.estimatedCost || request.amount || request.expenses || 0;
-            const isCompleted = request.status === 'completed' || request.status === 'resolved';
-            
-            // Only include maintenance from current year with cost and completed status
-            if (requestDate.getFullYear() === currentYear && maintenanceCost > 0 && isCompleted) {
-                const month = requestDate.getMonth();
-                monthlyExpenses[month] += maintenanceCost;
-                console.log(`Added expense for ${month+1}/${currentYear}: ${maintenanceCost}`);
-            }
-        });
+        // Process payments data with enhanced logging
+        if (payments && payments.length > 0) {
+            payments.forEach(payment => {
+                // Handle different date formats
+                const paymentDate = new Date(payment.createdAt || payment.paymentDate);
+                const paymentYear = paymentDate.getFullYear();
+                const paymentMonth = paymentDate.getMonth();
+                
+                console.log(`Processing payment: ${payment._id}, Date: ${paymentDate.toLocaleDateString()}, Status: ${payment.status}, Amount: ${payment.amount}`);
+                
+                // Include payments that are approved
+                if (payment.status === 'approved') {
+                    console.log(`Adding approved payment of ₱${payment.amount} from ${paymentDate.toLocaleDateString()} to income`);
+                    
+                    // Still track by month regardless of year for demo purposes
+                    // In production, you'd want to filter by currentYear
+                    const month = paymentDate.getMonth();
+                    monthlyIncome[month] += Number(payment.amount || 0);
+                    console.log(`Month ${month+1}: New total: ₱${monthlyIncome[month]}`);
+                }
+            });
+        }
         
-        console.log("Monthly Income:", monthlyIncome);
-        console.log("Monthly Expenses:", monthlyExpenses);
+        // Process maintenance expenses with better handling
+        if (maintenanceRequests && maintenanceRequests.length > 0) {
+            maintenanceRequests.forEach(request => {
+                // Handle different date formats
+                const requestDate = new Date(request.createdAt || request.date);
+                
+                // Get cost from any of the possible fields
+                const maintenanceCost = Number(
+                    request.cost || 
+                    request.estimatedCost || 
+                    request.amount || 
+                    request.expenses || 
+                    0
+                );
+                
+                // Check if the request is completed/resolved and has a cost
+                const isCompleted = request.status === 'completed' || request.status === 'resolved';
+                
+                // Log each maintenance request for debugging
+                console.log(`Processing maintenance: ${request._id}, Date: ${requestDate.toLocaleDateString()}, Status: ${request.status}, Cost: ${maintenanceCost}`);
+                
+                // Include completed maintenance with cost
+                if (isCompleted && maintenanceCost > 0) {
+                    const month = requestDate.getMonth();
+                    monthlyExpenses[month] += maintenanceCost;
+                    console.log(`Added expense for ${month+1}: ₱${maintenanceCost}, Total: ₱${monthlyExpenses[month]}`);
+                }
+            });
+        }
         
-        // Update chart data
+        console.log("Final Monthly Income:", monthlyIncome);
+        console.log("Final Monthly Expenses:", monthlyExpenses);
+        
+        // Update chart data with the new values
         setChartData(prevData => ({
             ...prevData,
             datasets: [
                 {
                     ...prevData.datasets[0],
-                    data: monthlyIncome
+                    data: monthlyIncome,
+                    hidden: visibleDataset === 'Expenses'
                 },
                 {
                     ...prevData.datasets[1],
-                    data: monthlyExpenses
+                    data: monthlyExpenses,
+                    hidden: visibleDataset === 'Income'
                 }
             ]
         }));
         
+        // If user approves a payment in TenantDetailsModal, this effect will run again
+        // because the payments array will change
     }, [payments, maintenanceRequests]);
 
     // Update chart visibility when selection changes

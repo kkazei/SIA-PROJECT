@@ -295,27 +295,37 @@ export const useApartmentStore = create((set, get) => ({
   vacateApartment: async (apartmentId) => {
     set({ isLoading: true, error: null });
     try {
+      // Make API call to backend to vacate the apartment
       const response = await axios.post(`${API_URL}/vacate`, { apartmentId });
       
-      // Process image URLs for the updated apartment
-      const updatedApartment = {
-        ...response.data.data,
-        images: response.data.data.images?.map(img => processImagePath(img)) || []
-      };
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to vacate apartment");
+      }
       
-      // Update apartment in the list
-      const updatedApartments = get().apartments.map(apt => 
-        apt._id === apartmentId ? updatedApartment : apt
-      );
+      // Update local state to reflect the changes
+      const apartments = get().apartments;
+      const updatedApartments = apartments.map(apt => {
+        if (apt._id === apartmentId) {
+          return {
+            ...apt,
+            status: 'available',
+            tenant_id: null
+          };
+        }
+        return apt;
+      });
       
       set({
         apartments: updatedApartments,
         isLoading: false,
-        message: "Apartment vacated successfully"
+        message: "Apartment successfully vacated"
       });
       
-      return updatedApartment;
+      console.log("Apartment vacated successfully:", response.data);
+      
+      return true;
     } catch (error) {
+      console.error("Error in vacateApartment:", error);
       set({
         isLoading: false,
         error: error.response?.data?.message || "Error vacating apartment"

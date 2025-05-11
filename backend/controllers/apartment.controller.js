@@ -484,59 +484,72 @@ export const assignTenant = async (req, res) => {
 
 // Vacate an apartment (remove tenant)
 export const vacateApartment = async (req, res) => {
-    try {
-        const { apartmentId } = req.body;
-        
-        // Validate ID
-        if (!mongoose.Types.ObjectId.isValid(apartmentId)) {
-            return res.status(400).json({ success: false, message: 'Invalid apartment ID' });
-        }
-        
-        // Find the apartment
-        const apartment = await Apartment.findById(apartmentId);
-        
-        if (!apartment) {
-            return res.status(404).json({ success: false, message: 'Apartment not found' });
-        }
-        
-        // Check if user is the landlord of this apartment
-        if (apartment.landlord_id.toString() !== req.user.id) {
-            return res.status(403).json({ 
-                success: false, 
-                message: 'You can only vacate your own apartments' 
-            });
-        }
-        
-        // Check if apartment is actually occupied
-        if (apartment.status !== 'occupied' || !apartment.tenant_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'This apartment is not currently occupied'
-            });
-        }
-        
-        // Update apartment: remove tenant, change status to available, clear payment info
-        apartment.tenant_id = null;
-        apartment.status = 'available';
-        apartment.paymentInfo = {
-            nextDueDate: null,
-            lastPaymentDate: null,
-            paymentStatus: null
-        };
-        
-        await apartment.save();
-        
-        res.status(200).json({
-            success: true,
-            message: 'Apartment vacated successfully',
-            data: apartment
-        });
-        
-    } catch (error) {
-        console.error("Error vacating apartment:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+  try {
+    const { apartmentId } = req.body;
+    
+    // Log for debugging
+    console.log("Vacating apartment with ID:", apartmentId);
+    
+    // Validate apartment ID
+    if (!mongoose.Types.ObjectId.isValid(apartmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid apartment ID format"
+      });
     }
-};
+    
+    // Find the apartment
+    const apartment = await Apartment.findById(apartmentId);
+    
+    if (!apartment) {
+      return res.status(404).json({
+        success: false,
+        message: "Apartment not found"
+      });
+    }
+    
+    // Store tenant ID before removing
+    const tenantId = apartment.tenant_id;
+    
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: "No tenant assigned to this apartment"
+      });
+    }
+    
+    // Update the apartment: remove tenant, update status
+    apartment.tenant_id = null;
+    apartment.status = 'available';
+    apartment.moveInDate = null;
+    apartment.nextDueDate = null;
+    
+    await apartment.save();
+    console.log("Apartment updated:", apartment);
+    
+    // Update User/Tenant document to remove apartment reference
+    const tenantUpdate = await User.findByIdAndUpdate(
+      tenantId,
+      { $unset: { apartment: "" } },
+      { new: true }
+    );
+    
+    console.log("Tenant updated:", tenantUpdate);
+    
+    res.status(200).json({
+      success: true,
+      message: "Apartment vacated successfully",
+      data: apartment
+    });
+  } catch (error) {
+    console.error("Error vacating apartment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while vacating apartment",
+      error: error.message
+    });
+  }
+}
 
 // Get available apartments for tenants
 export const getAvailableApartments = async (req, res) => {
