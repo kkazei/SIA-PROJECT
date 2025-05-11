@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePaymentStore } from "../store/paymentStore";
 import { useTenantStore } from "../store/tenantStore";
 import { useLeaseStore } from "../store/leaseStore";
+import { useApartmentStore } from "../store/apartmentStore"; // Import apartment store
+import Swal from "sweetalert2"; // Import SweetAlert for confirmation
 
 // Import the image path processor from one of the stores
 import { processImagePath } from "../store/paymentStore";
 
-const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
+const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
   const [loading, setLoading] = useState(false);
   const [detailedTenant, setDetailedTenant] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -22,6 +24,9 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const [isUploadingLease, setIsUploadingLease] = useState(false);
   const [leaseUploadMessage, setLeaseUploadMessage] = useState(null);
 
+  // Add state for end tenancy process
+  const [isEndingTenancy, setIsEndingTenancy] = useState(false);
+
   // Use our stores
   const { getTenantPayments, approvePayment, rejectPayment } = usePaymentStore();
   const { getTenantById } = useTenantStore();
@@ -33,6 +38,7 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
     uploadLeaseDocument,
     deleteLeaseDocument,
   } = useLeaseStore();
+  const { vacateApartment } = useApartmentStore();
 
   // Fetch detailed tenant info, payment history, and lease documents when a tenant is selected
   useEffect(() => {
@@ -86,12 +92,9 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   // Handle payment approval
   const handleApprovePayment = async (paymentId) => {
     setIsApproving(true);
-    console.log("Approving payment ID:", paymentId);
     
     try {
       const success = await approvePayment(paymentId, "Payment approved by landlord");
-      
-      console.log("Approval result:", success);
       
       if (success) {
         // Update the local payment history to reflect the change
@@ -103,14 +106,24 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
           )
         );
         
-        // Optional: Show success message
-        alert("Payment approved successfully");
-      } else {
-        throw new Error('Failed to approve payment');
+        // Show success message
+        Swal.fire({
+          icon: "success",
+          title: "Payment Approved",
+          text: "The payment has been approved successfully."
+        });
+        
+        // Get the getAllPayments function from the store and call it
+        // This will update the dashboard income data
+        usePaymentStore.getState().getAllPayments();
       }
     } catch (err) {
       console.error("Error approving payment:", err);
-      alert("Failed to approve payment: " + (err.message || "Unknown error"));
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to approve payment"
+      });
     } finally {
       setIsApproving(false);
     }
@@ -234,6 +247,71 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
   const handleViewLease = (documentPath) => {
     setCurrentProof(documentPath);
     setProofModalOpen(true);
+  };
+
+  // Handle end tenancy function
+  const handleEndTenancy = async () => {
+    if (!detailedTenant?.apartment?._id) {
+      console.error("No apartment ID found:", detailedTenant);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No apartment information found for this tenant."
+      });
+      return;
+    }
+    
+    const apartmentId = detailedTenant.apartment._id;
+    
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: "End Tenancy?",
+      text: "This will remove the tenant from this apartment and make it available for new tenants. This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, end tenancy",
+      cancelButtonText: "Cancel"
+    });
+    
+    if (result.isConfirmed) {
+      setIsEndingTenancy(true);
+      try {
+        // Log for debugging
+        console.log("Ending tenancy for apartment:", apartmentId);
+        
+        // Call the vacateApartment function with the apartment ID
+        const success = await vacateApartment(apartmentId);
+        
+        if (success) {
+          Swal.fire({
+            icon: "success",
+            title: "Tenancy Ended",
+            text: "The apartment is now available for new tenants"
+          });
+          
+          // Notify parent component about the change
+          if (typeof onTenancyEnded === 'function') {
+            onTenancyEnded();
+          }
+          
+          // Close the modal
+          onClose();
+        } else {
+          throw new Error("Failed to end tenancy");
+        }
+      } catch (error) {
+        console.error("Error ending tenancy:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error.response?.data?.message || "Failed to end tenancy. Please try again."
+        });
+      } finally {
+        setIsEndingTenancy(false);
+      }
+    }
   };
 
   if (!isOpen || !tenant) return null;
@@ -578,12 +656,27 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
                   <button className="px-4 py-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium">
                     Message
                   </button>
-                  <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium">
-                    Edit Details
-                  </button>
+                  
+                  {/* End Tenancy button with updated onClick handler */}
                   {displayTenant.apartment && (
-                    <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium">
-                      End Tenancy
+                    <button 
+                      onClick={handleEndTenancy}
+                      disabled={isEndingTenancy}
+                      className={`px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium flex items-center ${
+                        isEndingTenancy ? 'opacity-75 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {isEndingTenancy ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        'End Tenancy'
+                      )}
                     </button>
                   )}
                 </div>
@@ -628,3 +721,13 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant }) => {
 };
 
 export default TenantDetailsModal;
+
+/* 
+  Example usage in parent component:
+  <TenantDetailsModal 
+    isOpen={showModal}
+    onClose={handleCloseModal}
+    tenant={selectedTenant}
+    onTenancyEnded={fetchTenants} 
+  />
+*/

@@ -270,6 +270,7 @@ const TenantPage = () => {
           isOpen={showTenantModal}
           onClose={() => setShowTenantModal(false)}
           tenant={selectedTenant}
+          onTenancyEnded={fetchTenants}
         />
       </motion.div>
     </div>

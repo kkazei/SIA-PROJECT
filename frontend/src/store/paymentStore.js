@@ -13,7 +13,7 @@ const processImagePath = (path) => {
   return `${API_BASE_URL}${path}`;
 };
 
-const usePaymentStore = create((set) => ({
+const usePaymentStore = create((set, get) => ({
   payments: [],
   selectedPayment: null,
   loading: false,
@@ -90,7 +90,7 @@ const usePaymentStore = create((set) => ({
       // Process payment proof URLs
       const processedPayments = (response.data.payments || []).map(payment => ({
         ...payment,
-        // Create a new property instead of modifying the existing one
+        amount: Number(payment.amount || 0), // Ensure amount is a number for calculations
         displayUrl: processImagePath(payment.image_path || payment.proofUrl)
       }));
       
@@ -106,6 +106,43 @@ const usePaymentStore = create((set) => ({
       set({ 
         loading: false, 
         error: error.response?.data?.message || 'Failed to load payment history',
+        payments: []
+      });
+      
+      return [];
+    }
+  },
+  
+  // NEW FUNCTION: Get all payments for landlord dashboard
+  getAllPayments: async () => {
+    set({ loading: true, error: null });
+    
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/payments`, {
+        withCredentials: true
+      });
+      
+      // Process payment proof URLs and ensure amounts are numbers
+      const processedPayments = (response.data.payments || []).map(payment => ({
+        ...payment,
+        amount: Number(payment.amount || 0), // Important for calculations
+        displayUrl: processImagePath(payment.image_path || payment.proofUrl)
+      }));
+      
+      console.log('All payments loaded:', processedPayments.length);
+      
+      set({ 
+        payments: processedPayments,
+        loading: false
+      });
+      
+      return processedPayments;
+    } catch (error) {
+      console.error('Error fetching all payments:', error);
+      
+      set({ 
+        loading: false, 
+        error: error.response?.data?.message || 'Failed to load payments',
         payments: []
       });
       
@@ -154,6 +191,19 @@ const usePaymentStore = create((set) => ({
         admin_remarks: remarks || 'Payment approved'
       }, { withCredentials: true }); // ADDED credentials
       
+      // Update the payment in our local state too
+      const currentPayments = get().payments;
+      const updatedPayments = currentPayments.map(payment => 
+        payment._id === paymentId 
+          ? { ...payment, status: 'approved' } 
+          : payment
+      );
+      
+      set({ payments: updatedPayments });
+      
+      // After approval, refresh all payments for the dashboard
+      get().getAllPayments();
+      
       console.log('Payment approved:', response.data);
       return true;
     } catch (error) {
@@ -169,6 +219,16 @@ const usePaymentStore = create((set) => ({
         status: 'rejected',
         admin_remarks: remarks || 'Payment rejected'
       }, { withCredentials: true }); // ADDED credentials
+      
+      // Update the payment in our local state too
+      const currentPayments = get().payments;
+      const updatedPayments = currentPayments.map(payment => 
+        payment._id === paymentId 
+          ? { ...payment, status: 'rejected' } 
+          : payment
+      );
+      
+      set({ payments: updatedPayments });
       
       console.log('Payment rejected:', response.data);
       return true;
