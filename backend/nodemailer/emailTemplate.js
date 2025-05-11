@@ -13,7 +13,7 @@ export const VERIFICATION_EMAIL_TEMPLATE = `
       <td style="padding: 20px;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://i.ibb.co/TLXwBZD/rentflow-logo.png" alt="RentFlow Logo" style="height: 40px; margin-bottom: 10px;">
+          <img src="/frontend/public/image/Logo.png" alt="RentFlow Logo" style="height: 40px; margin-bottom: 10px;">
         </div>
         
         <!-- Main Content -->
