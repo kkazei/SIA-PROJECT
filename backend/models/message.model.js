@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import mongoosePaginate from 'mongoose-paginate-v2';
 
 const messageSchema = new mongoose.Schema({
   sender_id: {
@@ -8,7 +7,7 @@ const messageSchema = new mongoose.Schema({
     required: true
   },
   receiver_id: {
-    type: mongoose.Schema.Types.ObjectId, 
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
@@ -18,24 +17,22 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: [true, 'Message content is required'],
-    trim: true
+    required: true
   },
+  attachments: [String],
   read: {
     type: Boolean,
     default: false
   },
-  attachments: [{
-    url: String,
-    type: String, // 'image', 'document', etc.
-    name: String
+  deleted_by: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }]
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
-// Create a compound index for efficient conversation queries
+// Create a compound index for efficient message retrieval
 messageSchema.index({ conversation_id: 1, createdAt: -1 });
-
-// Add pagination plugin
-messageSchema.plugin(mongoosePaginate);
 
 export const Message = mongoose.model('Message', messageSchema);

@@ -1,145 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom'; // Add this import
-import { useSocket } from '../context/SocketContext';
-import { useMessageStore } from '../store/messageStore';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import ConversationsList from '../components/Messaging/ConversationsList';
-import ConversationDetail from '../components/Messaging/ConversationDetail';
-import TenantSideNav from '../components/layout/TenantSideNav';
-import LandlordSideNav from '../components/layout/LandlordSideNav';
+import { useMessageStore } from '../store/messageStore';
+import { useSocket } from '../context/SocketContext';
+import ConversationsList from '../components/messaging/ConversationsList';
+import ConversationDetail from '../components/messaging/ConversationDetail';
+import { generateConversationId } from '../utils/helpers';
 
 const MessagingPage = () => {
-  const location = useLocation(); // Add this
-  const { socket, connected } = useSocket();
-  const { user } = useAuthStore();
+  const { userId } = useParams(); // For direct conversation
+  const navigate = useNavigate();
+  const { user, token } = useAuthStore();
+  const socketContext = useSocket();
+  
+  // Add safety check for socket context
+  const socket = socketContext?.socket;
+  const connected = socketContext?.connected || false;
+  const joinConversation = socketContext?.joinConversation || (() => {});
+  const leaveConversation = socketContext?.leaveConversation || (() => {});
+  const socketStatus = socketContext?.socketStatus || {};
+  
   const { 
-    addIncomingMessage,
-    setUserTyping,
-    clearUserTyping 
+    conversations,
+    messages,
+    activeConversation,
+    getConversations,
+    getConversationMessages,
+    initializeSocketListeners,
+    cleanupSocketListeners,
+    sendMessageSocket,
+    sendMessage,
+    initUser
   } = useMessageStore();
   
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [showConversationList, setShowConversationList] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [messageInput, setMessageInput] = useState('');
+  const messagesEndRef = useRef(null);
   
-  // Add this to handle direct messaging from URL params
+  // Initialize user in message store
   useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const tenantId = queryParams.get('tenant');
-    const landlordId = queryParams.get('landlord');
-    const targetUserId = tenantId || landlordId;
+    if (user) {
+      console.log("Initialize user in message store:", user.id);
+      initUser();
+    }
+  }, [user]);
+  
+  // Load conversations and monitor socket connection
+  useEffect(() => {
+    console.log("Setting up messaging page with socket:", socket?.id);
+    console.log("Socket status:", socketStatus);
     
-    if (targetUserId) {
-      // Fetch conversations first
-      useMessageStore.getState().fetchConversations().then(conversations => {
-        // Try to find existing conversation with this user
-        const existingConversation = conversations.find(conv => 
-          conv.otherUser && conv.otherUser._id === targetUserId
-        );
-        
-        if (existingConversation) {
-          // If conversation exists, select it
-          setSelectedConversation(existingConversation);
-          setShowConversationList(false);
-        } else {
-          // If no existing conversation, we can handle this by creating a skeleton conversation
-          // object that will be populated once they send their first message
-          const targetUserType = tenantId ? 'tenant' : 'landlord';
-          console.log(`Starting new conversation with ${targetUserType} ID: ${targetUserId}`);
-          
-          // The actual conversation will be created when they send their first message
-          // For now just keep the conversations list open
-        }
-      });
+    // Always fetch conversations on load
+    getConversations();
+    
+    // Initialize socket listeners only when connected
+    if (socket && connected && user) {
+      console.log("Initializing socket listeners for user:", user.id);
+      initializeSocketListeners(socket, user.id);
     }
-  }, [location.search]);
+    
+    return () => {
+      // Cleanup socket listeners
+      if (socket) {
+        cleanupSocketListeners(socket);
+      }
+    };
+  }, [socket, connected, user]);
   
-  // Socket event listeners
+  // Handle direct conversation if userId is provided
   useEffect(() => {
-    if (socket && connected) {
-      // Listen for new messages
-      socket.on('receive_message', (message) => {
-        console.log('Received new message:', message);
-        addIncomingMessage(message);
-      });
-      
-      // Listen for new message notifications
-      socket.on('new_message_notification', (notification) => {
-        console.log('New message notification:', notification);
-        addIncomingMessage(notification.message);
-      });
-      
-      // Listen for typing indicators
-      socket.on('user_typing', ({ user: typingUser }) => {
-        setUserTyping(typingUser);
-      });
-      
-      socket.on('user_stopped_typing', () => {
-        clearUserTyping();
-      });
-      
-      return () => {
-        socket.off('receive_message');
-        socket.off('new_message_notification');
-        socket.off('user_typing');
-        socket.off('user_stopped_typing');
-      };
+    if (userId && user) {
+      console.log("Direct conversation requested with:", userId);
+      handleSelectConversation(userId);
     }
-  }, [socket, connected, addIncomingMessage, setUserTyping, clearUserTyping]);
+  }, [userId, user, conversations]);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
   
   // Handle conversation selection
-  const handleSelectConversation = (conversation) => {
-    setSelectedConversation(conversation);
-    setShowConversationList(false);
+  const handleSelectConversation = async (userId) => {
+    try {
+      console.log("Selecting conversation with:", userId);
+      
+      // Leave previous conversation if any
+      if (activeConversation && user) {
+        const prevConvId = generateConversationId(user.id, activeConversation);
+        leaveConversation(prevConvId);
+      }
+      
+      // Load conversation messages
+      await getConversationMessages(userId);
+      const selectedUserData = conversations.find(c => c.otherUser._id === userId)?.otherUser;
+      setSelectedUser(selectedUserData);
+      
+      // Join the conversation room
+      if (user) {
+        const convId = generateConversationId(user.id, userId);
+        console.log("Joining conversation room:", convId);
+        joinConversation(convId);
+      }
+      
+      // Update URL without reload
+      navigate(`/messages/${userId}`, { replace: true });
+    } catch (error) {
+      console.error('Error selecting conversation:', error);
+    }
   };
   
-  // Handle back button in mobile view
-  const handleBackToList = () => {
-    setShowConversationList(true);
+  // Handle message sending
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !activeConversation) return;
+    
+    console.log("Sending message to:", activeConversation);
+    
+    if (socket && connected) {
+      // Use socket for real-time messaging if available
+      sendMessageSocket(activeConversation, messageInput.trim());
+    } else {
+      // Fall back to HTTP if socket is not available
+      sendMessage(activeConversation, messageInput.trim());
+    }
+    
+    setMessageInput('');
   };
-  
-  // Get the right sidebar component based on user role
-  const SideNav = user?.role === 'tenant' ? TenantSideNav : LandlordSideNav;
   
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
-      {/* Side navigation */}
-      <SideNav />
+    <div className="flex flex-col h-screen bg-gray-100">
+      {!connected && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-sm">
+          <p>Socket connection unavailable. Messages will be sent using HTTP fallback.</p>
+        </div>
+      )}
       
-      {/* Main content area */}
-      <div className="flex-grow flex flex-col h-full overflow-hidden">
-        {/* Page header */}
-        <div className="bg-white border-b shadow-sm p-4">
-          <h1 className="text-2xl font-bold text-gray-800">Messages</h1>
-          <p className="text-gray-600">Communicate with your {user?.role === 'tenant' ? 'landlord' : 'tenants'}</p>
+      <div className="flex flex-grow overflow-hidden">
+        {/* Conversation List Sidebar */}
+        <div className="w-1/3 border-r bg-white overflow-y-auto">
+          <ConversationsList 
+            conversations={conversations}
+            activeConversation={activeConversation}
+            onSelectConversation={handleSelectConversation}
+          />
         </div>
         
-        {/* Messages container */}
-        <div className="flex-grow flex overflow-hidden">
-          {/* Conversations list (hidden on mobile when a conversation is selected) */}
-          <div className={`${
-            showConversationList ? 'flex' : 'hidden'
-          } md:flex flex-col w-full md:w-1/3 lg:w-1/4 border-r bg-white overflow-hidden`}>
-            <div className="p-3 border-b bg-gray-50">
-              <h2 className="font-medium text-gray-800">Conversations</h2>
-            </div>
-            
-            <div className="flex-grow overflow-y-auto">
-              <ConversationsList
-                onSelectConversation={handleSelectConversation}
-                activeConversationId={selectedConversation?._id}
-              />
-            </div>
-          </div>
-          
-          {/* Conversation detail (shown on mobile only when a conversation is selected) */}
-          <div className={`${
-            showConversationList ? 'hidden' : 'flex'
-          } md:flex flex-col flex-grow h-full`}>
+        {/* Conversation Detail */}
+        <div className="w-2/3 flex flex-col">
+          {activeConversation ? (
             <ConversationDetail
-              conversation={selectedConversation}
-              onBackClick={handleBackToList}
+              messages={messages}
+              user={user}
+              selectedUser={selectedUser}
+              messageInput={messageInput}
+              setMessageInput={setMessageInput}
+              handleSendMessage={handleSendMessage}
+              messagesEndRef={messagesEndRef}
             />
-          </div>
+          ) : (
+            <div className="flex-grow flex items-center justify-center bg-gray-50">
+              <p className="text-gray-500 text-lg">Select a conversation to start messaging</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   FaClipboardList,
   FaHammer,
   FaMailBulk,
-  FaEnvelope  // Add FaEnvelope icon
+  FaComments // Add this import for the messaging icon
 } from 'react-icons/fa';
 
 const LandlordSideNav = ({ onToggle }) => {
@@ -97,11 +97,6 @@ const LandlordSideNav = ({ onToggle }) => {
       icon: <FaClipboardList size={20} />
     },
     {
-      path: '/landlord/messages',  // Add messages path
-      name: 'Messages',
-      icon: <FaEnvelope size={20} />
-    },
-    {
       path: '/landlord/announcements',
       name: 'Announcements',
       icon: <FaBullhorn size={20} />
@@ -110,6 +105,12 @@ const LandlordSideNav = ({ onToggle }) => {
       path: '/maintenance',
       name: 'Maintenance',
       icon: <FaHammer size={20} />
+    },
+    // Add the messaging link here
+    {
+      path: '/messages',
+      name: 'Messages',
+      icon: <FaComments size={20} />
     },
     {
       path: '/archive',

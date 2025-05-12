@@ -9,7 +9,7 @@ import {
   FaBars,
   FaTimes,
   FaSearch,
-  FaEnvelope  // Add FaEnvelope icon
+  FaComments // Add this import for the messaging icon
 } from 'react-icons/fa';
 
 const TenantSideNav = ({ onToggle, onModalOpen }) => {
@@ -69,7 +69,7 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
 
   const isExpanded = !collapsed;
 
-  // Updated nav items - changed browseApartments to use path instead of modal
+  // Updated nav items - add messaging option
   const navItems = [
     {
       id: 'dashboard',
@@ -88,9 +88,9 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
     {
       id: 'messages',
       name: 'Messages',
-      icon: <FaEnvelope size={20} />,
+      icon: <FaComments size={20} />,
       modal: false,
-      path: '/tenant/messages'
+      path: '/messages'
     },
     {
       id: 'lease',
