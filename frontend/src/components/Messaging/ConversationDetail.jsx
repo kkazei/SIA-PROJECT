@@ -52,12 +52,11 @@ const ConversationDetail = ({ conversation, onBackClick }) => {
     markMessagesAsRead,
     currentConversation,
     userTyping,
-    loading,
-    addIncomingMessage
+    loading
   } = useMessageStore();
   
   const { user } = useAuthStore();
-  const { joinConversation, leaveConversation, markAsRead, socket } = useSocket();
+  const { joinConversation, leaveConversation, markAsRead } = useSocket();
   const messagesEndRef = useRef(null);
   
   // Join conversation room on mount
@@ -120,67 +119,6 @@ const ConversationDetail = ({ conversation, onBackClick }) => {
     }
   };
   
-  // Add this effect to listen for real-time messages
-  useEffect(() => {
-    if (!socket || !conversation?._id) return;
-    
-    // Listen for incoming messages
-    const handleNewMessage = (newMessage) => {
-      // Check if this message belongs to the current conversation
-      if (newMessage.conversation_id === conversation._id) {
-        // Add the message to the store
-        addIncomingMessage(newMessage);
-        
-        // Mark as read if we're actively viewing this conversation
-        if (newMessage.sender_id._id !== user.id) {
-          markAsRead(conversation._id, [newMessage._id]);
-          markMessagesAsRead(conversation._id);
-        }
-      }
-    };
-    
-    socket.on('receive_message', handleNewMessage);
-    
-    // Clean up
-    return () => {
-      socket.off('receive_message', handleNewMessage);
-    };
-  }, [socket, conversation?._id, user?.id]);
-
-  // Add this useEffect in ConversationDetail component
-  useEffect(() => {
-    if (!socket || !conversation?._id) return;
-    
-    // Define handler for incoming messages
-    const handleIncomingMessage = (message) => {
-      console.log("Received real-time message:", message);
-      
-      // Check if this message belongs to current conversation
-      const isForCurrentConversation = 
-        message.conversation_id === conversation._id ||
-        (message.sender_id._id === conversation.otherUser._id || 
-         message.receiver_id._id === conversation.otherUser._id);
-      
-      if (isForCurrentConversation) {
-        // Update the messages in the store
-        addIncomingMessage(message);
-        
-        // Mark as read if we're currently viewing this conversation
-        if (message.sender_id._id !== user.id) {
-          markAsRead(conversation._id, [message._id]);
-        }
-      }
-    };
-    
-    // Listen for real-time messages
-    socket.on('receive_message', handleIncomingMessage);
-    
-    // Clean up when component unmounts
-    return () => {
-      socket.off('receive_message', handleIncomingMessage);
-    };
-  }, [socket, conversation, user, addIncomingMessage, markAsRead]);
-
   const renderMessages = () => {
     if (!messages.length) {
       return (
