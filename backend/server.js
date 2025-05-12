@@ -43,6 +43,9 @@ const io = new SocketIOServer(server, {
 // Store active connections
 const activeUsers = new Map();
 
+// Track online users
+const onlineUsers = new Set();
+
 // Socket.io middleware to authenticate users
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -153,12 +156,30 @@ io.on('connection', (socket) => {
       conversationId
     });
   });
+
+  // User presence tracking
+  socket.on('user_online', ({ userId }) => {
+    console.log(`User ${userId} announced as online`);
+    if (userId) {
+      onlineUsers.add(userId);
+      
+      // Broadcast to all clients
+      io.emit('user_connected', userId);
+      
+      // Send current online users to the newly connected client
+      socket.emit('users_online', Array.from(onlineUsers));
+    }
+  });
   
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.user?.id);
     if (socket.user) {
       activeUsers.delete(socket.user.id);
+      onlineUsers.delete(socket.user.id);
+      
+      // Broadcast to all clients
+      io.emit('user_disconnected', socket.user.id);
     }
   });
 });
