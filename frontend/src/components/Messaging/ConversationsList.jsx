@@ -4,6 +4,7 @@ import { useMessageStore } from '../../store/messageStore';
 import { useAuthStore } from '../../store/authStore';
 import { useSocket } from '../../context/SocketContext';
 import { useApartmentStore } from '../../store/apartmentStore'; // Add this import
+import { format } from 'date-fns';
 
 const ConversationsList = ({ onSelectConversation, activeConversationId }) => {
   const { 
@@ -15,7 +16,7 @@ const ConversationsList = ({ onSelectConversation, activeConversationId }) => {
   } = useMessageStore();
   
   const { user } = useAuthStore();
-  const { onlineUsers } = useSocket();
+  const { onlineUsers, isUserOnline } = useSocket();
   
   // For tenant - to get landlord info
   const { getTenantApartment } = useApartmentStore();
@@ -66,6 +67,26 @@ const ConversationsList = ({ onSelectConversation, activeConversationId }) => {
       }
     } catch (error) {
       console.error("Error starting conversation with landlord:", error);
+    }
+  };
+  
+  // Format message timestamp
+  const formatMessageTime = (timestamp) => {
+    if (!timestamp) return '';
+    return format(new Date(timestamp), 'MMM d, h:mm a');
+  };
+  
+  // Check if a user is online - with safety check
+  const checkUserOnline = (userId) => {
+    // Add defensive check to avoid the error
+    try {
+      if (typeof isUserOnline === 'function') {
+        return isUserOnline(userId);
+      }
+      return false; // Default: not online
+    } catch (error) {
+      console.log("Error checking online status:", error);
+      return false;
     }
   };
   
