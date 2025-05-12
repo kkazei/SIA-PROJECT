@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
@@ -9,13 +9,10 @@ export const useSocket = () => useContext(SocketContext);
 // Create a socket instance outside the component to prevent recreation on rerender
 let socketInstance = null;
 
-// Track active users
-const activeUsers = new Set();
-
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const { token, isAuth, user } = useAuthStore();
+  const { token, isAuth } = useAuthStore();
   
   useEffect(() => {
     // Only try to connect if user is authenticated
@@ -37,11 +34,6 @@ export const SocketProvider = ({ children }) => {
       socketInstance.on('connect', () => {
         console.log('Socket connected');
         setConnected(true);
-        
-        // Announce presence
-        if (user?.id) {
-          socketInstance.emit('user_online', { userId: user.id });
-        }
       });
       
       socketInstance.on('disconnect', () => {
@@ -52,25 +44,6 @@ export const SocketProvider = ({ children }) => {
       socketInstance.on('connect_error', (err) => {
         console.error('Socket connection error:', err.message);
         setConnected(false);
-      });
-      
-      // Handle user presence (add these listeners)
-      socketInstance.on('users_online', (users) => {
-        console.log('Users online:', users);
-        activeUsers.clear();
-        if (Array.isArray(users)) {
-          users.forEach(id => activeUsers.add(id));
-        }
-      });
-      
-      socketInstance.on('user_connected', (userId) => {
-        console.log('User connected:', userId);
-        activeUsers.add(userId);
-      });
-      
-      socketInstance.on('user_disconnected', (userId) => {
-        console.log('User disconnected:', userId);
-        activeUsers.delete(userId);
       });
     }
     
@@ -83,17 +56,11 @@ export const SocketProvider = ({ children }) => {
         setConnected(false);
       }
     };
-  }, [isAuth, token, user?.id]);
-  
-  // Safe function to check if a user is online
-  const isUserOnline = (userId) => {
-    return activeUsers.has(userId);
-  };
+  }, [isAuth, token]);
   
   const value = {
     socket,
-    connected,
-    isUserOnline // Expose this function
+    connected
   };
   
   return (
