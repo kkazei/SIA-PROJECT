@@ -1,74 +1,105 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
 const SocketContext = createContext();
 
-export const useSocket = () => useContext(SocketContext);
-
-// Create a socket instance outside the component to prevent recreation on rerender
-let socketInstance = null;
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (context === undefined) {
+    throw new Error('useSocket must be used within a SocketProvider');
+  }
+  return context;
+};
 
 export const SocketProvider = ({ children }) => {
+  const { user, token } = useAuthStore();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const { token, isAuth } = useAuthStore();
-  
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+
   useEffect(() => {
-    // Only try to connect if user is authenticated
-    if (isAuth && token && !socketInstance) {
-      const BASE_URL = import.meta.env.MODE === "development" 
-        ? "http://localhost:5000" 
-        : "";
-      
-      console.log('Creating new socket connection');
-      socketInstance = io(BASE_URL, {
-        auth: { token },
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5
-      });
-      
-      setSocket(socketInstance);
-      
-      socketInstance.on('connect', () => {
-        console.log('Socket connected');
-        setConnected(true);
-      });
-      
-      socketInstance.on('disconnect', () => {
-        console.log('Socket disconnected');
-        setConnected(false);
-      });
-      
-      socketInstance.on('connect_error', (err) => {
-        console.error('Socket connection error:', err.message);
-        setConnected(false);
-      });
-    }
-    
+    // Only connect if user is logged in
+    if (!user || !token) return;
+
+    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+      auth: { token },
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+    });
+
+    // Socket event handlers
+    socketInstance.on('connect', () => {
+      console.log('Socket connected');
+      setConnected(true);
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setConnected(false);
+    });
+
+    socketInstance.on('online_users', (users) => {
+      setOnlineUsers(new Set(users));
+    });
+
+    socketInstance.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
+    });
+
+    setSocket(socketInstance);
+
+    // Cleanup on unmount
     return () => {
       if (socketInstance) {
-        console.log('Cleaning up socket connection');
+        console.log('Disconnecting socket');
         socketInstance.disconnect();
-        socketInstance = null;
-        setSocket(null);
-        setConnected(false);
       }
     };
-  }, [isAuth, token]);
-  
+  }, [user, token]);
+
+  // Join a conversation room
+  const joinConversation = (conversationId) => {
+    if (socket && connected) {
+      socket.emit('join_conversation', conversationId);
+    }
+  };
+
+  // Leave a conversation room
+  const leaveConversation = (conversationId) => {
+    if (socket && connected) {
+      socket.emit('leave_conversation', conversationId);
+    }
+  };
+
+  // Send a typing indicator
+  const sendTyping = (conversationId, isTyping) => {
+    if (socket && connected) {
+      socket.emit(isTyping ? 'typing' : 'stop_typing', { conversationId });
+    }
+  };
+
+  // Mark messages as read
+  const markAsRead = (conversationId, messageIds) => {
+    if (socket && connected && messageIds.length > 0) {
+      socket.emit('mark_as_read', { conversationId, messageIds });
+    }
+  };
+
   const value = {
     socket,
-    connected
+    connected,
+    onlineUsers,
+    joinConversation,
+    leaveConversation,
+    sendTyping,
+    markAsRead,
   };
-  
+
   return (
     <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );
 };
-
-// Export singleton instance for direct import
-export const socket = socketInstance;
