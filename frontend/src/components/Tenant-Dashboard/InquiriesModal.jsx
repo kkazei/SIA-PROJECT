@@ -82,6 +82,15 @@ const InquiriesModal = ({ isOpen, closeModal }) => {
       return;
     }
     
+    // Check file sizes (limit each to 5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    
+    if (oversizedFiles.length > 0) {
+      setFormError(`Some files exceed the 5MB size limit. Please compress your images.`);
+      return;
+    }
+    
     setFormData((prev) => ({
       ...prev,
       images: files
@@ -382,7 +391,43 @@ const InquiriesModal = ({ isOpen, closeModal }) => {
                 </div>
               )}
               
-              {/* Add response form could go here for future enhancement */}
+              {/* Tenant response form */}
+              {selectedInquiry && (
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="font-medium mb-3">Add Response</h4>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const responseText = e.target.responseText.value.trim();
+                    if (!responseText) return;
+                    
+                    // Call the addResponse function from inquiryStore
+                    useInquiryStore.getState().addResponse(selectedInquiry._id, responseText)
+                      .then(() => {
+                        // Clear the form
+                        e.target.responseText.value = '';
+                      })
+                      .catch(err => {
+                        console.error('Error adding response:', err);
+                        toast.error('Failed to add response');
+                      });
+                  }}>
+                    <textarea
+                      name="responseText"
+                      rows="3"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Type your response here..."
+                    ></textarea>
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        Send Response
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           ) : (
             <>
