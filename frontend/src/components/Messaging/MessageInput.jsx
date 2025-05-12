@@ -9,36 +9,34 @@ const MessageInput = ({ onSendMessage, receiverId, conversationId }) => {
   const [previews, setPreviews] = useState([]);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const { emitTyping, emitStopTyping } = useSocket();
+  const { sendTyping } = useSocket();
   
-  // Handle typing indicators with debouncing
+  // Handle typing indicator
   useEffect(() => {
-    if (!message || !receiverId) return;
-    
     if (message && !isTyping) {
       setIsTyping(true);
-      emitTyping(receiverId);
+      sendTyping(conversationId, true);
     }
     
-    // Debounce stop typing event
-    const typingTimer = setTimeout(() => {
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
       if (isTyping) {
         setIsTyping(false);
-        emitStopTyping(receiverId);
+        sendTyping(conversationId, false);
       }
     }, 2000);
     
-    return () => clearTimeout(typingTimer);
-  }, [message, isTyping, receiverId, emitTyping, emitStopTyping]);
-  
-  // Stop typing when component unmounts
-  useEffect(() => {
     return () => {
-      if (isTyping && receiverId) {
-        emitStopTyping(receiverId);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [isTyping, receiverId, emitStopTyping]);
+  }, [message, isTyping, conversationId, sendTyping]);
   
   // Handle send message
   const handleSendMessage = (e) => {
@@ -55,7 +53,7 @@ const MessageInput = ({ onSendMessage, receiverId, conversationId }) => {
     
     // Stop typing indicator
     setIsTyping(false);
-    emitStopTyping(receiverId);
+    sendTyping(conversationId, false);
   };
   
   // Handle file selection
