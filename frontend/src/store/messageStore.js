@@ -153,62 +153,50 @@ export const useMessageStore = create((set, get) => ({
   
   // Handle incoming message from socket
   addIncomingMessage: (message) => {
-    // Check if this message belongs to the current conversation
-    const { currentConversation } = get();
-    const currentReceiverId = currentConversation?.userId;
-    
-    // Add to messages if we're in the same conversation
-    if (currentReceiverId && 
-        (message.sender_id._id === currentReceiverId || 
-         message.receiver_id._id === currentReceiverId)) {
-      set(state => ({
-        messages: [message, ...state.messages]
-      }));
-    }
-    
-    // Update conversations list
     set(state => {
-      // Find if conversation exists already
-      const conversationId = message.conversation_id;
-      const existingIndex = state.conversations.findIndex(c => c._id === conversationId);
-      
-      let newConversations = [...state.conversations];
-      let newUnreadCounts = {...state.unreadCounts};
-      
-      // If user is not currently viewing this conversation, increment unread count
-      if (currentReceiverId !== message.sender_id._id) {
-        newUnreadCounts[conversationId] = (newUnreadCounts[conversationId] || 0) + 1;
+      // Check if this message already exists in the messages array
+      if (state.messages.some(m => m._id === message._id)) {
+        return state; // No changes needed
       }
       
-      if (existingIndex !== -1) {
-        // Update existing conversation
-        newConversations[existingIndex] = {
-          ...newConversations[existingIndex],
+      console.log("Adding new message to state:", message);
+      
+      // Add the message to current conversation's messages if relevant
+      const updatedMessages = [...state.messages];
+      
+      // Add the new message at the beginning of the array
+      updatedMessages.unshift(message);
+      
+      // Update unread counts and conversation list if needed
+      let updatedUnreadCounts = {...state.unreadCounts};
+      let updatedConversations = [...state.conversations];
+      
+      // Find the conversation this message belongs to
+      const conversationIndex = updatedConversations.findIndex(
+        conv => conv._id === message.conversation_id
+      );
+      
+      if (conversationIndex >= 0) {
+        // Update the last message in the conversation
+        updatedConversations[conversationIndex] = {
+          ...updatedConversations[conversationIndex],
           lastMessage: message
         };
         
-        // Move to top of list
-        newConversations = [
-          newConversations[existingIndex],
-          ...newConversations.slice(0, existingIndex),
-          ...newConversations.slice(existingIndex + 1)
-        ];
-      } else {
-        // Add new conversation
-        const otherUser = message.sender_id._id === currentReceiverId 
-          ? message.receiver_id 
-          : message.sender_id;
-          
-        newConversations = [{
-          _id: conversationId,
-          lastMessage: message,
-          otherUser
-        }, ...newConversations];
+        // Move the conversation to the top of the list
+        if (conversationIndex > 0) {
+          updatedConversations = [
+            updatedConversations[conversationIndex],
+            ...updatedConversations.slice(0, conversationIndex),
+            ...updatedConversations.slice(conversationIndex + 1)
+          ];
+        }
       }
       
       return {
-        conversations: newConversations,
-        unreadCounts: newUnreadCounts
+        messages: updatedMessages,
+        conversations: updatedConversations,
+        unreadCounts: updatedUnreadCounts
       };
     });
   },

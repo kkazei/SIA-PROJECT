@@ -87,27 +87,23 @@ io.on('connection', (socket) => {
     try {
       // Import message controller to save the message
       const { saveMessage } = await import('./controllers/message.controller.js');
+      
+      // Save message to database
       const savedMessage = await saveMessage({
         ...messageData,
         sender_id: socket.user.id
       });
       
-      // Emit to conversation room
-      io.to(messageData.conversation_id).emit('receive_message', savedMessage);
+      // Emit to the conversation room
+      io.to(savedMessage.conversation_id).emit('receive_message', savedMessage);
       
-      // Also emit specifically to receiver if they're online but not in the room
-      const receiverId = messageData.receiver_id;
-      const receiverSocketId = activeUsers.get(receiverId);
-      
+      // Also send to the specific user if they're not in the room
+      const receiverSocketId = activeUsers.get(savedMessage.receiver_id.toString());
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit('new_message_notification', {
-          message: savedMessage,
-          from: socket.user
-        });
+        io.to(receiverSocketId).emit('receive_message', savedMessage);
       }
     } catch (error) {
-      console.error('Error handling message:', error);
-      socket.emit('message_error', { error: 'Failed to send message' });
+      console.error('Error in socket message handler:', error);
     }
   });
   

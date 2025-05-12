@@ -31,7 +31,7 @@ export const SocketProvider = ({ children }) => {
 
     // Socket event handlers
     socketInstance.on('connect', () => {
-      console.log('Socket connected');
+      console.log('Socket connected successfully with ID:', socketInstance.id);
       setConnected(true);
     });
 
@@ -45,7 +45,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
+      console.error('Socket connection error:', err.message, err);
     });
 
     setSocket(socketInstance);
@@ -58,6 +58,28 @@ export const SocketProvider = ({ children }) => {
       }
     };
   }, [user, token]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    const debugSocketEvents = () => {
+      // Debug incoming events
+      const originalOnEvent = socket.onevent;
+      socket.onevent = function(packet) {
+        console.log('Socket received:', packet.data[0], packet.data[1] || '');
+        originalOnEvent.call(this, packet);
+      };
+      
+      // Debug outgoing events
+      const originalEmit = socket.emit;
+      socket.emit = function(eventName, ...args) {
+        console.log('Socket emitting:', eventName, ...args);
+        return originalEmit.apply(this, [eventName, ...args]);
+      };
+    };
+    
+    debugSocketEvents();
+  }, [socket]);
 
   // Join a conversation room
   const joinConversation = (conversationId) => {
