@@ -137,7 +137,11 @@ export const useInquiryStore = create((set, get) => ({
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        withCredentials: true
+        withCredentials: true,
+        timeout: 30000, // 30 seconds timeout for large uploads
+        onUploadProgress: progressEvent => {
+          console.log('Upload progress:', Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        }
       });
       
       // Process the returned inquiry to fix image paths
