@@ -1,104 +1,114 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import io from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
 const SocketContext = createContext();
 
-export const useSocket = () => {
-  const context = useContext(SocketContext);
-  if (context === undefined) {
-    throw new Error('useSocket must be used within a SocketProvider');
-  }
-  return context;
-};
+export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  const { user, token } = useAuthStore();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
-
+  const { user, isAuthenticated } = useAuthStore();
+  
+  // Connect to socket when authenticated
   useEffect(() => {
-    // Only connect if user is logged in
-    if (!user || !token) return;
-
-    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      auth: { token },
+    if (!isAuthenticated || !user) {
+      return;
+    }
+    
+    const SOCKET_URL = import.meta.env.MODE === "development" 
+      ? "http://localhost:5000" 
+      : "";
+      
+    // Create socket connection
+    const newSocket = io(SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
-      autoConnect: true,
+      auth: {
+        userId: user.id,
+        role: user.role
+      }
     });
-
-    // Socket event handlers
-    socketInstance.on('connect', () => {
-      console.log('Socket connected');
+    
+    // Set up event listeners
+    newSocket.on('connect', () => {
+      console.log('Socket connected!');
       setConnected(true);
+      
+      // Emit presence when connected
+      newSocket.emit('presence', { userId: user.id, status: 'online' });
     });
-
-    socketInstance.on('disconnect', () => {
+    
+    newSocket.on('disconnect', () => {
       console.log('Socket disconnected');
       setConnected(false);
     });
-
-    socketInstance.on('online_users', (users) => {
+    
+    // Listen for online users updates
+    newSocket.on('online_users', (users) => {
+      console.log('Online users update:', users);
       setOnlineUsers(new Set(users));
     });
-
-    socketInstance.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
-    });
-
-    setSocket(socketInstance);
-
-    // Cleanup on unmount
+    
+    // Store socket instance
+    setSocket(newSocket);
+    
     return () => {
-      if (socketInstance) {
-        console.log('Disconnecting socket');
-        socketInstance.disconnect();
+      // Cleanly disconnect on unmount
+      if (newSocket) {
+        newSocket.emit('presence', { userId: user.id, status: 'offline' });
+        newSocket.disconnect();
       }
     };
-  }, [user, token]);
-
-  // Join a conversation room
+  }, [isAuthenticated, user]);
+  
+  // Provide functions for messaging
   const joinConversation = (conversationId) => {
-    if (socket && connected) {
-      socket.emit('join_conversation', conversationId);
+    if (socket) {
+      console.log(`Joining conversation: ${conversationId}`);
+      socket.emit('join_conversation', { conversationId });
     }
   };
-
-  // Leave a conversation room
+  
   const leaveConversation = (conversationId) => {
-    if (socket && connected) {
-      socket.emit('leave_conversation', conversationId);
+    if (socket) {
+      console.log(`Leaving conversation: ${conversationId}`);
+      socket.emit('leave_conversation', { conversationId });
     }
   };
-
-  // Send a typing indicator
-  const sendTyping = (conversationId, isTyping) => {
-    if (socket && connected) {
-      socket.emit(isTyping ? 'typing' : 'stop_typing', { conversationId });
-    }
-  };
-
-  // Mark messages as read
+  
   const markAsRead = (conversationId, messageIds) => {
-    if (socket && connected && messageIds.length > 0) {
+    if (socket && messageIds.length > 0) {
+      console.log(`Marking messages as read: ${messageIds.length} messages`);
       socket.emit('mark_as_read', { conversationId, messageIds });
     }
   };
-
-  const value = {
-    socket,
-    connected,
-    onlineUsers,
-    joinConversation,
-    leaveConversation,
-    sendTyping,
-    markAsRead,
+  
+  const emitTyping = (receiverId) => {
+    if (socket) {
+      socket.emit('typing', { receiverId });
+    }
   };
-
+  
+  const emitStopTyping = (receiverId) => {
+    if (socket) {
+      socket.emit('stop_typing', { receiverId });
+    }
+  };
+  
   return (
-    <SocketContext.Provider value={value}>
+    <SocketContext.Provider value={{ 
+      socket, 
+      connected, 
+      onlineUsers,
+      joinConversation,
+      leaveConversation,
+      markAsRead,
+      emitTyping,
+      emitStopTyping
+    }}>
       {children}
     </SocketContext.Provider>
   );

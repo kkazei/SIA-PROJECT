@@ -203,6 +203,27 @@ export const sendMessage = async (req, res) => {
       attachments: req.files
     });
     
+    // Get io instance
+    const io = req.app.get('io');
+    
+    // Emit to receiver if online
+    if (io) {
+      // Emit to the conversation room
+      io.to(`conversation:${savedMessage.conversation_id}`).emit('receive_message', savedMessage);
+      
+      // Also send notification to the receiver's other pages/tabs
+      const receiverSocketIds = Array.from(req.app.get('userSockets').get(receiver_id.toString()) || []);
+      receiverSocketIds.forEach(socketId => {
+        io.to(socketId).emit('new_message_notification', {
+          message: savedMessage,
+          from: {
+            id: sender_id,
+            name: req.user.name
+          }
+        });
+      });
+    }
+    
     res.status(201).json({
       success: true,
       data: savedMessage

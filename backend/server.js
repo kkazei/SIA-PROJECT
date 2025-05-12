@@ -42,6 +42,7 @@ const io = new SocketIOServer(server, {
 
 // Store active connections
 const activeUsers = new Map();
+const userSockets = new Map(); // Add this to track multiple connections per user
 
 // Socket.io middleware to authenticate users
 io.use((socket, next) => {
@@ -67,13 +68,35 @@ io.use((socket, next) => {
   }
 });
 
+// Add this after setting up socket.io but before defining routes
+
+// Make socket.io and user tracking available to routes
+app.set('io', io);
+app.set('activeUsers', activeUsers);
+app.set('userSockets', userSockets);
+
 // Socket connection handler
 io.on('connection', (socket) => {
   console.log('User connected:', socket.user?.id);
   
-  // Store user connection
+  // Store user connection (improved version)
   if (socket.user) {
-    activeUsers.set(socket.user.id, socket.id);
+    const userId = socket.user.id;
+    
+    // Track this socket for this user
+    if (!userSockets.has(userId)) {
+      userSockets.set(userId, new Set());
+    }
+    userSockets.get(userId).add(socket.id);
+    
+    // Mark user as active
+    activeUsers.set(userId, {
+      lastActive: new Date(),
+      role: socket.user.role
+    });
+    
+    // Broadcast updated online users to everyone
+    broadcastOnlineUsers();
   }
   
   // Handle join conversation
@@ -143,13 +166,68 @@ io.on('connection', (socket) => {
     });
   });
   
-  // Handle disconnect
+  socket.on('message_delivered', async ({ messageId }) => {
+    try {
+      // Update message status in database if needed
+      // ...
+      
+      // Notify sender that message was delivered
+      socket.to(`message:${messageId}`).emit('message_status_update', {
+        messageId,
+        status: 'delivered',
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error marking message as delivered:', error);
+    }
+  });
+
+  socket.on('message_seen', async ({ messageId, conversationId }) => {
+    try {
+      // Update message status in database if needed
+      // ...
+      
+      // Notify conversation that message was seen
+      socket.to(conversationId).emit('message_status_update', {
+        messageId,
+        status: 'seen',
+        timestamp: new Date(),
+        seenBy: socket.user.id
+      });
+    } catch (error) {
+      console.error('Error marking message as seen:', error);
+    }
+  });
+
+  // Replace the disconnect handler with this
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.user?.id);
     if (socket.user) {
-      activeUsers.delete(socket.user.id);
+      const userId = socket.user.id;
+      
+      // Remove this socket from user's sockets
+      if (userSockets.has(userId)) {
+        userSockets.get(userId).delete(socket.id);
+        
+        // If no more sockets for this user, mark them as offline
+        if (userSockets.get(userId).size === 0) {
+          userSockets.delete(userId);
+          activeUsers.delete(userId);
+          
+          // Broadcast updated online users
+          broadcastOnlineUsers();
+        }
+      }
     }
   });
+  
+  // Add a function to broadcast online users
+  function broadcastOnlineUsers() {
+    const onlineUserIds = Array.from(activeUsers.keys());
+    io.emit('online_users', onlineUserIds);
+  }
+  
+  // Rest of your socket event handlers
 });
 
 const PORT = process.env.PORT || 5000;
