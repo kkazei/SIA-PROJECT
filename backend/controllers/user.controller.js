@@ -213,4 +213,34 @@ export const getFilteredTenants = async (req, res) => {
   }
 };
 
+// Add or update this method
+export const getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log('Getting user by ID:', userId);
+    
+    const user = await User.findById(userId).select('name email role avatar');
+    
+    if (!user) {
+      console.log('User not found for ID:', userId);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    console.log('User found:', user._id);
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 // ... remaining controller methods ...

@@ -8,7 +8,8 @@ import {
   FaSignOutAlt,
   FaBars,
   FaTimes,
-  FaSearch
+  FaSearch,
+  FaEnvelope  // Add FaEnvelope icon
 } from 'react-icons/fa';
 
 const TenantSideNav = ({ onToggle, onModalOpen }) => {
@@ -83,6 +84,13 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
       icon: <FaSearch size={20} />,
       modal: false,
       path: '/tenant/browse-apartments'
+    },
+    {
+      id: 'messages',
+      name: 'Messages',
+      icon: <FaEnvelope size={20} />,
+      modal: false,
+      path: '/tenant/messages'
     },
     {
       id: 'lease',

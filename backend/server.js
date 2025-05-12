@@ -21,11 +21,137 @@ import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
 import leaseRoutes from './routes/lease.route.js';
 import adminRoutes from './routes/admin.route.js';
-
+import messageRoutes from './routes/message.route.js';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import fs from 'fs';
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+
+// Socket.io setup
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || "http://localhost:5173", // Adjust to match your frontend URL
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Store active connections
+const activeUsers = new Map();
+
+// Socket.io middleware to authenticate users
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  
+  // Verify token using your existing auth middleware
+  // This is a simplified example - you should adapt your actual auth middleware
+  if (!token) {
+    return next(new Error("Authentication error"));
+  }
+  
+  try {
+    // Import your JWT verification logic here
+    import('./middleware/auth.middleware.js').then(({ verifyToken }) => {
+      const decoded = verifyToken(token);
+      socket.user = decoded;
+      next();
+    }).catch(err => {
+      next(new Error("Authentication error"));
+    });
+  } catch (error) {
+    next(new Error("Authentication error"));
+  }
+});
+
+// Socket connection handler
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.user?.id);
+  
+  // Store user connection
+  if (socket.user) {
+    activeUsers.set(socket.user.id, socket.id);
+  }
+  
+  // Handle join conversation
+  socket.on('join_conversation', (conversationId) => {
+    socket.join(conversationId);
+    console.log(`User ${socket.user?.id} joined conversation ${conversationId}`);
+  });
+  
+  // Handle send message
+  socket.on('send_message', async (messageData) => {
+    try {
+      // Import message controller to save the message
+      const { saveMessage } = await import('./controllers/message.controller.js');
+      const savedMessage = await saveMessage({
+        ...messageData,
+        sender_id: socket.user.id
+      });
+      
+      // Emit to conversation room
+      io.to(messageData.conversation_id).emit('receive_message', savedMessage);
+      
+      // Also emit specifically to receiver if they're online but not in the room
+      const receiverId = messageData.receiver_id;
+      const receiverSocketId = activeUsers.get(receiverId);
+      
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('new_message_notification', {
+          message: savedMessage,
+          from: socket.user
+        });
+      }
+    } catch (error) {
+      console.error('Error handling message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  });
+  
+  // Handle mark as read
+  socket.on('mark_as_read', async ({ conversationId, messageIds }) => {
+    try {
+      const { markMessagesAsRead } = await import('./controllers/message.controller.js');
+      await markMessagesAsRead(conversationId, messageIds);
+      
+      // Notify the conversation that messages were read
+      io.to(conversationId).emit('messages_read', {
+        conversationId,
+        messageIds,
+        readBy: socket.user.id
+      });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  });
+  
+  // Handle typing indicators
+  socket.on('typing', ({ conversationId }) => {
+    socket.to(conversationId).emit('user_typing', {
+      user: socket.user.id,
+      conversationId
+    });
+  });
+  
+  socket.on('stop_typing', ({ conversationId }) => {
+    socket.to(conversationId).emit('user_stopped_typing', {
+      user: socket.user.id,
+      conversationId
+    });
+  });
+  
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.user?.id);
+    if (socket.user) {
+      activeUsers.delete(socket.user.id);
+    }
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
@@ -69,7 +195,6 @@ const setupUploadDirectories = () => {
 };
 
 // Ensure upload directories exist
-import fs from 'fs';
 setupUploadDirectories();
 
 // API routes
@@ -82,6 +207,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes); 
 app.use("/api/applications", applicationRoutes); 
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
 
 
 // Add this before mounting the route
@@ -119,7 +245,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     connectDb();
     console.log(`Server is running at http://localhost:${PORT}`);
 });
