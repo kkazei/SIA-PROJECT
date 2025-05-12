@@ -204,33 +204,7 @@ const NoApartmentView = ({ userName, onBrowseClick, onApplicationsClick, onLogou
           </motion.div>
         </div>
 
-        {/* Additional information */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className='bg-white shadow-xl rounded-xl p-6 border border-blue-100 backdrop-blur-sm bg-opacity-80 mt-6'
-        >
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to find your perfect apartment?</h3>
-          <p className="text-gray-600 mb-4">
-            Browse our selection of apartments, apply for your favorites, and get approved to move in. 
-            Our tenant portal offers a seamless experience from application to residency.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button 
-              onClick={onBrowseClick}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg flex items-center justify-center shadow-md hover:shadow-blue-500/30 transition-all duration-300"
-            >
-              <FaSearchLocation className="mr-2" /> Browse Available Units
-            </button>
-            <button 
-              onClick={onApplicationsClick}
-              className="px-5 py-2.5 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-gray-900 text-white rounded-lg flex items-center justify-center shadow-md hover:shadow-gray-500/30 transition-all duration-300"
-            >
-              <FaClipboardList className="mr-2" /> Check Application Status
-            </button>
-          </div>
-        </motion.div>
+      
       </motion.div>
       
       {/* Child components (modals) */}
