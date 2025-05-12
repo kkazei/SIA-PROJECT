@@ -57,37 +57,16 @@ export const useMessageStore = create((set, get) => ({
       // For first page, replace messages; for pagination, append
       const newMessages = page === 1 ? response.data.data.docs : [...get().messages, ...response.data.data.docs];
       
-      const conversation = {
-        userId,
-        hasMoreMessages: response.data.data.hasNextPage,
-        totalMessages: response.data.data.totalDocs,
-        currentPage: response.data.data.page
-      };
-      
       set({
         messages: newMessages,
-        currentConversation: conversation,
+        currentConversation: {
+          userId,
+          hasMoreMessages: response.data.data.hasNextPage,
+          totalMessages: response.data.data.totalDocs,
+          currentPage: response.data.data.page
+        },
         isLoading: false
       });
-
-      // Find the conversation in conversations list to get the _id
-      const conversations = get().conversations;
-      const existingConversation = conversations.find(c => 
-        c.otherUser && c.otherUser._id === userId
-      );
-      
-      // If we found the conversation and we're on page 1, join the room
-      if (existingConversation && page === 1) {
-        try {
-          const { socket } = await import('../context/SocketContext');
-          if (socket && socket.connected) {
-            console.log(`Joining conversation room: ${existingConversation._id}`);
-            socket.emit('join_conversation', existingConversation._id);
-          }
-        } catch (err) {
-          console.error('Error joining conversation room:', err);
-        }
-      }
       
       return response.data.data;
     } catch (error) {
@@ -112,54 +91,48 @@ export const useMessageStore = create((set, get) => ({
       }
       
       // Try using regular JSON instead of FormData if there are no attachments
-      let response;
-      
       if (!attachments || attachments.length === 0) {
         console.log('Sending message with JSON');
-        response = await axios.post(API_URL, {
+        const response = await axios.post(API_URL, {
           receiver_id: actualReceiverId,
           content: content
         });
-      } else {
-        // Use FormData only if there are attachments
-        console.log('Sending message with FormData');
-        const formData = new FormData();
-        formData.append('receiver_id', actualReceiverId);
-        formData.append('content', content);
         
-        // Add attachments
-        attachments.forEach(file => {
-          formData.append('attachments', file);
-        });
+        // Handle response...
+        const newMessage = response.data.data;
+        set(state => ({
+          messages: [newMessage, ...state.messages],
+          isLoading: false,
+          message: "Message sent successfully"
+        }));
         
-        response = await axios.post(API_URL, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+        return newMessage;
       }
       
-      // Handle response
+      // Use FormData only if there are attachments
+      console.log('Sending message with FormData');
+      const formData = new FormData();
+      formData.append('receiver_id', actualReceiverId);
+      formData.append('content', content);
+      
+      // Add attachments
+      attachments.forEach(file => {
+        formData.append('attachments', file);
+      });
+      
+      const response = await axios.post(API_URL, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Handle response...
       const newMessage = response.data.data;
       set(state => ({
         messages: [newMessage, ...state.messages],
         isLoading: false,
         message: "Message sent successfully"
       }));
-      
-      // Also try to emit via socket for real-time delivery
-      try {
-        const { socket } = await import('../context/SocketContext');
-        if (socket && socket.connected) {
-          socket.emit('send_message', {
-            receiver_id: actualReceiverId,
-            content,
-            conversation_id: newMessage.conversation_id
-          });
-        }
-      } catch (err) {
-        console.error('Error sending message via socket:', err);
-      }
       
       return newMessage;
     } catch (error) {
@@ -180,8 +153,6 @@ export const useMessageStore = create((set, get) => ({
   
   // Handle incoming message from socket
   addIncomingMessage: (message) => {
-    console.log('Adding incoming message to state:', message);
-    
     // Check if this message belongs to the current conversation
     const { currentConversation } = get();
     const currentReceiverId = currentConversation?.userId;
@@ -242,24 +213,6 @@ export const useMessageStore = create((set, get) => ({
     });
   },
   
-  // Update messages read status when received via socket
-  updateMessagesReadStatus: (conversationId, messageIds, readBy) => {
-    set(state => {
-      // Only update if we're viewing this conversation
-      if (state.currentConversation?.userId !== readBy) {
-        const updatedMessages = state.messages.map(message => {
-          if (messageIds.includes(message._id)) {
-            return { ...message, read: true };
-          }
-          return message;
-        });
-        
-        return { messages: updatedMessages };
-      }
-      return state;
-    });
-  },
-  
   // Mark messages as read locally
   markMessagesAsRead: (conversationId) => {
     set(state => {
@@ -292,21 +245,10 @@ export const useMessageStore = create((set, get) => ({
         messageIds
       });
       
-      // Also emit via socket for real-time updates
-      try {
-        const { socket } = await import('../context/SocketContext');
-        if (socket && socket.connected) {
-          socket.emit('mark_as_read', {
-            conversationId,
-            messageIds
-          });
-        }
-      } catch (err) {
-        console.error('Error marking messages as read via socket:', err);
-      }
-      
+      // State is already updated by markMessagesAsRead
     } catch (error) {
       console.error('Error marking messages as read on server:', error);
+      // Don't set error state to avoid UI disruption
     }
   },
   
@@ -329,7 +271,7 @@ export const useMessageStore = create((set, get) => ({
     });
   },
   
-  // Clear messages and errors
+  // Clear messages and errors (similar to apartmentStore)
   clearMessages: () => {
     set({ error: null, message: null });
   },

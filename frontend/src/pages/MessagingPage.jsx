@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom'; // Add this import
 import { useSocket } from '../context/SocketContext';
 import { useMessageStore } from '../store/messageStore';
 import { useAuthStore } from '../store/authStore';
@@ -9,46 +9,19 @@ import TenantSideNav from '../components/layout/TenantSideNav';
 import LandlordSideNav from '../components/layout/LandlordSideNav';
 
 const MessagingPage = () => {
-  const location = useLocation();
+  const location = useLocation(); // Add this
   const { socket, connected } = useSocket();
   const { user } = useAuthStore();
   const { 
     addIncomingMessage,
     setUserTyping,
-    clearUserTyping,
-    fetchConversations
+    clearUserTyping 
   } = useMessageStore();
   
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [showConversationList, setShowConversationList] = useState(true);
   
-  // Fetch conversations when component mounts
-  useEffect(() => {
-    fetchConversations();
-    // Set up periodic refresh to ensure we get latest messages
-    const refreshInterval = setInterval(() => {
-      fetchConversations();
-    }, 30000); // Refresh every 30 seconds as a backup
-    
-    return () => clearInterval(refreshInterval);
-  }, [fetchConversations]);
-  
-  // Join conversation room when selected conversation changes
-  useEffect(() => {
-    if (socket && connected && selectedConversation && selectedConversation._id) {
-      // Leave any previous rooms
-      if (socket.previousRoom) {
-        socket.emit('leave_conversation', socket.previousRoom);
-      }
-      
-      // Join the new room
-      console.log(`Joining conversation: ${selectedConversation._id}`);
-      socket.emit('join_conversation', selectedConversation._id);
-      socket.previousRoom = selectedConversation._id;
-    }
-  }, [socket, connected, selectedConversation]);
-  
-  // Handle direct messaging from URL params
+  // Add this to handle direct messaging from URL params
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const tenantId = queryParams.get('tenant');
@@ -68,14 +41,13 @@ const MessagingPage = () => {
           setSelectedConversation(existingConversation);
           setShowConversationList(false);
         } else {
-          // If no existing conversation, create a skeleton conversation
-          useMessageStore.getState().getOrCreateConversation(targetUserId)
-            .then(newConversation => {
-              if (newConversation) {
-                setSelectedConversation(newConversation);
-                setShowConversationList(false);
-              }
-            });
+          // If no existing conversation, we can handle this by creating a skeleton conversation
+          // object that will be populated once they send their first message
+          const targetUserType = tenantId ? 'tenant' : 'landlord';
+          console.log(`Starting new conversation with ${targetUserType} ID: ${targetUserId}`);
+          
+          // The actual conversation will be created when they send their first message
+          // For now just keep the conversations list open
         }
       });
     }
@@ -94,8 +66,6 @@ const MessagingPage = () => {
       socket.on('new_message_notification', (notification) => {
         console.log('New message notification:', notification);
         addIncomingMessage(notification.message);
-        // Refresh conversations to update unread counts
-        fetchConversations();
       });
       
       // Listen for typing indicators
@@ -107,26 +77,14 @@ const MessagingPage = () => {
         clearUserTyping();
       });
       
-      // Listen for message read status updates
-      socket.on('messages_read', ({ conversationId, messageIds, readBy }) => {
-        console.log('Messages marked as read:', messageIds);
-        useMessageStore.getState().updateMessagesReadStatus(conversationId, messageIds, readBy);
-      });
-      
       return () => {
         socket.off('receive_message');
         socket.off('new_message_notification');
         socket.off('user_typing');
         socket.off('user_stopped_typing');
-        socket.off('messages_read');
-        
-        // Leave any rooms when component unmounts
-        if (socket.previousRoom) {
-          socket.emit('leave_conversation', socket.previousRoom);
-        }
       };
     }
-  }, [socket, connected, addIncomingMessage, setUserTyping, clearUserTyping, fetchConversations]);
+  }, [socket, connected, addIncomingMessage, setUserTyping, clearUserTyping]);
   
   // Handle conversation selection
   const handleSelectConversation = (conversation) => {
