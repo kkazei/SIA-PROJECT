@@ -5,45 +5,6 @@ import { useMessageStore } from '../../store/messageStore';
 import { useAuthStore } from '../../store/authStore';
 import { useSocket } from '../../context/SocketContext';
 
-// Add this function at the top of your component
-const formatTimestamp = (timestamp) => {
-  if (!timestamp) return '';
-  
-  const messageDate = new Date(timestamp);
-  const now = new Date();
-  
-  // If invalid date, return empty string
-  if (isNaN(messageDate)) return '';
-  
-  // Same day - show time only
-  if (messageDate.toDateString() === now.toDateString()) {
-    return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  // Yesterday
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (messageDate.toDateString() === yesterday.toDateString()) {
-    return `Yesterday at ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  
-  // This week (within 7 days) - show day name and time
-  const sixDaysAgo = new Date(now);
-  sixDaysAgo.setDate(now.getDate() - 6);
-  if (messageDate >= sixDaysAgo) {
-    return messageDate.toLocaleDateString([], { weekday: 'short' }) + 
-           ' at ' + 
-           messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  // Older - show full date
-  return messageDate.toLocaleDateString([], { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-};
-
 const ConversationDetail = ({ conversation, onBackClick }) => {
   const {
     messages,
@@ -117,66 +78,6 @@ const ConversationDetail = ({ conversation, onBackClick }) => {
         currentConversation.currentPage + 1
       );
     }
-  };
-  
-  const renderMessages = () => {
-    if (!messages.length) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
-          <svg className="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-          <p className="text-center">No messages yet. Send a message to start the conversation.</p>
-        </div>
-      );
-    }
-  
-    return (
-      <div className="flex flex-col-reverse p-4 space-y-reverse space-y-3 overflow-y-auto">
-        {messages.map((message) => {
-          // Determine if the message is from the current user by comparing IDs
-          const isCurrentUser = message.sender_id?._id === user.id;
-          
-          return (
-            <div 
-              key={message._id} 
-              className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-            >
-              <div 
-                className={`max-w-[75%] rounded-lg p-3 ${
-                  isCurrentUser 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                <p className="break-words">{message.content}</p>
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {message.attachments.map((attachment, index) => (
-                      <a
-                        key={index}
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center text-sm underline"
-                      >
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                        {attachment.filename || 'Attachment'}
-                      </a>
-                    ))}
-                  </div>
-                )}
-                <div className="text-xs opacity-70 mt-1 text-right">
-                  {formatTimestamp(message.createdAt)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
   };
   
   if (!conversation) {
@@ -264,7 +165,21 @@ const ConversationDetail = ({ conversation, onBackClick }) => {
         )}
         
         {/* Messages */}
-        {renderMessages()}
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No messages yet. Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map(message => (
+              <MessageBubble
+                key={message._id}
+                message={message}
+                isOwnMessage={message.sender_id._id === user?.id}
+              />
+            ))
+          )}
+        </div>
         
         {/* Typing indicator */}
         {userTyping === conversation.otherUser?._id && (
