@@ -79,7 +79,19 @@ const applicationSchema = new mongoose.Schema({
   additionalDocuments: {
     type: [String],  // Array of file paths
     default: []
+  },
+
+  // Rating fields
+  rating: {
+    score: {
+      type: Number,
+      min: 1,
+      max: 5
+    },
+    comment: String,
+    createdAt: Date
   }
+  
 }, { timestamps: true });
 
 // Create compound index to prevent duplicate applications

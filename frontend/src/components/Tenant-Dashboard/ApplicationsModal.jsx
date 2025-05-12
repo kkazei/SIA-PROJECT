@@ -1,14 +1,19 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useApplicationStore } from "../../store/applicationStore";
+import RatingForm from "../RatingForm";
 
 const ApplicationsModal = ({ isOpen, closeModal }) => {
+  const [ratingApplication, setRatingApplication] = useState(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  
   const { 
     tenantApplications, 
     fetchTenantApplications, 
     loading, 
     error,
     getStatusColor,
-    formatDate
+    formatDate,
+    submitRating
   } = useApplicationStore();
 
   useEffect(() => {
@@ -34,6 +39,26 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
         return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>;
     }
   };
+  
+  const handleRateClick = (application) => {
+    setRatingApplication(application);
+  };
+  
+  const handleSubmitRating = async (score, comment) => {
+    if (!ratingApplication) return;
+    
+    setIsSubmittingRating(true);
+    try {
+      await submitRating(ratingApplication._id, score, comment);
+      // Refresh the applications to show updated rating
+      await fetchTenantApplications();
+      setRatingApplication(null);
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
@@ -44,6 +69,29 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
             ✖
           </button>
         </div>
+
+        {/* Rating form modal */}
+        {ratingApplication && (
+          <div className="px-6 py-4 border-b">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium">
+                Rate your stay at {ratingApplication.apartment_id.room}
+              </h4>
+              <button 
+                onClick={() => setRatingApplication(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✖
+              </button>
+            </div>
+            
+            <RatingForm 
+              onSubmit={handleSubmitRating}
+              disabled={isSubmittingRating}
+              initialRating={ratingApplication.rating}
+            />
+          </div>
+        )}
 
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
           {loading ? (
@@ -106,6 +154,48 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
                       <div className="mt-3">
                         <p className="text-sm font-medium text-gray-500">Landlord's Response</p>
                         <p className="text-gray-700">{app.processedReason}</p>
+                      </div>
+                    )}
+                    
+                    {/* Show rating section for ended applications */}
+                    {app.status === "ended" && (
+                      <div className="mt-4 pt-4 border-t">
+                        {app.rating ? (
+                          <div>
+                            <h5 className="font-medium text-gray-800 mb-2">Your Rating</h5>
+                            <div className="flex items-center mb-2">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <svg
+                                  key={star}
+                                  className={`w-5 h-5 ${
+                                    star <= app.rating.score ? "text-yellow-400" : "text-gray-300"
+                                  }`}
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="ml-2 text-gray-700">{app.rating.score}/5</span>
+                            </div>
+                            {app.rating.comment && (
+                              <p className="text-gray-600 italic">"{app.rating.comment}"</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <button
+                              onClick={() => handleRateClick(app)}
+                              className="bg-blue-600 text-white py-1.5 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Rate Your Experience
+                            </button>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Share your experience to help future tenants
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -431,3 +431,103 @@ export const getActiveTenantApplication = async (req, res) => {
     });
   }
 };
+
+// Submit rating for an ended tenancy
+export const submitRating = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { score, comment } = req.body;
+    const tenantId = req.user.id;
+    
+    // Validate tenant role
+    if (req.user.role !== 'tenant') {
+      return res.status(403).json({
+        success: false,
+        message: "Only tenants can submit ratings"
+      });
+    }
+    
+    // Validate score
+    if (!score || score < 1 || score > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating score must be between 1 and 5"
+      });
+    }
+    
+    // Find the application
+    const application = await Application.findById(applicationId);
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found"
+      });
+    }
+    
+    // Check if this tenant owns the application
+    if (application.tenant_id.toString() !== tenantId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only rate your own applications"
+      });
+    }
+    
+    // Check if application status is 'ended'
+    if (application.status !== 'ended') {
+      return res.status(400).json({
+        success: false,
+        message: "You can only rate apartments after your tenancy has ended"
+      });
+    }
+    
+    // Check if already rated
+    if (application.rating && application.rating.score) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already rated this apartment"
+      });
+    }
+    
+    // Add rating to application
+    application.rating = {
+      score,
+      comment: comment || "",
+      createdAt: new Date()
+    };
+    
+    await application.save();
+
+    // Update apartment average rating
+    const apartmentId = application.apartment_id;
+    const allRatings = await Application.find({
+      apartment_id: apartmentId,
+      'rating.score': { $exists: true }
+    });
+    
+    if (allRatings.length > 0) {
+      const totalScore = allRatings.reduce((sum, app) => sum + app.rating.score, 0);
+      const averageRating = totalScore / allRatings.length;
+      
+      await Apartment.findByIdAndUpdate(apartmentId, {
+        $set: {
+          'ratings.average': averageRating.toFixed(1),
+          'ratings.count': allRatings.length
+        }
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "Rating submitted successfully",
+      data: application
+    });
+    
+  } catch (error) {
+    console.error("Error submitting rating:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while submitting rating"
+    });
+  }
+};

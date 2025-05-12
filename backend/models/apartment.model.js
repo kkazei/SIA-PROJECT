@@ -65,6 +65,16 @@ const apartmentSchema = new mongoose.Schema({
         moveInDate: {
             type: Date
         }
+    },
+    ratings: {
+        average: {
+            type: Number,
+            default: 0
+        },
+        count: {
+            type: Number,
+            default: 0
+        }
     }
 }, { timestamps: true });
 
