@@ -183,6 +183,37 @@ export const useApplicationStore = create((set, get) => ({
     }
   },
   
+  // Submit rating for an application
+  submitRating: async (applicationId, score, comment) => {
+    set({ loading: true, error: null, message: null });
+    try {
+      const response = await axios.post(`${API_URL}/${applicationId}/rate`, {
+        score,
+        comment
+      });
+      
+      // Update the application in the tenantApplications list
+      const updatedApplications = get().tenantApplications.map(app => 
+        app._id === applicationId ? {...app, rating: response.data.data.rating} : app
+      );
+      
+      set({
+        tenantApplications: updatedApplications,
+        loading: false,
+        message: "Rating submitted successfully"
+      });
+      
+      return response.data.data;
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      set({
+        loading: false,
+        error: error.response?.data?.message || "Failed to submit rating"
+      });
+      throw error;
+    }
+  },
+  
   // Helper function to get application status color
   getStatusColor: (status) => {
     switch (status) {

@@ -7,7 +7,8 @@ import {
   getTenantApplications,
   processApplication,
   getApplicationById,
-  getActiveTenantApplication
+  getActiveTenantApplication,
+  submitRating // Add this import
 } from "../controllers/application.controller.js";
 
 const router = express.Router();
@@ -46,5 +47,8 @@ router.get("/tenant/:tenantId/active", verifyToken, getActiveTenantApplication);
 router.get("/landlord", authorize("landlord"), getLandlordApplications);
 router.patch("/:applicationId/process", authorize("landlord"), processApplication);
 router.get("/:applicationId", getApplicationById);
+
+// Fix this line - replace authMiddleware with authorize("tenant")
+router.post('/:applicationId/rate', authorize("tenant"), submitRating);
 
 export default router;
