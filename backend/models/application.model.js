@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+
 const applicationSchema = new mongoose.Schema({
   // The tenant who applied
   tenant_id: {
@@ -36,7 +37,7 @@ const applicationSchema = new mongoose.Schema({
   // Application status
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'ended'],
     default: 'pending'
   },
   

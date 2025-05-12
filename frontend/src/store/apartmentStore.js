@@ -296,7 +296,10 @@ export const useApartmentStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       // Make API call to backend to vacate the apartment
-      const response = await axios.post(`${API_URL}/vacate`, { apartmentId });
+      const response = await axios.post(`${API_URL}/vacate`, { 
+        apartmentId,
+        updateApplicationStatus: true
+      });
       
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to vacate apartment");
@@ -321,8 +324,6 @@ export const useApartmentStore = create((set, get) => ({
         message: "Apartment successfully vacated"
       });
       
-      console.log("Apartment vacated successfully:", response.data);
-      
       return true;
     } catch (error) {
       console.error("Error in vacateApartment:", error);
@@ -330,7 +331,7 @@ export const useApartmentStore = create((set, get) => ({
         isLoading: false,
         error: error.response?.data?.message || "Error vacating apartment"
       });
-      throw error;
+      throw error; // Make sure to throw the error to be caught by the component
     }
   },
   

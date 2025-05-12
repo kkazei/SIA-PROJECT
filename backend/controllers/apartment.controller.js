@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import nodeGeocoder from 'node-geocoder';
+import { Application } from "../models/application.model.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -485,71 +486,79 @@ export const assignTenant = async (req, res) => {
 // Vacate an apartment (remove tenant)
 export const vacateApartment = async (req, res) => {
   try {
-    const { apartmentId } = req.body;
+    const { apartmentId, updateApplicationStatus } = req.body;
     
-    // Log for debugging
-    console.log("Vacating apartment with ID:", apartmentId);
-    
-    // Validate apartment ID
-    if (!mongoose.Types.ObjectId.isValid(apartmentId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid apartment ID format"
-      });
-    }
-    
-    // Find the apartment
-    const apartment = await Apartment.findById(apartmentId);
+    // Find the apartment with tenant information
+    const apartment = await Apartment.findById(apartmentId).populate('tenant_id');
     
     if (!apartment) {
-      return res.status(404).json({
-        success: false,
-        message: "Apartment not found"
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Apartment not found' 
       });
     }
     
-    // Store tenant ID before removing
-    const tenantId = apartment.tenant_id;
-    
-    if (!tenantId) {
-      return res.status(400).json({
-        success: false,
-        message: "No tenant assigned to this apartment"
+    if (!apartment.tenant_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This apartment has no assigned tenant' 
       });
     }
     
-    // Update the apartment: remove tenant, update status
-    apartment.tenant_id = null;
+    // Store tenant ID before removing it from apartment
+    const tenantId = apartment.tenant_id._id;
+    
+    // Update the apartment status and remove tenant
     apartment.status = 'available';
-    apartment.moveInDate = null;
-    apartment.nextDueDate = null;
-    
+    apartment.tenant_id = null;
     await apartment.save();
-    console.log("Apartment updated:", apartment);
     
-    // Update User/Tenant document to remove apartment reference
-    const tenantUpdate = await User.findByIdAndUpdate(
-      tenantId,
-      { $unset: { apartment: "" } },
-      { new: true }
-    );
+    // Update tenant document to remove apartment reference
+    await User.findByIdAndUpdate(tenantId, { 
+      $unset: { apartment: "" } 
+    });
     
-    console.log("Tenant updated:", tenantUpdate);
+    // Update application status to "ended"
+    if (updateApplicationStatus) {
+      const endDate = new Date();
+      const formattedDate = endDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      const updatedApp = await Application.findOneAndUpdate(
+        { 
+          tenant_id: tenantId, 
+          apartment_id: apartmentId, 
+          status: 'approved' 
+        },
+        { 
+          status: 'ended',
+          processedDate: endDate,
+          processedReason: `Tenancy ended by landlord on ${formattedDate}`
+        },
+        { new: true }
+      );
+      
+      console.log("Updated application:", updatedApp);
+    }
     
-    res.status(200).json({
-      success: true,
-      message: "Apartment vacated successfully",
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Apartment vacated successfully',
       data: apartment
     });
+    
   } catch (error) {
-    console.error("Error vacating apartment:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while vacating apartment",
-      error: error.message
+    console.error('Error vacating apartment:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error vacating apartment', 
+      error: error.message 
     });
   }
-}
+};
 
 // Get available apartments for tenants
 export const getAvailableApartments = async (req, res) => {

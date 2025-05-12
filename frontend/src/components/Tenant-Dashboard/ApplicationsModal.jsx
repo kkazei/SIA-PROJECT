@@ -28,6 +28,8 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
         return <span className={`${baseClasses} bg-green-100 text-green-800`}>Approved</span>;
       case "rejected":
         return <span className={`${baseClasses} bg-red-100 text-red-800`}>Rejected</span>;
+      case "ended":
+        return <span className={`${baseClasses} bg-gray-100 text-gray-700`}>Ended</span>;
       default:
         return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>;
     }
@@ -85,7 +87,9 @@ const ApplicationsModal = ({ isOpen, closeModal }) => {
                       </div>
                       {app.processedDate && (
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Processed On</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            {app.status === "ended" ? "Tenancy Ended On" : "Processed On"}
+                          </p>
                           <p>{formatDate(app.processedDate)}</p>
                         </div>
                       )}
