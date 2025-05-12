@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { FaSpinner } from 'react-icons/fa';
+import { FaSpinner, FaFilePdf, FaFileImage, FaFileAlt, FaDownload, FaEye } from 'react-icons/fa';
 import Swal from "sweetalert2"; // Import SweetAlert2
 
 const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, processingStatus }) => {
   const [rejectionReason, setRejectionReason] = useState('');
+  const [viewingDocument, setViewingDocument] = useState(null);
+  
+  // Base URL for file access
+  const BASE_URL = import.meta.env.MODE === "development" 
+    ? "http://localhost:5000" 
+    : "";
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -12,6 +18,44 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
       month: 'long',
       day: 'numeric',
     });
+  };
+  
+  // Function to get appropriate icon based on file type
+  const getFileIcon = (filename) => {
+    if (!filename) return <FaFileAlt className="text-gray-500" />;
+    
+    const extension = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return <FaFileImage className="text-blue-500" />;
+    } else if (['pdf'].includes(extension)) {
+      return <FaFilePdf className="text-red-500" />;
+    } else {
+      return <FaFileAlt className="text-gray-500" />;
+    }
+  };
+  
+  // Function to view document
+  const viewDocument = (docPath) => {
+    if (!docPath) return;
+    
+    // If it's an image, show it in a modal
+    const url = `${BASE_URL}/${docPath}`;
+    setViewingDocument(url);
+    
+    // For different file types, you might want to use different viewers
+    const extension = docPath.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      Swal.fire({
+        title: 'Document Preview',
+        html: `<img src="${url}" alt="Document" class="max-w-full max-h-[70vh]">`,
+        width: '80%',
+        showCloseButton: true,
+        showConfirmButton: false,
+      });
+    } else {
+      // For other file types, open in new tab
+      window.open(url, '_blank');
+    }
   };
 
   const handleReject = async () => {
@@ -56,7 +100,7 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div
-        className="bg-white rounded-lg shadow-lg w-full max-w-3xl lg:max-w-2xl lg:h-auto lg:max-h-[80vh] overflow-auto lg:overflow-visible"
+        className="bg-white rounded-lg shadow-lg w-full max-w-3xl lg:max-w-2xl lg:h-auto lg:max-h-[80vh] overflow-auto"
         style={{ maxHeight: '90vh' }}
       >
         {/* Header */}
@@ -74,7 +118,7 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
             <h3 className="text-lg font-bold mb-4">Tenant Information</h3>
             <p><strong>Name:</strong> {application.tenant_id?.name || 'N/A'}</p>
             <p><strong>Email:</strong> {application.tenant_id?.email || 'N/A'}</p>
-            <p><strong>Phone:</strong> {application.tenant_id?.phone || 'N/A'}</p>
+            <p><strong>Phone:</strong> {application.phoneNumber || application.tenant_id?.phone || 'N/A'}</p>
           </div>
 
           {/* Apartment Information */}
@@ -89,8 +133,71 @@ const ApplicationDetailsModal = ({ isOpen, onClose, application, handleProcess, 
           <div className="lg:col-span-2">
             <h3 className="text-lg font-bold mb-4">Application Details</h3>
             <p><strong>Application Date:</strong> {formatDate(application.createdAt)}</p>
-            <p><strong>Requested Move-in Date:</strong> {formatDate(application.details?.moveInDate)}</p>
-            <p><strong>Additional Comments:</strong> {application.details?.additionalComments || 'None provided'}</p>
+            <p><strong>Requested Move-in Date:</strong> {formatDate(application.moveInDate)}</p>
+            <p><strong>Lease Duration:</strong> {application.duration || 'N/A'} months</p>
+            <p><strong>Additional Comments:</strong> {application.additionalComments || 'None provided'}</p>
+          </div>
+          
+          {/* Documents Section - New Addition */}
+          <div className="lg:col-span-2 mt-4">
+            <h3 className="text-lg font-bold mb-4">Submitted Documents</h3>
+            
+            {/* Valid ID */}
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2">Valid ID</h4>
+              {application.validId ? (
+                <div className="flex items-center p-3 border rounded bg-gray-50">
+                  <span className="mr-2">{getFileIcon(application.validId)}</span>
+                  <span className="flex-grow truncate">{application.validId.split('/').pop()}</span>
+                  <div className="flex space-x-2">
+                    <button 
+                      onClick={() => viewDocument(`uploads/${application.validId}`)} 
+                      className="text-blue-500 hover:text-blue-700"
+                      title="View document"
+                    >
+                      <FaEye />
+                    </button>
+                    <a 
+                      href={`${BASE_URL}/uploads/${application.validId}`} 
+                      download 
+                      className="text-green-500 hover:text-green-700"
+                      title="Download document"
+                    >
+                      <FaDownload />
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No valid ID file available</p>
+              )}
+            </div>
+            
+            {/* Additional Documents */}
+            <div>
+              <h4 className="font-semibold mb-2">Additional Documents</h4>
+              {application.additionalDocuments && application.additionalDocuments.length > 0 ? (
+                <div className="space-y-2">
+                  {application.additionalDocuments.map((doc, index) => (
+                    <div key={index} className="flex items-center p-3 border rounded bg-gray-50">
+                      <span className="mr-2">{getFileIcon(doc)}</span>
+                      <span className="flex-grow truncate">{doc.split('/').pop()}</span>
+                      <div className="flex space-x-2">
+                        <a 
+                          href={`${BASE_URL}/uploads/${doc}`} 
+                          download 
+                          className="text-green-500 hover:text-green-700"
+                          title="Download document"
+                        >
+                          <FaDownload />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No additional documents provided</p>
+              )}
+            </div>
           </div>
         </div>
 

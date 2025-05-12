@@ -2,12 +2,25 @@ import mongoose from "mongoose";
 import { Application } from "../models/application.model.js";
 import { Apartment } from "../models/apartment.model.js";
 import { User } from "../models/user.model.js";
+import fs from 'fs';
+import path from 'path';
 
+// Make sure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)){
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Submit a new application - Tenant
 export const submitApplication = async (req, res) => {
   try {
-    const { apartmentId, moveInDate, phoneNumber, additionalComments, duration } = req.body;
+    const { apartmentId, moveInDate, phoneNumber, additionalComments } = req.body;
+    
+    // Get the duration and explicitly convert it to a number
+    const duration = Number(req.body.duration);
+    
+    // Debug what's being received
+    console.log("Received duration:", req.body.duration, "Parsed as:", duration);
     
     // Get tenant ID from authenticated user
     const tenantId = req.user.id;
@@ -21,7 +34,7 @@ export const submitApplication = async (req, res) => {
     }
     
     // Validate duration
-    if (!duration || duration < 1) {
+    if (isNaN(duration) || duration < 1) {
       return res.status(400).json({
         success: false,
         message: "Duration must be at least 1 month"
@@ -62,6 +75,18 @@ export const submitApplication = async (req, res) => {
       });
     }
     
+    // Get file paths from uploaded files
+    const validIdPath = req.files?.validId ? req.files.validId[0].filename : null;
+    let additionalDocsArray = [];
+    
+    if (req.files?.additionalDocuments) {
+      additionalDocsArray = req.files.additionalDocuments.map(file => file.filename);
+    }
+    
+    // Debug file information
+    console.log("Valid ID file:", validIdPath);
+    console.log("Additional documents:", additionalDocsArray);
+    
     // Create new application with fields at root level
     const newApplication = new Application({
       tenant_id: tenantId,
@@ -72,7 +97,10 @@ export const submitApplication = async (req, res) => {
       additionalComments: additionalComments || "",
       duration: Number(duration),
       tenant: tenantId,
-      property: apartmentId
+      property: apartmentId,
+      // Save document paths to database
+      validId: validIdPath,
+      additionalDocuments: additionalDocsArray
     });
     
     await newApplication.save();
