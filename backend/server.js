@@ -21,13 +21,33 @@ import inquiryRoute from './routes/inquiry.route.js';
 import paymentRoutes from "./routes/payment.route.js";
 import leaseRoutes from './routes/lease.route.js';
 import adminRoutes from './routes/admin.route.js';
-
+import http from 'http';
+import { Server } from 'socket.io';
+import { socketAuthMiddleware } from './middleware/socketAuth.js';
+import fs from 'fs';
+import messageRoutes from './routes/message.routes.js';
+import messageHandler from './socketHandlers/messageHandler.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
+
+// Create HTTP server using the Express app
+const server = http.createServer(app);
+
+// Create Socket.IO server
+export const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Apply Socket.IO middleware
+io.use(socketAuthMiddleware);
 
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
 app.use(express.json()); // to parse json data: req.body
@@ -69,7 +89,6 @@ const setupUploadDirectories = () => {
 };
 
 // Ensure upload directories exist
-import fs from 'fs';
 setupUploadDirectories();
 
 // API routes
@@ -83,7 +102,6 @@ app.use("/api/tenants", tenantRoutes);
 app.use("/api/applications", applicationRoutes); 
 app.use('/api/admin', adminRoutes);
 
-
 // Add this before mounting the route
 console.log('Setting up inquiry routes...');
 app.use('/api/inquiries', inquiryRoute);
@@ -95,6 +113,9 @@ console.log('Payment routes initialized');
 
 // Use lease routes
 app.use('/api/leases', leaseRoutes);
+
+// Add this line to register message routes
+app.use('/api/messages', messageRoutes);
 
 // Static file serving
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -118,8 +139,24 @@ if (process.env.NODE_ENV === "production") {
     });
 }
 
+// Socket.IO connection handler
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.user.id}`);
+  
+  // Add user to a room with their ID for direct messaging
+  socket.join(socket.user.id);
+  
+  // Register message handlers
+  messageHandler(io, socket);
+  
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.user.id}`);
+  });
+});
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     connectDb();
     console.log(`Server is running at http://localhost:${PORT}`);
 });

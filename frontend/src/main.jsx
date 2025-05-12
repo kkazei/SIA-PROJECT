@@ -4,11 +4,14 @@ import './index.css'
 import 'leaflet/dist/leaflet.css' // Add this line to import Leaflet CSS
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
+import { SocketProvider } from './context/SocketContext' // Import the SocketProvider
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-    <App />
+      <SocketProvider> {/* Add the SocketProvider wrapper */}
+        <App />
+      </SocketProvider>
     </BrowserRouter>
   </StrictMode>,
 );

@@ -34,6 +34,9 @@ const LandlordLayout = lazy(() => import('./components/layout/LandlordLayout'));
 // Add import for BrowseApartmentsPage
 const BrowseApartmentsPage = lazy(() => import('./pages/BrowseApartmentsPage'));
 
+// Add import for MessagingPage
+const MessagingPage = lazy(() => import('./pages/MessagingPage'));
+
 // Keep the route protection components
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated, user } = useAuthStore();
@@ -315,6 +318,29 @@ function App() {
                             <TenantRoute>
                                 <BrowseApartmentsPage />
                             </TenantRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Messaging Routes - Available to both landlords and tenants */}
+                <Route
+                    path='/messages'
+                    element={
+                        <ProtectedRoute>
+                            <Suspense fallback={<LoadingSpinner />}>
+                                <MessagingPage />
+                            </Suspense>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/messages/:userId'
+                    element={
+                        <ProtectedRoute>
+                            <Suspense fallback={<LoadingSpinner />}>
+                                <MessagingPage />
+                            </Suspense>
                         </ProtectedRoute>
                     }
                 />

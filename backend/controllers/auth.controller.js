@@ -94,6 +94,7 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+// Update login function to include token in response
 export const login = async (req, res) => {
   const {email, password} = req.body;
   try {
@@ -106,10 +107,7 @@ export const login = async (req, res) => {
           return res.status(400).json({success:false, message: "Invalid credentials"});
       }
       
-      // Replace this line
-      // generateTokenAndSetCookie(res, user._id);
-      
-      // With direct JWT generation that includes role (matching your other functions)
+      // Generate JWT token
       const token = jwt.sign(
         { id: user._id, role: user.role },
         process.env.JWT_SECRET,
@@ -127,10 +125,18 @@ export const login = async (req, res) => {
       user.lastLogin = new Date();
       await user.save();
 
-      res.status(200).json({success:true, message: "Logged in successfully",
+      // Include token in the response JSON
+      res.status(200).json({
+          success: true, 
+          message: "Logged in successfully",
+          token: token, // Include token in response
           user: {
-              ...user._doc,
-              password: undefined,
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              isVerified: user.isVerified,
+              avatar: user.avatar
           }
       });
   } catch (error) {
@@ -199,7 +205,7 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-// In your auth.controller.js
+// Update checkAuth to include token in response
 export const checkAuth = async (req, res) => {
   try {
       // Get the token from cookies or Authorization header
@@ -219,9 +225,10 @@ export const checkAuth = async (req, res) => {
           return res.status(404).json({ success: false, message: 'User not found' });
       }
       
-      // Return user data
+      // Return user data with token
       return res.status(200).json({
           success: true,
+          token: token, // Include token in the response
           user: {
               id: user._id,
               name: user.name,

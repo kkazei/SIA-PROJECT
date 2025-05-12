@@ -8,7 +8,8 @@ import {
   FaSignOutAlt,
   FaClipboardList,
   FaHammer,
-  FaMailBulk
+  FaMailBulk,
+  FaComments // Add this import for the messaging icon
 } from 'react-icons/fa';
 
 const LandlordSideNav = ({ onToggle }) => {
@@ -104,6 +105,12 @@ const LandlordSideNav = ({ onToggle }) => {
       path: '/maintenance',
       name: 'Maintenance',
       icon: <FaHammer size={20} />
+    },
+    // Add the messaging link here
+    {
+      path: '/messages',
+      name: 'Messages',
+      icon: <FaComments size={20} />
     },
     {
       path: '/archive',
