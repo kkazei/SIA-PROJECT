@@ -3,8 +3,6 @@ import { lazy, Suspense, useEffect } from 'react'; // Add lazy and Suspense
 import LoadingSpinner from './components/ui/LoadingSpinner'
 import LandingPage from './pages/LandingPage' // Keep this eagerly loaded
 import { useAuthStore } from './store/authStore';
-import { SocketProvider } from './context/SocketContext';
-import MessagingPage from './pages/MessagingPage';
 
 // Lazy load authentication pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -178,218 +176,192 @@ function App() {
     console.log("Auth state:", { isAuthenticated, userExists: !!user, role: user?.role });
 
     return (
-        <SocketProvider>
-            {/* Wrap routes in Suspense to handle lazy loading */}
-            <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                    {/* Landing page - eagerly loaded */}
-                    <Route path='/' element={<LandingPage />} />
-                    
-                    {/* Dashboard for authenticated users */}
-                    <Route
-                        path='/dashboard'
-                        element={
-                            <ProtectedRoute>
-                                <DashboardRouter />
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    {/* Admin Routes */}
-                    <Route
-                        path='/admin/dashboard'
-                        element={
-                            <ProtectedRoute>
-                                <AdminRoute>
-                                    <AdminDashboard />
-                                </AdminRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    {/* Landlord Routes */}
-                    <Route
-                        path='/landlord/dashboard'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <DashboardPage />
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    {/* The rest of your routes remain the same but will now be lazy-loaded */}
-                    <Route
-                        path='/landlord/tenants'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <TenantPage />
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route
-                        path='/landlord/announcements'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <Suspense fallback={<LoadingSpinner />}>
-                                        <LandlordLayout>
-                                            <Announcement />
-                                        </LandlordLayout>
-                                    </Suspense>
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route
-                        path='/maintenance'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <Suspense fallback={<LoadingSpinner />}>
-                                        <LandlordLayout>
-                                            <MaintenancePage />
-                                        </LandlordLayout>
-                                    </Suspense>
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route
-                        path='/archive'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <Suspense fallback={<LoadingSpinner />}>
-                                        <LandlordLayout>
-                                            <ArchivePage />
-                                        </LandlordLayout>
-                                    </Suspense>
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route
-                        path='/landlord/applications'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <LandlordApplications />
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route
-                        path='/landlord/inquiries'
-                        element={
-                            <ProtectedRoute>
-                                <LandlordRoute>
-                                    <InquiryPage />
-                                </LandlordRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    {/* Tenant Routes */}
-                    <Route
-                        path='/tenant/dashboard'
-                        element={
-                            <ProtectedRoute>
-                                <TenantRoute>
-                                    <TenantDashboard />
-                                </TenantRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    {/* Add BrowseApartmentsPage route */}
-                    <Route
-                        path='/tenant/browse-apartments'
-                        element={
-                            <ProtectedRoute>
-                                <TenantRoute>
-                                    <BrowseApartmentsPage />
-                                </TenantRoute>
-                            </ProtectedRoute>
-                        }
-                    />
-                    
-                    <Route path="/tenant">
-                        <Route
-                            path="messages"
-                            element={
-                                <ProtectedRoute allowedRoles={['tenant']}>
-                                    <MessagingPage />
-                                </ProtectedRoute>
-                            }
-                        />
-                        {/* ...other tenant routes */}
-                    </Route>
-                    
-                    <Route path="/landlord">
-                        <Route
-                            path="messages"
-                            element={
-                                <ProtectedRoute allowedRoles={['landlord']}>
-                                    <MessagingPage />
-                                </ProtectedRoute>
-                            }
-                        />
-                        {/* ...other landlord routes */}
-                    </Route>
-                  
-                    {/* Auth Routes */}
-                    <Route
-                        path='/signup'
-                        element={
-                            <RedirectAuthenticatedUser>
-                                <SignUpPage />
-                            </RedirectAuthenticatedUser>
-                        }
-                    />
-                    <Route
-                        path='/login'
-                        element={
-                            <RedirectAuthenticatedUser>
-                                <LoginPage />
-                            </RedirectAuthenticatedUser>
-                        }
-                    />
-                    <Route path='/verify-email' element={<EmailVerificationPage />} />
-                    <Route
-                        path='/forgot-password'
-                        element={
-                            <RedirectAuthenticatedUser>
-                                <ForgotPasswordPage />
-                            </RedirectAuthenticatedUser>
-                        }
-                    />
-                    <Route
-                        path='/reset-password/:token'
-                        element={
-                            <RedirectAuthenticatedUser>
-                                <ResetPasswordPage />
-                            </RedirectAuthenticatedUser>
-                        }
-                    />
-                    
-                    {/* OAuth routes */}
-                    <Route path="/oauth-success" element={<OAuthSuccess />} />
-                    <Route path="/role-selection" element={<RoleSelection />} />
-                    
-                    {/* catch all routes */}
-                    <Route path='*' element={<Navigate to='/' replace />} />
-                </Routes>
-            </Suspense>
-        </SocketProvider>
+        // Wrap routes in Suspense to handle lazy loading
+        <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+                {/* Landing page - eagerly loaded */}
+                <Route path='/' element={<LandingPage />} />
+                
+                {/* Dashboard for authenticated users */}
+                <Route
+                    path='/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <DashboardRouter />
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Admin Routes */}
+                <Route
+                    path='/admin/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <AdminRoute>
+                                <AdminDashboard />
+                            </AdminRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Landlord Routes */}
+                <Route
+                    path='/landlord/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <DashboardPage />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* The rest of your routes remain the same but will now be lazy-loaded */}
+                <Route
+                    path='/landlord/tenants'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <TenantPage />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/landlord/announcements'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <Announcement />
+                                    </LandlordLayout>
+                                </Suspense>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/maintenance'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <MaintenancePage />
+                                    </LandlordLayout>
+                                </Suspense>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/archive'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <Suspense fallback={<LoadingSpinner />}>
+                                    <LandlordLayout>
+                                        <ArchivePage />
+                                    </LandlordLayout>
+                                </Suspense>
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/landlord/applications'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <LandlordApplications />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path='/landlord/inquiries'
+                    element={
+                        <ProtectedRoute>
+                            <LandlordRoute>
+                                <InquiryPage />
+                            </LandlordRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Tenant Routes */}
+                <Route
+                    path='/tenant/dashboard'
+                    element={
+                        <ProtectedRoute>
+                            <TenantRoute>
+                                <TenantDashboard />
+                            </TenantRoute>
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Add BrowseApartmentsPage route */}
+                <Route
+                    path='/tenant/browse-apartments'
+                    element={
+                        <ProtectedRoute>
+                            <TenantRoute>
+                                <BrowseApartmentsPage />
+                            </TenantRoute>
+                        </ProtectedRoute>
+                    }
+                />
+              
+                {/* Auth Routes */}
+                <Route
+                    path='/signup'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <SignUpPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                <Route
+                    path='/login'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <LoginPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                <Route path='/verify-email' element={<EmailVerificationPage />} />
+                <Route
+                    path='/forgot-password'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <ForgotPasswordPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                <Route
+                    path='/reset-password/:token'
+                    element={
+                        <RedirectAuthenticatedUser>
+                            <ResetPasswordPage />
+                        </RedirectAuthenticatedUser>
+                    }
+                />
+                
+                {/* OAuth routes */}
+                <Route path="/oauth-success" element={<OAuthSuccess />} />
+                <Route path="/role-selection" element={<RoleSelection />} />
+                
+                {/* catch all routes */}
+                <Route path='*' element={<Navigate to='/' replace />} />
+            </Routes>
+        </Suspense>
     );
 }
 

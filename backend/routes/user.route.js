@@ -4,8 +4,7 @@ import {
   getUnassignedTenants,
   getTenantById,
   searchTenants,
-  getFilteredTenants,
-  getUserById
+  getFilteredTenants
 } from "../controllers/user.controller.js";
 import { verifyToken, authorize } from "../middleware/auth.middleware.js";
 
@@ -21,7 +20,5 @@ router.get("/tenants/unassigned", verifyToken, getUnassignedTenants);
 router.get("/tenants/search", verifyToken, searchTenants);
 router.get("/tenants/filter", verifyToken, getFilteredTenants);
 router.get("/tenants/:id", verifyToken, getTenantById);
-router.get('/:id', verifyToken, getUserById);
-
 
 export default router;

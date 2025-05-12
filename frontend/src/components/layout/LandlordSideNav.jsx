@@ -8,8 +8,7 @@ import {
   FaSignOutAlt,
   FaClipboardList,
   FaHammer,
-  FaMailBulk,
-  FaEnvelope  // Add FaEnvelope icon
+  FaMailBulk
 } from 'react-icons/fa';
 
 const LandlordSideNav = ({ onToggle }) => {
@@ -95,11 +94,6 @@ const LandlordSideNav = ({ onToggle }) => {
       path: '/landlord/applications',
       name: 'Applications',
       icon: <FaClipboardList size={20} />
-    },
-    {
-      path: '/landlord/messages',  // Add messages path
-      name: 'Messages',
-      icon: <FaEnvelope size={20} />
     },
     {
       path: '/landlord/announcements',
