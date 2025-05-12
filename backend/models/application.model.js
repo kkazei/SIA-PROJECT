@@ -41,18 +41,18 @@ const applicationSchema = new mongoose.Schema({
   },
   
   // Application details
-    moveInDate: {
-      type: Date,
-      required: true
-    },
-    phoneNumber: {
-      type: String,
-      required: true
-    },
-    additionalComments: {
-      type: String,
-      default: ""
-    },
+  moveInDate: {
+    type: Date,
+    required: true
+  },
+  phoneNumber: {
+    type: String,
+    required: true
+  },
+  additionalComments: {
+    type: String,
+    default: ""
+  },
 
   duration: {
     type: Number,
@@ -68,6 +68,16 @@ const applicationSchema = new mongoose.Schema({
   // Reason for approval/rejection (optional)
   processedReason: {
     type: String
+  },
+  
+  // Document fields - add these
+  validId: {
+    type: String,  // Store the file path
+  },
+  
+  additionalDocuments: {
+    type: [String],  // Array of file paths
+    default: []
   }
 }, { timestamps: true });
 

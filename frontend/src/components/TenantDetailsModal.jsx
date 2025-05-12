@@ -113,9 +113,11 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
           text: "The payment has been approved successfully."
         });
         
-        // Get the getAllPayments function from the store and call it
-        // This will update the dashboard income data
-        usePaymentStore.getState().getAllPayments();
+        // Refresh this tenant's payment data instead of calling getAllPayments
+        if (tenant?._id) {
+          const updatedPayments = await getTenantPayments(tenant._id);
+          setPaymentHistory(updatedPayments || []);
+        }
       }
     } catch (err) {
       console.error("Error approving payment:", err);

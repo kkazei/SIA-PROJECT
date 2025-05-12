@@ -24,12 +24,40 @@ export const useApplicationStore = create((set, get) => ({
   submitApplication: async (applicationData) => {
     set({ loading: true, error: null, message: null });
     try {
-      // Ensure duration is a number
-      if (applicationData.duration) {
-        applicationData.duration = Number(applicationData.duration);
+      // For FormData, make sure to NOT set Content-Type manually
+      // Let axios set the boundary parameter automatically
+      const config = {
+        headers: {
+          // Remove the Content-Type setting as axios will handle it
+          // 'Content-Type': 'multipart/form-data'
+        }
+      };
+      
+      // Log attempt to submit
+      console.log("Submitting application to:", `${API_URL}/submit`);
+      
+      // More detailed debugging of form data
+      console.log("Form data contents:");
+      for (let [key, value] of applicationData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${value.type}, ${value.size} bytes)`);
+        } else {
+          console.log(`${key}: ${value}`);
+        }
       }
       
-      const response = await axios.post(`${API_URL}/submit`, applicationData);
+      // Make a special check for the duration field
+      console.log("Duration value:", applicationData.get('duration'));
+      
+      // Make sure duration is a valid number string
+      const durationValue = applicationData.get('duration');
+      if (!durationValue || isNaN(Number(durationValue)) || Number(durationValue) < 1) {
+        // Force update the duration if it seems invalid
+        applicationData.set('duration', '1');
+        console.log("Duration corrected to:", applicationData.get('duration'));
+      }
+      
+      const response = await axios.post(`${API_URL}/submit`, applicationData, config);
       
       // Add the new application to the tenant applications list
       const updatedApplications = [response.data.data, ...get().tenantApplications];
@@ -43,6 +71,13 @@ export const useApplicationStore = create((set, get) => ({
       return response.data.data;
     } catch (error) {
       console.error("Error submitting application:", error);
+      // Log more details about the error
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      }
+      
       set({
         loading: false,
         error: error.response?.data?.message || "Failed to submit application"
