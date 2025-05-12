@@ -82,15 +82,25 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.user?.id} joined conversation ${conversationId}`);
   });
   
-  // Handle send message
+  // Handle leave conversation
+  socket.on('leave_conversation', (conversationId) => {
+    socket.leave(conversationId);
+    console.log(`User ${socket.user?.id} left conversation ${conversationId}`);
+  });
+
+  // Improve the send_message handler
   socket.on('send_message', async (messageData) => {
     try {
+      console.log('Socket message received:', messageData);
+      
       // Import message controller to save the message
       const { saveMessage } = await import('./controllers/message.controller.js');
       const savedMessage = await saveMessage({
         ...messageData,
         sender_id: socket.user.id
       });
+      
+      console.log('Message saved, emitting to room:', messageData.conversation_id);
       
       // Emit to conversation room
       io.to(messageData.conversation_id).emit('receive_message', savedMessage);
@@ -100,6 +110,7 @@ io.on('connection', (socket) => {
       const receiverSocketId = activeUsers.get(receiverId);
       
       if (receiverSocketId) {
+        console.log(`Emitting notification to receiver ${receiverId}`);
         io.to(receiverSocketId).emit('new_message_notification', {
           message: savedMessage,
           from: socket.user
