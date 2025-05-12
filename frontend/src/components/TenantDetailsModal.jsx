@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // Add this import
 import { usePaymentStore } from "../store/paymentStore";
 import { useTenantStore } from "../store/tenantStore";
 import { useLeaseStore } from "../store/leaseStore";
-import { useApartmentStore } from "../store/apartmentStore"; // Import apartment store
-import Swal from "sweetalert2"; // Import SweetAlert for confirmation
+import { useApartmentStore } from "../store/apartmentStore";
+import { useAuthStore } from "../store/authStore"; // Add this import
+import Swal from "sweetalert2";
 
 // Import the image path processor from one of the stores
 import { processImagePath } from "../store/paymentStore";
 
 const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
+  // Add navigate hook
+  const navigate = useNavigate();
+  const { user } = useAuthStore(); // Get current user
+  
   const [loading, setLoading] = useState(false);
   const [detailedTenant, setDetailedTenant] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -314,6 +320,28 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
     }
   };
 
+  // Add this function to handle messaging
+  const handleMessageTenant = () => {
+    if (!tenant || !tenant._id) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Cannot message this tenant. Tenant information is incomplete."
+      });
+      return;
+    }
+    
+    // Close the modal
+    onClose();
+    
+    // Navigate to the messaging page
+    const path = user?.role === 'landlord' 
+      ? `/landlord/messages?tenant=${tenant._id}`
+      : `/tenant/messages?landlord=${tenant._id}`;
+      
+    navigate(path);
+  };
+
   if (!isOpen || !tenant) return null;
 
   // Use either the fetched detailed tenant or the initial tenant object
@@ -400,10 +428,6 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
                           src={displayTenant.avatar}
                           alt={displayTenant.name || "Tenant"}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/image/avatar-placeholder.png";
-                          }}
                         />
                       ) : (
                         <span>{displayTenant.name?.charAt(0).toUpperCase() || "T"}</span>
@@ -653,7 +677,23 @@ const TenantDetailsModal = ({ isOpen, onClose, tenant, onTenancyEnded }) => {
 
                 {/* Action Buttons */}
                 <div className="mt-6 pt-4 border-t flex justify-end space-x-4">
-                  <button className="px-4 py-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium">
+                  <button 
+                    onClick={handleMessageTenant}
+                    className="px-4 py-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium flex items-center"
+                  >
+                    <svg 
+                      className="w-4 h-4 mr-1" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth="2" 
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" 
+                      />
+                    </svg>
                     Message
                   </button>
                   
