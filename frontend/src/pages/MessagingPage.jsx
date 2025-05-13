@@ -82,6 +82,38 @@ const MessagingPage = () => {
     }
   }, [messages]);
   
+  // Mark messages as read when conversation is selected or new messages arrive
+  useEffect(() => {
+    if (activeConversation && messages.length > 0 && socketContext?.markMessagesAsRead) {
+      // Find only unread messages from the other user
+      const hasUnreadMessages = messages.some(
+        msg => msg.sender_id._id === activeConversation && !msg.isRead
+      );
+      
+      // Only mark messages as read if there are unread messages
+      if (hasUnreadMessages) {
+        console.log("Marking messages as read for:", activeConversation);
+        socketContext.markMessagesAsRead(activeConversation);
+      }
+    }
+  }, [activeConversation]); // Only trigger when conversation changes
+  
+  // Add this effect to mark messages as read when loading a conversation
+  useEffect(() => {
+    if (activeConversation && messages.length > 0 && socketContext?.socket) {
+      // Check if there are any unread messages from the other user
+      const unreadMessages = messages.filter(
+        msg => msg.sender_id._id === activeConversation && !msg.isRead
+      );
+      
+      // If there are unread messages, mark them as read
+      if (unreadMessages.length > 0) {
+        console.log(`Marking ${unreadMessages.length} unread messages as read`);
+        socketContext.markMessagesAsRead(activeConversation);
+      }
+    }
+  }, [activeConversation, messages]);
+  
   // Handle conversation selection
   const handleSelectConversation = async (userId) => {
     try {

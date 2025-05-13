@@ -51,28 +51,27 @@ const ConversationDetail = ({
   
   // Handle message input change - update to use props
   const handleInputChange = (e) => {
-    // Use setMessageInput from props
+    // Update the input value
     setMessageInput(e.target.value);
     
-    // Handle typing indicator - with safe access
-    if (!isTyping && e.target.value && selectedUser && 
-        selectedUser._id && sendTypingIndicator) {
+    // Send typing indicator if not already typing and there's actual text
+    if (!isTyping && e.target.value.trim() && selectedUser?._id) {
       setIsTyping(true);
       sendTypingIndicator(true, selectedUser._id);
     }
     
-    // Clear previous timer
+    // Reset the timeout on every keystroke - this is key for continuous typing
     if (typingTimerRef.current) {
       clearTimeout(typingTimerRef.current);
     }
     
-    // Set a new timer
+    // Set a longer timeout (5 seconds instead of 2)
     typingTimerRef.current = setTimeout(() => {
-      setIsTyping(false);
-      if (selectedUser && selectedUser._id && sendTypingIndicator) {
+      if (selectedUser?._id) {
+        setIsTyping(false);
         sendTypingIndicator(false, selectedUser._id);
       }
-    }, 2000);
+    }, 5000); // Increase from 2000ms to 5000ms
   };
   
   // Clean up typing indicator on unmount
@@ -130,9 +129,24 @@ const ConversationDetail = ({
               >
                 <div className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500 text-white' : 'bg-white'} rounded-lg p-3 shadow`}>
                   <p>{message.content}</p>
-                  <p className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} text-right`}>
+                  <p className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} text-right flex items-center justify-end`}>
                     {formatMessageTime(message.createdAt)}
-                    {message._id.startsWith('temp-') && <span className="ml-2 opacity-70">✓</span>}
+                    
+                    {isOwnMessage && (
+                      <span className="ml-2 inline-flex items-center">
+                        {message._id.startsWith('temp-') ? (
+                          <span title="Sending..." className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">sending...</span>
+                        ) : message.isRead ? (
+                          <span title="Read" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">
+                            Read {formatMessageTime(message.readAt)}
+                          </span>
+                        ) : message.isDelivered ? (
+                          <span title="Delivered" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">Delivered</span>
+                        ) : (
+                          <span title="Sent" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">Sent</span>
+                        )}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

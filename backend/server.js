@@ -29,6 +29,7 @@ import messageRoutes from './routes/message.routes.js';
 import messageHandler from './socketHandlers/messageHandler.js';
 import { checkRentPaymentsDue } from './schedulers/rentReminders.js';
 import cron from 'node-cron';
+import { verifyToken, authorize } from './middleware/auth.middleware.js';
 
 dotenv.config();
 

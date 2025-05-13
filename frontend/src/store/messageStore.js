@@ -301,6 +301,34 @@ export const useMessageStore = create((set, get) => ({
       set({ messages: updatedMessages });
     });
     
+    // Replace your existing messages_read socket handler with this improved version:
+
+    socket.on('messages_read', ({ reader_id, timestamp }) => {
+      console.log(`Message store: Messages read by ${reader_id} at ${timestamp}`);
+      
+      // This updates the UI for the sender when their messages are read by someone else
+      set(state => {
+        // Get current user ID
+        const userId = state.user?.id;
+        if (!userId) return state;
+        
+        let updated = false;
+        
+        // Filter to messages sent BY current user TO the reader who just sent the receipt
+        const updatedMessages = state.messages.map(msg => {
+          if (msg.sender_id._id === userId && msg.receiver_id._id === reader_id && !msg.isRead) {
+            updated = true;
+            console.log(`Marking message ${msg._id} as read`);
+            return { ...msg, isRead: true, readAt: timestamp };
+          }
+          return msg;
+        });
+        
+        // Only update state if we actually changed something
+        return updated ? { messages: updatedMessages } : state;
+      });
+    });
+    
     // Other existing socket listeners...
   },
   
@@ -331,5 +359,45 @@ export const useMessageStore = create((set, get) => ({
       
       return { messages: updatedMessages };
     });
+  },
+
+  // Add these to your store state
+  markMessagesAsRead: (senderId) => {
+    console.log("Store: Marking messages as read from:", senderId);
+    set(state => {
+      // Log some debugging info
+      const messagesFromSender = state.messages.filter(m => 
+        m.sender_id._id === senderId && !m.isRead
+      );
+      console.log(`Found ${messagesFromSender.length} unread messages to mark as read`);
+      
+      const updatedMessages = state.messages.map(msg => {
+        if (msg.sender_id._id === senderId && !msg.isRead) {
+          console.log("Marking message read:", msg._id, msg.content);
+          return { 
+            ...msg, 
+            isRead: true, 
+            readAt: new Date().toISOString() 
+          };
+        }
+        return msg;
+      });
+      
+      return { messages: updatedMessages };
+    });
+  },
+
+  markMessageAsDelivered: (messageId) => {
+    set(state => ({
+      messages: state.messages.map(msg => 
+        msg._id === messageId ? { ...msg, isDelivered: true } : msg
+      )
+    }));
   }
 }));
+
+// Add this after your store definition (after line 354)
+window.messageStore = {
+  markMessagesAsRead: (senderId) => useMessageStore.getState().markMessagesAsRead(senderId),
+  markMessageAsDelivered: (messageId) => useMessageStore.getState().markMessageAsDelivered(messageId)
+};

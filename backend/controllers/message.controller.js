@@ -60,7 +60,8 @@ export const saveMessage = async (messageData) => {
       conversation_id,
       content,
       attachments,
-      read: false
+      isRead: false,  // Changed from 'read: false'
+      isDelivered: false
     });
     
     // Save the message
@@ -304,9 +305,12 @@ export const getConversation = async (req, res) => {
       { 
         conversation_id,
         receiver_id: currentUserId,
-        read: false
+        isRead: false  // Changed from 'read: false'
       },
-      { read: true }
+      { 
+        isRead: true,  // Changed from 'read: true'
+        readAt: new Date() // Add timestamp
+      }
     );
     
     res.status(200).json({

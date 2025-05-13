@@ -1,4 +1,5 @@
 import { saveMessage } from '../controllers/message.controller.js';
+import { Message } from '../models/message.model.js'; // Add this import
 
 const messageHandler = (io, socket) => {
   // Handle sending messages
@@ -81,6 +82,89 @@ const messageHandler = (io, socket) => {
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
+  });
+
+  // Add this near the top to track recent updates
+  const recentReadUpdates = new Map();
+
+  // Modify your mark_messages_read handler to add debouncing
+  socket.on('mark_messages_read', async ({ sender_id }) => {
+    try {
+      // Create a key for this specific update
+      const updateKey = `${socket.user.id}-${sender_id}`;
+      const now = Date.now();
+      
+      // Check if we've processed a similar update recently (within 3 seconds)
+      if (recentReadUpdates.has(updateKey) && 
+          now - recentReadUpdates.get(updateKey) < 3000) {
+        return; // Skip this update, too soon after previous one
+      }
+      
+      // Record this update time
+      recentReadUpdates.set(updateKey, now);
+      
+      // Clean up old entries every minute
+      if (now % 60000 < 1000) {
+        for (const [key, timestamp] of recentReadUpdates.entries()) {
+          if (now - timestamp > 60000) recentReadUpdates.delete(key);
+        }
+      }
+      
+      console.log(`User ${socket.user.id} marking messages from ${sender_id} as read`);
+      
+      // Update read status in database
+      const result = await Message.updateMany(
+        { 
+          sender_id: sender_id,
+          receiver_id: socket.user.id,
+          isRead: false 
+        },
+        { 
+          $set: {
+            isRead: true, 
+            readAt: new Date()
+          }
+        }
+      );
+      
+      console.log(`Updated ${result.modifiedCount} messages to read status`);
+      
+      // Find all updated messages to get their IDs
+      const updatedMessages = await Message.find({
+        sender_id: sender_id,
+        receiver_id: socket.user.id,
+        isRead: true
+      }).select('_id');
+      
+      const messageIds = updatedMessages.map(msg => msg._id);
+      
+      // Notify sender their messages were read with message IDs
+      if (messageIds.length > 0) {
+        io.to(sender_id).emit('messages_read', {
+          reader_id: socket.user.id,
+          timestamp: new Date().toISOString(),
+          message_ids: messageIds // Send the IDs of messages that were marked as read
+        });
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  });
+
+  // Handle message delivery receipt
+  socket.on('message_delivered', ({ message_id }) => {
+    // Find message sender and emit delivery confirmation
+    Message.findById(message_id)
+      .then(message => {
+        if (message && message.sender_id) {
+          io.to(message.sender_id.toString()).emit('delivery_confirmation', {
+            message_id,
+            delivered_to: socket.user.id,
+            timestamp: new Date()
+          });
+        }
+      })
+      .catch(err => console.error('Error processing delivery receipt:', err));
   });
 };
 
