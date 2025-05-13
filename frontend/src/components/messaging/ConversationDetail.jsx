@@ -1,87 +1,158 @@
 import { useState, useEffect, useRef } from 'react';
-import { format } from 'date-fns';
-import { FiSend, FiPaperclip } from 'react-icons/fi';
+import { format, isToday, isYesterday } from 'date-fns';
+import { FiSend, FiPaperclip, FiImage, FiSmile } from 'react-icons/fi';
+import { FaUser, FaCheckDouble, FaCheck } from 'react-icons/fa';
 import { useMessageStore } from '../../store/messageStore';
 import { useSocket } from '../../context/SocketContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Update props to match what MessagingPage is sending
 const ConversationDetail = ({ 
   messages, 
   user, 
   selectedUser, 
-  messageInput,  // Accept messageInput from props
-  setMessageInput, // Accept setMessageInput from props
-  handleSendMessage, // Accept handleSendMessage from props
+  messageInput, 
+  setMessageInput, 
+  handleSendMessage, 
   messagesEndRef 
 }) => {
   const [isTyping, setIsTyping] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
   const textareaRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const [groupedMessages, setGroupedMessages] = useState([]);
   
-  // We don't need these anymore since we're getting them as props
-  // const { sendMessage, sendMessageSocket } = useMessageStore();
+  useEffect(() => {
+    setAvatarLoaded(false);
+  }, [selectedUser?.avatar]);
   
-  // Safely destructure socket context with fallbacks
   const socketContext = useSocket();
   const socket = socketContext?.socket;
   const connected = socketContext?.connected || false;
   const sendTypingIndicator = socketContext?.sendTypingIndicator || (() => {});
   const typingUsers = socketContext?.typingUsers || {};
   
-  // Check if the other user is typing - with safe access
   const otherUserTyping = selectedUser && typingUsers && 
     selectedUser._id && typingUsers[selectedUser._id];
   
-  // Handle textarea auto-resize
+  // Group messages by date for displaying date separators
+  useEffect(() => {
+    if (!messages?.length) {
+      setGroupedMessages([]);
+      return;
+    }
+    
+    try {
+      // Create groups of messages with date separators
+      const groups = [];
+      let currentDate = null;
+      let currentGroup = [];
+      
+      messages.forEach(message => {
+        const messageDate = new Date(message.createdAt);
+        const messageDateStr = messageDate.toDateString();
+        
+        if (messageDateStr !== currentDate) {
+          // Start a new group when date changes
+          if (currentGroup.length > 0) {
+            groups.push({
+              type: 'messages',
+              date: currentDate,
+              messages: currentGroup
+            });
+          }
+          
+          // Add a date separator
+          groups.push({
+            type: 'dateSeparator',
+            date: messageDateStr
+          });
+          
+          currentDate = messageDateStr;
+          currentGroup = [message];
+        } else {
+          currentGroup.push(message);
+        }
+      });
+      
+      // Add the last group
+      if (currentGroup.length > 0) {
+        groups.push({
+          type: 'messages',
+          date: currentDate,
+          messages: currentGroup
+        });
+      }
+      
+      setGroupedMessages(groups);
+    } catch (err) {
+      console.error('Error grouping messages:', err);
+      // Fallback to ungrouped messages
+      setGroupedMessages([{
+        type: 'messages',
+        date: null,
+        messages: messages
+      }]);
+    }
+  }, [messages]);
+  
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
-  }, [messageInput]); // Use messageInput from props
+  }, [messageInput]);
   
-  // Format message timestamp
   const formatMessageTime = (timestamp) => {
     try {
       return format(new Date(timestamp), 'h:mm a');
     } catch (error) {
-      return ''; // Return empty string if date is invalid
+      return '';
     }
   };
   
-  // Handle message input change - update to use props
+  const formatDateSeparator = (dateStr) => {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      
+      if (isToday(date)) {
+        return 'Today';
+      } else if (isYesterday(date)) {
+        return 'Yesterday';
+      } else {
+        return format(date, 'MMMM d, yyyy');
+      }
+    } catch (error) {
+      return dateStr;
+    }
+  };
+  
   const handleInputChange = (e) => {
-    // Update the input value
     setMessageInput(e.target.value);
     
-    // Send typing indicator if not already typing and there's actual text
     if (!isTyping && e.target.value.trim() && selectedUser?._id) {
       setIsTyping(true);
       sendTypingIndicator(true, selectedUser._id);
     }
     
-    // Reset the timeout on every keystroke - this is key for continuous typing
     if (typingTimerRef.current) {
       clearTimeout(typingTimerRef.current);
     }
     
-    // Set a longer timeout (5 seconds instead of 2)
     typingTimerRef.current = setTimeout(() => {
       if (selectedUser?._id) {
         setIsTyping(false);
         sendTypingIndicator(false, selectedUser._id);
       }
-    }, 5000); // Increase from 2000ms to 5000ms
+    }, 3000);
   };
   
-  // Clean up typing indicator on unmount
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current);
       }
       
-      // Clear typing indicator when component unmounts
       if (selectedUser && selectedUser._id && sendTypingIndicator) {
         sendTypingIndicator(false, selectedUser._id);
       }
@@ -90,123 +161,244 @@ const ConversationDetail = ({
   
   return (
     <>
-      {/* Header */}
-      <div className="p-4 border-b bg-white flex items-center">
-        <div className="h-10 w-10 rounded-full bg-gray-300 overflow-hidden mr-3">
+      <div className="p-3 border-b bg-white flex items-center shadow-sm">
+        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3 relative flex items-center justify-center">
           {selectedUser?.avatar ? (
-            <img 
-              src={selectedUser.avatar} 
-              alt={selectedUser?.name} 
-              className="h-full w-full object-cover"
-            />
+            <>
+              {!avatarLoaded && <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 to-gray-300"></div>}
+              <img 
+                src={selectedUser.avatar} 
+                alt=""
+                className={`h-full w-full object-cover transition-opacity duration-300 ${avatarLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onError={() => setAvatarLoaded(true)} 
+                onLoad={() => setAvatarLoaded(true)}
+              />
+            </>
           ) : (
-            <div className="h-full w-full flex items-center justify-center bg-gray-400 text-white font-semibold">
-              {selectedUser?.name?.[0]?.toUpperCase() || '?'}
+            <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white font-semibold">
+              {selectedUser?.name?.[0]?.toUpperCase() || <FaUser className="text-white" />}
             </div>
+          )}
+          
+          {/* Online status indicator */}
+          {selectedUser?.isOnline && (
+            <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
           )}
         </div>
         <div>
-          <h3 className="font-semibold">{selectedUser?.name || 'Loading...'}</h3>
-          <p className="text-xs text-gray-500">{selectedUser?.role || ''}</p>
+          <h3 className="font-semibold text-gray-800">
+            {selectedUser?.name || (
+              <div className="h-5 w-40 bg-gray-200 rounded animate-pulse"></div>
+            )}
+          </h3>
+          <p className="text-xs text-gray-500 flex items-center">
+            {selectedUser?.isOnline ? (
+              <><span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1"></span> Online</>
+            ) : selectedUser?.lastSeen ? (
+              `Last seen ${format(new Date(selectedUser.lastSeen), 'h:mm a')}`
+            ) : selectedUser?.role ? (
+              selectedUser.role
+            ) : (
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse mt-1"></div>
+            )}
+          </p>
         </div>
       </div>
       
-      {/* Messages */}
-      <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
-        <div className="space-y-3">
-          {messages.map((message) => {
-            // Safe check for sender ID
-            const isOwnMessage = user && message.sender_id && 
-              message.sender_id._id === user.id;
-            
-            // Use a unique key that won't have collisions between temp and confirmed messages
-            const messageKey = message._id.startsWith('temp-') ? message._id : `msg-${message._id}`;
-            
-            return (
-              <div 
-                key={messageKey}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500 text-white' : 'bg-white'} rounded-lg p-3 shadow`}>
-                  <p>{message.content}</p>
-                  <p className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} text-right flex items-center justify-end`}>
-                    {formatMessageTime(message.createdAt)}
-                    
-                    {isOwnMessage && (
-                      <span className="ml-2 inline-flex items-center">
-                        {message._id.startsWith('temp-') ? (
-                          <span title="Sending..." className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">sending...</span>
-                        ) : message.isRead ? (
-                          <span title="Read" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">
-                            Read {formatMessageTime(message.readAt)}
-                          </span>
-                        ) : message.isDelivered ? (
-                          <span title="Delivered" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">Delivered</span>
-                        ) : (
-                          <span title="Sent" className="bg-black bg-opacity-25 text-white text-xs font-medium px-1.5 py-0.5 rounded">Sent</span>
-                        )}
-                      </span>
-                    )}
-                  </p>
-                </div>
+      <div className="flex-grow p-4 overflow-y-auto bg-gray-50 scroll-smooth">
+        <div className="space-y-3 max-w-3xl mx-auto">
+          {groupedMessages.length === 0 && (
+            <div className="text-center py-8">
+              <div className="bg-gray-100 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-3">
+                <FiSend className="text-gray-400 text-xl" />
               </div>
-            );
-          })}
-          
-          {/* Typing indicator */}
-          {otherUserTyping && (
-            <div className="flex justify-start">
-              <div className="bg-gray-200 rounded-lg p-3 shadow max-w-[70%]">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '600ms' }}></div>
-                </div>
-              </div>
+              <p className="text-gray-500">No messages yet</p>
+              <p className="text-gray-400 text-sm">Send a message to start the conversation</p>
             </div>
           )}
           
-          {/* This element is used to scroll to bottom */}
+          {groupedMessages.map((group, groupIndex) => (
+            <div key={`group-${groupIndex}`}>
+              {group.type === 'dateSeparator' && (
+                <div className="flex justify-center my-4">
+                  <div className="bg-gray-200 rounded-full px-4 py-1 text-xs font-medium text-gray-600">
+                    {formatDateSeparator(group.date)}
+                  </div>
+                </div>
+              )}
+              
+              {group.type === 'messages' && group.messages.map((message) => {
+                const isOwnMessage = user && message.sender_id && 
+                  message.sender_id._id === user.id;
+                
+                const messageKey = message._id?.startsWith('temp-') ? message._id : `msg-${message._id}`;
+                
+                return (
+                  <motion.div 
+                    key={messageKey}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {!isOwnMessage && (
+                      <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden mr-2 mt-1 flex-shrink-0">
+                        {selectedUser?.avatar ? (
+                          <img 
+                            src={selectedUser.avatar} 
+                            alt=""
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.target.src = '';
+                              e.target.className = 'hidden';
+                              e.target.parentNode.innerHTML = `<div class="h-full w-full flex items-center justify-center bg-blue-500 text-white font-semibold">${selectedUser?.name?.[0]?.toUpperCase() || ''}</div>`;
+                            }}
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-blue-500 text-white font-semibold">
+                            {selectedUser?.name?.[0]?.toUpperCase() || <FaUser />}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500 text-white' : 'bg-white'} rounded-2xl p-3 shadow-sm`}>
+                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      <div className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} flex items-center justify-end space-x-1`}>
+                        <span>{formatMessageTime(message.createdAt)}</span>
+                        
+                        {isOwnMessage && (
+                          <span className="ml-1">
+                            {message._id?.startsWith('temp-') ? (
+                              <span className="text-blue-200 text-xs">sending...</span>
+                            ) : message.isRead ? (
+                              <FaCheckDouble className="text-blue-200" title="Read" />
+                            ) : message.isDelivered ? (
+                              <FaCheckDouble className="text-blue-300 opacity-70" title="Delivered" />
+                            ) : (
+                              <FaCheck className="text-blue-300 opacity-70" title="Sent" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {isOwnMessage && (
+                      <div className="w-8 flex-shrink-0">
+                        {/* Space for balancing */}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          ))}
+          
+          <AnimatePresence>
+            {otherUserTyping && (
+              <motion.div 
+                className="flex justify-start"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
+                  {selectedUser?.avatar ? (
+                    <img 
+                      src={selectedUser.avatar} 
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-blue-500 text-white font-semibold">
+                      {selectedUser?.name?.[0]?.toUpperCase() || <FaUser />}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white rounded-2xl p-3 shadow-sm max-w-[70%]">
+                  <div className="flex space-x-1">
+                    <motion.div 
+                      className="w-2 h-2 rounded-full bg-gray-400"
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1 }}
+                    />
+                    <motion.div 
+                      className="w-2 h-2 rounded-full bg-gray-400" 
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                    />
+                    <motion.div 
+                      className="w-2 h-2 rounded-full bg-gray-400"
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <div ref={messagesEndRef} />
         </div>
       </div>
       
-      {/* Message Input */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-3 border-t bg-white">
         <form onSubmit={(e) => {
           e.preventDefault();
           handleSendMessage();
         }} className="flex space-x-2">
           <button 
             type="button" 
-            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none rounded-full hover:bg-gray-100 transition-colors"
             disabled={!selectedUser}
+            title="Attach files"
           >
             <FiPaperclip className="h-5 w-5" />
           </button>
           
-          <textarea
-            ref={textareaRef}
-            value={messageInput}
-            onChange={handleInputChange}
-            placeholder={selectedUser ? "Type a message..." : "Select a conversation to start messaging"}
-            className="flex-grow p-2 border rounded-md focus:outline-none focus:border-blue-500 resize-none max-h-32"
-            rows="1"
+          <button 
+            type="button" 
+            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none rounded-full hover:bg-gray-100 transition-colors"
             disabled={!selectedUser}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && selectedUser) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-          />
+            title="Add images"
+          >
+            <FiImage className="h-5 w-5" />
+          </button>
+          
+          <div className="flex-grow relative">
+            <textarea
+              ref={textareaRef}
+              value={messageInput}
+              onChange={handleInputChange}
+              placeholder={selectedUser ? "Type a message..." : "Select a conversation to start messaging"}
+              className="flex-grow p-3 border rounded-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none w-full max-h-32 bg-gray-50"
+              rows="1"
+              disabled={!selectedUser}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && selectedUser) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <button 
+              type="button" 
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 focus:outline-none rounded-full hover:bg-gray-100"
+              disabled={!selectedUser}
+              title="Add emoji"
+            >
+              <FiSmile className="h-5 w-5" />
+            </button>
+          </div>
           
           <button 
             type="submit" 
             disabled={!messageInput.trim() || !selectedUser}
-            className={`p-2 rounded-md ${
-              messageInput.trim() && selectedUser ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
-            } focus:outline-none`}
+            className={`p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all ${
+              messageInput.trim() && selectedUser 
+                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title="Send message"
           >
             <FiSend className="h-5 w-5" />
           </button>
