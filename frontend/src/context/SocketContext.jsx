@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
-import { debounce } from 'lodash'; // Add this import
+
+import debounce from 'lodash.debounce'; // Add this import
+
 
 // Create context outside of any function
 const SocketContext = createContext(null);
