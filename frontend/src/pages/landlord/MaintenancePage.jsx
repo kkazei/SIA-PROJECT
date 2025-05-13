@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useMaintenanceStore } from "../../store/maintenanceStore";
 import { useAuthStore } from "../../store/authStore";
+import { useApartmentStore } from "../../store/apartmentStore";  // Add this import
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import Swal from "sweetalert2"; // Import SweetAlert2
+import Swal from "sweetalert2";
 
 const MaintenancePage = () => {
   const { user } = useAuthStore();
@@ -21,6 +22,13 @@ const MaintenancePage = () => {
     clearError,
     clearSuccess
   } = useMaintenanceStore();
+  
+  // Add apartment store
+  const { 
+    apartments,
+    isLoading: apartmentsLoading,
+    fetchApartments 
+  } = useApartmentStore();
 
   const [formData, setFormData] = useState({
     start_date: "",
@@ -28,6 +36,7 @@ const MaintenancePage = () => {
     description: "",
     expenses: 0,
     status: "pending",
+    apartment_id: "", // Add apartment_id to form data
   });
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +44,7 @@ const MaintenancePage = () => {
   useEffect(() => {
     fetchMaintenance();
     fetchMaintenanceStats();
+    fetchApartments(); // Fetch the landlord's apartments
   }, []);
 
   // Handle success and error messages
@@ -56,6 +66,13 @@ const MaintenancePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate apartment selection
+    if (!formData.apartment_id) {
+      toast.error("Please select an apartment");
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -86,6 +103,7 @@ const MaintenancePage = () => {
         description: "",
         expenses: 0,
         status: "pending",
+        apartment_id: "", // Reset apartment selection
       });
 
       // Refresh statistics after adding/updating
@@ -104,7 +122,8 @@ const MaintenancePage = () => {
       ...task,
       start_date: task.start_date ? task.start_date.split("T")[0] : "",
       end_date: task.end_date ? task.end_date.split("T")[0] : "",
-      expenses: task.expenses || 0
+      expenses: task.expenses || 0,
+      apartment_id: task.apartment_id?._id || task.apartment_id // Handle both populated and non-populated
     });
     setEditId(id);
   };
@@ -190,6 +209,26 @@ const MaintenancePage = () => {
         <div className="bg-gray-900 p-6 rounded-lg shadow-md w-full md:w-1/3">
           <h2 className="text-white font-bold mb-4">{editId ? "Edit Maintenance Task" : "Add Maintenance Task"}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Add the apartment selection dropdown */}
+            <div>
+              <label className="block text-white font-semibold">Apartment:</label>
+              <select
+                name="apartment_id"
+                value={formData.apartment_id}
+                onChange={handleChange}
+                className="w-full p-3 border rounded-md bg-gray-800 text-white border-gray-700"
+                required
+              >
+                <option value="">Select an apartment</option>
+                {apartments.map(apt => (
+                  <option key={apt._id} value={apt._id}>
+                    {apt.room} {apt.unit_number ? `- Unit ${apt.unit_number}` : ''}
+                    {apt.address?.street ? ` - ${apt.address.street}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             <div>
               <label className="block text-white font-semibold">Description:</label>
               <textarea 
@@ -328,7 +367,7 @@ const MaintenancePage = () => {
           {maintenanceRequests.length === 0 ? (
             <div className="text-center py-8">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 002 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <p className="text-gray-500 mt-2">No maintenance tasks found.</p>
               <p className="text-gray-600 text-sm mt-1">Create a new task to get started.</p>
@@ -340,7 +379,18 @@ const MaintenancePage = () => {
                   <div className="flex justify-between items-start">
                     <div className="flex-grow">
                       <h3 className="font-semibold text-lg mb-2">{task.description}</h3>
+                      
+                      {/* Add apartment information */}
+                      <div className="mb-2">
+                        <p className="text-gray-400 text-sm">Apartment</p>
+                        <p className="text-white">
+                          {task.apartment_id?.room || "N/A"} 
+                          {task.apartment_id?.unit_number ? ` - Unit ${task.apartment_id.unit_number}` : ''}
+                        </p>
+                      </div>
+                      
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {/* Existing task details */}
                         <div>
                           <p className="text-gray-400 text-sm">Start Date</p>
                           <p>{new Date(task.start_date).toLocaleDateString()}</p>
