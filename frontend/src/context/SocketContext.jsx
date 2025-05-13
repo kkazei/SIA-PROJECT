@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
-
-import debounce from 'lodash'; // Add this import
-
+import debounce from 'lodash.debounce'; // Correct import for debounce
 
 // Create context outside of any function
 const SocketContext = createContext(null);
@@ -26,7 +24,7 @@ export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
-  const [processedReadReceipts, setProcessedReadReceipts] = useState({}); // Add state for tracking processed read receipts
+  const [processedReadReceipts, setProcessedReadReceipts] = useState({});
   
   // Initialize socket connection
   useEffect(() => {
@@ -45,10 +43,13 @@ export function SocketProvider({ children }) {
       return;
     }
     
+    // Get the correct server URL based on environment
+    const serverURL = getServerUrl();
+    console.log('SocketContext: Creating socket connection to', serverURL);
+    
     // Create socket with token in auth object
-    console.log('SocketContext: Creating socket connection with token');
-    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      auth: { token: currentToken }, // Pass token here
+    const socketInstance = io(serverURL, {
+      auth: { token: currentToken },
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -66,6 +67,12 @@ export function SocketProvider({ children }) {
     socketInstance.on('connect_error', (error) => {
       console.error('🔴 Socket connection error:', error.message);
       setConnected(false);
+      
+      // Try fallback to polling if websocket fails
+      if (socketInstance.io.opts.transports[0] === 'websocket') {
+        console.log('Falling back to polling transport');
+        socketInstance.io.opts.transports = ['polling', 'websocket'];
+      }
     });
 
     socketInstance.on('disconnect', () => {
@@ -84,6 +91,20 @@ export function SocketProvider({ children }) {
       }
     };
   }, [token]); // Only recreate when token changes
+  
+  // Helper function to get the correct server URL based on environment
+  const getServerUrl = () => {
+    // Check for production domain first
+    const currentDomain = window.location.origin;
+    
+    // If we're in development (using Vite's dev server)
+    if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
+      return import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    }
+    
+    // In production, use the window.location.origin
+    return currentDomain;
+  };
   
   // Handle typing indicators
   useEffect(() => {
@@ -201,7 +222,8 @@ export function SocketProvider({ children }) {
   const socketStatus = {
     connected,
     socketId: socket?.id || 'not connected',
-    token: token ? '✓ Available' : '✗ Missing'
+    token: token ? '✓ Available' : '✗ Missing',
+    url: getServerUrl() // Add this for debugging
   };
   
   return (
@@ -212,7 +234,7 @@ export function SocketProvider({ children }) {
       joinConversation,
       leaveConversation,
       sendTypingIndicator,
-      markMessagesAsRead,  // Use the modified function
+      markMessagesAsRead,
       socketStatus
     }}>
       {children}
