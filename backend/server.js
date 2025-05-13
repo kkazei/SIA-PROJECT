@@ -27,6 +27,8 @@ import { socketAuthMiddleware } from './middleware/socketAuth.js';
 import fs from 'fs';
 import messageRoutes from './routes/message.routes.js';
 import messageHandler from './socketHandlers/messageHandler.js';
+import { checkRentPaymentsDue } from './schedulers/rentReminders.js';
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -153,6 +155,27 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.user.id}`);
   });
+});
+
+// Schedule rent reminder checks to run every day at 9:00 AM
+cron.schedule('0 9 * * *', async () => {
+    console.log('Running rent due reminder check...');
+    try {
+        const result = await checkRentPaymentsDue();
+        console.log('Rent reminder check completed:', result);
+    } catch (error) {
+        console.error('Error running rent reminder check:', error);
+    }
+});
+
+// You can also add an endpoint to manually trigger this check for testing:
+app.get('/api/admin/check-rent-reminders', verifyToken, authorize('admin'), async (req, res) => {
+    try {
+        const result = await checkRentPaymentsDue();
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Start server

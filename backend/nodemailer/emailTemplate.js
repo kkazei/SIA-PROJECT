@@ -230,3 +230,71 @@ export const WELCOME_EMAIL_TEMPLATE = `
 </body>
 </html>
 `;
+
+// Add this new template to the file
+
+export const RENT_DUE_REMINDER_TEMPLATE = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rent Payment Due Reminder - RentFlow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; margin: 0; padding: 0; border: none;">
+    <tr>
+      <td style="padding: 20px;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://i.ibb.co/TLXwBZD/rentflow-logo.png" alt="RentFlow Logo" style="height: 40px; margin-bottom: 10px;">
+        </div>
+        
+        <!-- Main Content -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 2px; border-radius: 16px;">
+          <div style="background-color: white; border-radius: 14px; padding: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            <h1 style="color: #1e3a8a; font-size: 24px; margin: 0 0 20px; text-align: center; font-weight: 700;">Rent Payment Reminder</h1>
+            
+            <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 15px; margin-bottom: 25px; border-radius: 6px;">
+              <h3 style="color: #c2410c; margin-top: 0; margin-bottom: 5px; font-size: 16px;">Your rent payment is due in 3 days</h3>
+              <p style="color: #9a3412; margin-bottom: 0;">Due Date: {dueDate}</p>
+            </div>
+            
+            <p style="color: #64748b; margin-bottom: 20px;">Dear {tenantName},</p>
+            
+            <p style="color: #64748b; margin-bottom: 20px;">This is a friendly reminder that your monthly rent payment of <strong style="color: #334155;">{rentAmount}</strong> for your apartment at <strong style="color: #334155;">{apartmentAddress}</strong> is due on {dueDate}.</p>
+            
+            <div style="background-color: #f0f9ff; border-radius: 12px; padding: 20px; margin: 25px 0; border-left: 4px solid #0ea5e9;">
+              <h3 style="color: #0369a1; margin-top: 0; font-size: 16px;">Payment Summary</h3>
+              <ul style="color: #64748b; padding-left: 20px; margin-bottom: 0;">
+                <li style="margin-bottom: 8px;"><strong>Apartment:</strong> {apartmentRoom}</li>
+                <li style="margin-bottom: 8px;"><strong>Amount Due:</strong> {rentAmount}</li>
+                <li style="margin-bottom: 8px;"><strong>Due Date:</strong> {dueDate}</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{paymentLink}" style="display: inline-block; background: linear-gradient(to right, #1e40af, #3b82f6); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25); transition: all 0.3s ease;">Pay Now</a>
+            </div>
+            
+            <p style="color: #64748b; margin-top: 25px;">If you've already made your payment, please disregard this reminder and thank you for your prompt payment.</p>
+            
+            <div style="margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; margin-bottom: 5px;">If you have any questions regarding your payment, please contact your landlord:</p>
+              <p style="color: #64748b; margin-bottom: 0;"><strong>{landlordName}</strong> at <a href="mailto:{landlordEmail}" style="color: #3b82f6; text-decoration: none;">{landlordEmail}</a></p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 25px; color: #94a3b8; font-size: 13px;">
+          <p>&copy; ${new Date().getFullYear()} RentFlow. All rights reserved.</p>
+          <p>This is an automated message, please do not reply.</p>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;

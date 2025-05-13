@@ -1,4 +1,4 @@
-import { VERIFICATION_EMAIL_TEMPLATE, WELCOME_EMAIL_TEMPLATE, PASSWORD_RESET_REQUEST_TEMPLATE, PASSWORD_RESET_SUCCESS_TEMPLATE } from "./emailTemplate.js";
+import { VERIFICATION_EMAIL_TEMPLATE, WELCOME_EMAIL_TEMPLATE, PASSWORD_RESET_REQUEST_TEMPLATE, PASSWORD_RESET_SUCCESS_TEMPLATE, RENT_DUE_REMINDER_TEMPLATE } from "./emailTemplate.js";
 import { sendEmail, sender } from "./email.config.js";
 
 export const sendVerificationEmail = async (email, verificationToken) => {
@@ -66,5 +66,51 @@ export const sendResetSuccessEmail = async (email) => {
     } catch (error) {
         console.error("Error sending password reset success email", error);
         throw new Error(`Error sending password reset success email: ${error}`);
+    }
+};
+
+export const sendRentDueReminderEmail = async (tenant, apartment, landlord) => {
+    try {
+        // Format the due date
+        const dueDate = new Date(apartment.paymentInfo.nextDueDate);
+        const formattedDueDate = dueDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        // Format the rent amount
+        const rentAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'PHP'
+        }).format(apartment.rent);
+        
+        // Create the full address
+        const apartmentAddress = `${apartment.address.street}, ${apartment.address.city}, ${apartment.address.state} ${apartment.address.zipCode}`;
+        
+        // Replace placeholders in the template
+        let emailContent = RENT_DUE_REMINDER_TEMPLATE
+            .replace(/{tenantName}/g, tenant.name)
+            .replace(/{rentAmount}/g, rentAmount)
+            .replace(/{apartmentAddress}/g, apartmentAddress)
+            .replace(/{apartmentRoom}/g, apartment.room)
+            .replace(/{dueDate}/g, formattedDueDate)
+            .replace(/{landlordName}/g, landlord.name)
+            .replace(/{landlordEmail}/g, landlord.email)
+            .replace(/{paymentLink}/g, `${process.env.CLIENT_URL || 'https://sia-project-a5xr.onrender.com'}/tenant/payments`);
+        
+        // Send the email
+        const response = await sendEmail(
+            tenant.email,
+            "Rent Payment Due Reminder",
+            emailContent
+        );
+        
+        console.log("Rent reminder email sent to", tenant.email);
+        return response;
+    } catch (error) {
+        console.error("Failed to send rent reminder email:", error);
+        throw new Error(`Failed to send rent reminder email: ${error.message}`);
     }
 };
