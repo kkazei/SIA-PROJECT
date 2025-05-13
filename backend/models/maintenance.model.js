@@ -7,6 +7,11 @@ const maintenanceSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+        apartment_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Apartment",
+            required: true,
+        },
         start_date: {
             type: Date,
             required: true,
@@ -40,7 +45,8 @@ const maintenanceSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Add index for faster queries
+// Add indices for faster queries
 maintenanceSchema.index({ landlord_id: 1 });
+maintenanceSchema.index({ apartment_id: 1 });
 
 export const Maintenance = mongoose.model("Maintenance", maintenanceSchema);

@@ -1,14 +1,37 @@
 import { Maintenance } from "../models/maintenance.model.js";
+import { Apartment } from "../models/apartment.model.js"; // Add this import
 import mongoose from "mongoose";
 
 // Create a new maintenance record
 export const createMaintenance = async (req, res, next) => {
   try {
-    const { start_date, description, expenses, status } = req.body;
+    const { start_date, description, expenses, status, apartment_id } = req.body;
+    
+    // Validate that apartment exists and belongs to the landlord
+    if (!apartment_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Apartment ID is required"
+      });
+    }
+    
+    // Check if apartment exists and belongs to this landlord
+    const apartment = await Apartment.findOne({
+      _id: apartment_id,
+      landlord_id: req.user.id
+    });
+    
+    if (!apartment) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only create maintenance tasks for your own apartments"
+      });
+    }
     
     // Create new maintenance record
     const newMaintenance = new Maintenance({
       landlord_id: req.user.id,
+      apartment_id,
       start_date,
       description,
       expenses: expenses || 0.0,
@@ -35,7 +58,9 @@ export const getMaintenancesByLandlord = async (req, res, next) => {
       landlord_id: req.user.id,
       isVisible: true,
       isArchived: { $ne: true } // Exclude archived maintenances
-    }).sort({ createdAt: -1 });
+    })
+    .populate('apartment_id', 'room unit_number address') // Populate apartment details
+    .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
@@ -79,6 +104,23 @@ export const getMaintenanceById = async (req, res, next) => {
 // Update a maintenance record
 export const updateMaintenance = async (req, res, next) => {
   try {
+    const { apartment_id } = req.body;
+    
+    // If apartment_id is being updated, validate it
+    if (apartment_id) {
+      const apartment = await Apartment.findOne({
+        _id: apartment_id,
+        landlord_id: req.user.id
+      });
+      
+      if (!apartment) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only assign maintenance tasks to your own apartments"
+        });
+      }
+    }
+    
     const maintenance = await Maintenance.findById(req.params.id);
     
     if (!maintenance || !maintenance.isVisible) {

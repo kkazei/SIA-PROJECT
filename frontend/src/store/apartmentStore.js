@@ -375,5 +375,31 @@ export const useApartmentStore = create((set, get) => ({
   // Clear messages (error and success)
   clearMessages: () => {
     set({ error: null, message: null });
+  },
+
+  // Fetch apartments (alternative method)
+  fetchApartments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/apartments`, { 
+        withCredentials: true 
+      });
+      
+      if (response.data.success) {
+        set({ 
+          apartments: response.data.data, 
+          isLoading: false 
+        });
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || "Failed to fetch apartments");
+      }
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || "Error fetching apartments"
+      });
+      return [];
+    }
   }
 }));

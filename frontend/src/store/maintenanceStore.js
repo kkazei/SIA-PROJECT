@@ -57,6 +57,11 @@ export const useMaintenanceStore = create((set, get) => ({
   createMaintenance: async (maintenanceData) => {
     set({ isLoading: true, error: null, success: null });
     try {
+      // Ensure apartment_id is included in the data
+      if (!maintenanceData.apartment_id) {
+        throw new Error("Apartment selection is required");
+      }
+      
       const response = await axios.post(`${API_URL}/api/maintenance/create`, maintenanceData, { 
         withCredentials: true,
         headers: {
@@ -87,6 +92,7 @@ export const useMaintenanceStore = create((set, get) => ({
   updateMaintenance: async (id, updateData) => {
     set({ isLoading: true, error: null, success: null });
     try {
+      // Ensure apartment_id is still included if it exists in the update data
       const response = await axios.put(`${API_URL}/api/maintenance/${id}`, updateData, { 
         withCredentials: true,
         headers: {
