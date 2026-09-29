@@ -7,13 +7,13 @@ import { useMaintenanceStore } from "../../store/maintenanceStore";
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import TenantModal from '../../components/TenantModal';
-import RoomModal from '../../components/RoomModal';
-import AnnouncementModal from '../../components/AnnouncementModal';
+import TenantModal from '../../components/tenant-management/TenantModal';
+import RoomModal from '../../components/apartments/RoomModal';
+import AnnouncementModal from '../../components/announcements/AnnouncementModal';
 import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
 import ApplicationModal from './ApplicationModal'; // Import the modal
-import ApartmentDetails from '../../components/ApartmentDetails'; // Import the ApartmentDetails component
+import ApartmentDetails from '../../components/apartments/ApartmentDetails';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 

@@ -4,8 +4,8 @@ import { useTenantStore } from "../../store/tenantStore";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useQRImageStore } from "../../store/qrImageStore"; // Import QR image store
 import LandlordSideNav from "../../components/layout/LandlordSideNav";
-import TenantModal from "../../components/TenantModal";
-import TenantDetailsModal from "../../components/TenantDetailsModal";
+import TenantModal from "../../components/tenant-management/TenantModal";
+import TenantDetailsModal from "../../components/tenant-management/TenantDetailsModal";
 import { motion } from "framer-motion";
 
 const TenantPage = () => {

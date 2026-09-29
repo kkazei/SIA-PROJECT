@@ -1,25 +1,30 @@
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { isAuthenticated, user, isCheckingAuth } = useAuthStore();
 
   if (isCheckingAuth) {
-    // Show loading spinner while checking auth status
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
   }
 
-  // If specific roles are required, check if user has the needed role
+  const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
+  if (bypassVerification) {
+    localStorage.removeItem('bypassVerification');
+  }
+
+  const isVerified = user.googleId || user.isVerified || bypassVerification;
+  if (!isVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;

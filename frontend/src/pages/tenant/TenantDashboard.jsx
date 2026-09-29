@@ -20,14 +20,14 @@ import {
 } from 'react-icons/fa';
 
 // Import your modals
-import InquiriesModal from "../../components/Tenant-Dashboard/InquiriesModal";
-import LeaseAgreementModal from "../../components/Tenant-Dashboard/LeaseAgreementModal";
-import LandlordAnnouncementModal from "../../components/Tenant-Dashboard/LandlordAnnouncementModal";
-import PaymentHistoryModal from "../../components/Tenant-Dashboard/PaymentHistoryModal";
-import PaymentProofModal from "../../components/Tenant-Dashboard/PaymentProofModal";
-import BrowseApartmentsModal from "../../components/Tenant-Dashboard/BrowseApartmentsModal";
-import ApplicationsModal from "../../components/Tenant-Dashboard/ApplicationsModal";
-import NoApartmentView from "../../components/Tenant-Dashboard/NoApartmentView";
+import InquiriesModal from "../../components/tenant/InquiriesModal";
+import LeaseAgreementModal from "../../components/tenant/LeaseAgreementModal";
+import LandlordAnnouncementModal from "../../components/tenant/LandlordAnnouncementModal";
+import PaymentHistoryModal from "../../components/tenant/PaymentHistoryModal";
+import PaymentProofModal from "../../components/tenant/PaymentProofModal";
+import BrowseApartmentsModal from "../../components/tenant/BrowseApartmentsModal";
+import ApplicationsModal from "../../components/tenant/ApplicationsModal";
+import NoApartmentView from "../../components/tenant/NoApartmentView";
 
 // Improve the formatDate function where it's defined
 const formatDate = (dateString) => {

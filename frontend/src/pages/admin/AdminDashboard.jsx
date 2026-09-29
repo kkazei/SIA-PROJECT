@@ -9,13 +9,13 @@ import {
 } from 'react-icons/fa';
 
 // Import smaller component files
-import DashboardStats from './components/DashboardStats';
-import UsersManagement from './components/UsersManagement';
-import ApartmentsManagement from './components/ApartmentsManagement';
-import AnnouncementsManagement from './components/AnnouncementsManagement';
-import UserFormModal from './components/modals/UserFormModal';
-import DeleteConfirmationModal from './components/modals/DeleteConfirmationModal';
-import ResetPasswordModal from './components/modals/ResetPasswordModal';
+import DashboardStats from '../../components/admin/DashboardStats';
+import UsersManagement from '../../components/admin/UsersManagement';
+import ApartmentsManagement from '../../components/admin/ApartmentsManagement';
+import AnnouncementsManagement from '../../components/admin/AnnouncementsManagement';
+import UserFormModal from '../../components/admin/modals/UserFormModal';
+import DeleteConfirmationModal from '../../components/admin/modals/DeleteConfirmationModal';
+import ResetPasswordModal from '../../components/admin/modals/ResetPasswordModal';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();

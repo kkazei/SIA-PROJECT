@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useEffect } from 'react'; // Add lazy and Suspense
+import { lazy, Suspense, useEffect } from 'react';
 import LoadingSpinner from './components/ui/LoadingSpinner'
-import LandingPage from './pages/LandingPage' // Keep this eagerly loaded
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LandingPage from './pages/public/LandingPage.jsx'
 import { useAuthStore } from './store/authStore';
 import { SocketProvider } from './context/SocketContext';
-import MessagingPage from './pages/MessagingPage';
 
 // Lazy load authentication pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -12,6 +12,7 @@ const SignUpPage = lazy(() => import('./pages/auth/SignUpPage'));
 const EmailVerificationPage = lazy(() => import('./pages/auth/EmailVerificationPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const UnauthorizedPage = lazy(() => import('./pages/auth/Unauthorized'));
 const OAuthSuccess = lazy(() => import('./pages/auth/OAuthSuccess'));
 const RoleSelection = lazy(() => import('./pages/auth/RoleSelection'));
 
@@ -33,61 +34,8 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 // Lazy load layouts
 const LandlordLayout = lazy(() => import('./components/layout/LandlordLayout'));
 
-// Add import for BrowseApartmentsPage
-const BrowseApartmentsPage = lazy(() => import('./pages/BrowseApartmentsPage'));
-
-// Keep the route protection components
-const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, user } = useAuthStore();
-  
-    if (!isAuthenticated) {
-      return <Navigate to='/login' replace />;
-    }
-  
-    const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
-    if (bypassVerification) {
-      localStorage.removeItem('bypassVerification');
-    }
-  
-    const skipVerification = user.googleId || bypassVerification || user.isVerified;
-    if (!skipVerification) {
-      return <Navigate to='/verify-email' replace />;
-    }
-  
-    return children;
-};
-
-// Keep the rest of your route protection components unchanged
-const RoleBasedRoute = ({ children }) => {
-    const { user, isAuthenticated } = useAuthStore();
-    
-    // Add safety checks
-    if (!isAuthenticated || !user) {
-        console.log("User not authenticated or user object missing");
-        return <Navigate to='/login' replace />;
-    }
-    
-    // Add logging to see what's happening
-    console.log("Current user role:", user.role);
-    
-    if (!user.role) {
-        console.log("User has no role assigned");
-        return <Navigate to='/role-selection' replace />;
-    }
-    
-    // Rest of your routing logic
-    if (user.role === 'admin') {
-        return <Navigate to='/admin/dashboard' replace />;
-    } else if (user.role === 'landlord') {
-        return <Navigate to='/landlord/dashboard' replace />;
-    } else if (user.role === 'tenant') {
-        return <Navigate to='/tenant/dashboard' replace />;
-    }
-    
-    // Fallback - shouldn't reach here if roles are properly set
-    console.warn("User has unrecognized role:", user.role);
-    return children;
-};
+const BrowseApartmentsPage = lazy(() => import('./pages/tenant/BrowseApartmentsPage.jsx'));
+const MessagingPage = lazy(() => import('./pages/messaging/MessagingPage.jsx'));
 
 const LandlordRoute = ({ children }) => {
     const { user } = useAuthStore();
@@ -219,7 +167,6 @@ function App() {
                         }
                     />
                     
-                    {/* The rest of your routes remain the same but will now be lazy-loaded */}
                     <Route
                         path='/landlord/tenants'
                         element={
@@ -310,7 +257,6 @@ function App() {
                         }
                     />
                     
-                    {/* Add BrowseApartmentsPage route */}
                     <Route
                         path='/tenant/browse-apartments'
                         element={
@@ -331,7 +277,6 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
-                        {/* ...other tenant routes */}
                     </Route>
                     
                     <Route path="/landlord">
@@ -343,7 +288,6 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
-                        {/* ...other landlord routes */}
                     </Route>
                   
                     {/* Auth Routes */}
@@ -364,6 +308,7 @@ function App() {
                         }
                     />
                     <Route path='/verify-email' element={<EmailVerificationPage />} />
+                    <Route path='/unauthorized' element={<UnauthorizedPage />} />
                     <Route
                         path='/forgot-password'
                         element={
