@@ -87,11 +87,22 @@ Create a `.env` file in the backend directory with the following variables:
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
+SESSION_SECRET=your_session_secret
+JWT_EXPIRES_IN=24h
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=google_secret
 EMAIL_USER=google_account
 EMAIL_APP_PASSWORD=application_pass
+# Or use any SMTP provider (recommended for Render)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_smtp_login
+SMTP_PASSWORD=your_smtp_key
+EMAIL_FROM=verified-sender@example.com
 ```
+
+For local development, set `EMAIL_MODE=console` (or leave SMTP variables unset). The verification code will be printed by the backend, so signup can be tested without sending real mail. For Render, create a free Brevo account, generate an SMTP key, verify the sender address, and add the SMTP variables above as Render environment variables. Gmail also works with `EMAIL_USER` and a Gmail app password.
 
 ---
 
@@ -117,6 +128,8 @@ EMAIL_APP_PASSWORD=application_pass
      - `PORT`: 10000 (Render will override this with their own port)
      - `MONGO_URI`: your MongoDB connection string
      - `JWT_SECRET`: your JWT secret key
+    - `SESSION_SECRET`: a separate secret for server sessions
+    - `JWT_EXPIRES_IN`: JWT lifetime, such as `24h`
      - `GOOGLE_CLIENT_ID`: your Google Client ID
      - `GOOGLE_CLIENT_SECRET`: your Google Client Secret
 

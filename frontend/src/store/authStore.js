@@ -146,6 +146,18 @@ setRole: async (role) => {
 		}
 	},
 
+	resendVerificationEmail: async () => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.post(`${API_URL}/resend-verification`);
+			set({ message: response.data.message, isLoading: false });
+			return response.data;
+		} catch (error) {
+			set({ error: error.response?.data?.message || "Error sending verification email", isLoading: false });
+			throw error;
+		}
+	},
+
 	// Update in authStore.js
 	checkAuth: async () => {
 		set({ isCheckingAuth: true, error: null });

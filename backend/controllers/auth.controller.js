@@ -4,20 +4,51 @@ import crypto from "crypto";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendResetSuccessEmail } from "../nodemailer/emails.js";
 import jwt from 'jsonwebtoken';
+import { clearAuthCookieOptions, getJwtSecret } from "../config/auth.js";
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const minimumPasswordLength = 8;
+const maximumPasswordLength = 128;
+
+const publicUser = (user) => ({
+  id: user._id.toString(),
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  isVerified: user.isVerified,
+  avatar: user.avatar,
+  googleId: user.googleId
+});
+
+const validateCredentials = ({ email, password, name } = {}, includeName = false) => {
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+
+  if (!normalizedEmail || !emailPattern.test(normalizedEmail)) {
+    return { error: "Please provide a valid email and password" };
+  }
+  if (typeof password !== "string" || password.length < minimumPasswordLength || password.length > maximumPasswordLength) {
+    return { error: "Please provide a valid email and password" };
+  }
+  if (includeName && (normalizedName.length < 2 || normalizedName.length > 100)) {
+    return { error: "Please provide your name, email, and password" };
+  }
+
+  return { email: normalizedEmail, password, name: normalizedName };
+};
 
 
 export const signup = async (req, res) => {
-  const {email, password, name} = req.body;
   try {
-  if(!email || !password || !name){
-      throw new Error("Please fill all fields");
+  const credentials = validateCredentials(req.body, true);
+  if (credentials.error) {
+    return res.status(400).json({ success: false, message: credentials.error });
   }
 
-  const userAlreadyExists = await User.findOne({email});
-  console.log("userAlreadyExists", userAlreadyExists);
+  const { email, password, name } = credentials;
+  const userAlreadyExists = await User.findOne({ email });
   if(userAlreadyExists){
-      return res.status(400).json({success:false, message: "User already exists"});
+    return res.status(400).json({success:false, message: "Unable to create account with those details"});
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -31,37 +62,27 @@ export const signup = async (req, res) => {
 
   await user.save();
 
-  // Generate token with user ID
-  // Replace this line with direct JWT generation
-  // generateTokenAndSetCookie(res, user._id);
-  
-  // Generate JWT token directly here to ensure it has the right payload
-  const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-  
-  // Set the cookie with the token
-  res.cookie('jwt', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  });
-  
-  await sendVerificationEmail(user.email, verificationToken);
+  generateTokenAndSetCookie(res, user);
+  let emailSent = true;
+  try {
+    await sendVerificationEmail(user.email, verificationToken);
+  } catch (emailError) {
+    emailSent = false;
+    console.error("Verification email delivery failed:", emailError.message);
+  }
+
   res.status(201).json({
       success:true, 
-      message: "User created successfully",
-      user: {
-          ...user._doc,
-          password: undefined,
-      },
+      message: emailSent
+        ? "User created successfully"
+        : "Account created, but the verification email could not be sent. Please resend it.",
+      emailSent,
+      user: publicUser(user),
       });
 
   } catch (error) {
-      res.status(400).json({success:false, message: error.message});
+      console.error("Signup failed:", error.message);
+      res.status(500).json({success:false, message: "Unable to create account"});
   }
 };
 
@@ -83,69 +104,51 @@ export const verifyEmail = async (req, res) => {
           success: true, 
           message: "Email verified successfully. Please select your role.",
           needsRoleSelection: true,
-          user: {
-              ...user._doc,
-              password: undefined,
-          }
+          user: publicUser(user)
       });
   } catch (error) {
-      console.log("error in verifyEmail", error);
+        console.error("Email verification failed:", error.message);
       res.status(400).json({success:false, message: "Server Error"});
   }
 };
 
 export const login = async (req, res) => {
-  const {email, password} = req.body;
   try {
-      const user = await User.findOne({email});
-      if (!user){
+      const credentials = validateCredentials(req.body);
+      if (credentials.error) {
+          return res.status(400).json({ success: false, message: credentials.error });
+      }
+
+      const user = await User.findOne({ email: credentials.email }).select("+password");
+      if (!user || !user.password){
           return res.status(400).json({success:false, message: "Invalid credentials"});
       }
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
       if(!isPasswordValid){
           return res.status(400).json({success:false, message: "Invalid credentials"});
       }
       
-      // Replace this line
-      // generateTokenAndSetCookie(res, user._id);
-      
-      // With direct JWT generation that includes role (matching your other functions)
-      const token = jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      // Set cookie with token
-      res.cookie('jwt', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      });
+      generateTokenAndSetCookie(res, user);
       
       user.lastLogin = new Date();
       await user.save();
 
       res.status(200).json({success:true, message: "Logged in successfully",
-          user: {
-              ...user._doc,
-              password: undefined,
-          }
+            user: publicUser(user)
       });
   } catch (error) {
-      console.log("error in login", error);
-      res.status(400).json({success:false, message: error.message});
+          console.error("Login failed:", error.message);
+          res.status(500).json({success:false, message: "Unable to log in"});
   }
 };
 
 export const forgotPassword = async (req, res) => {
-    const { email } = req.body;
     try {
-        const user = await User.findOne({ email });
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const user = emailPattern.test(email) ? await User.findOne({ email }) : null;
 
         if (!user) {
-            return res.status(400).json({ success: false, message: "User not found" });
+      return res.status(200).json({ success: true, message: "If the account exists, a reset link has been sent" });
         }
 
         // Generate reset token
@@ -160,23 +163,23 @@ export const forgotPassword = async (req, res) => {
         // Add fallback URL if CLIENT_URL is not defined
         const clientURL = process.env.CLIENT_URL || 'https://sia-project-a5xr.onrender.com';
         
-        // Log the URL being used for debugging
-        console.log(`Using client URL for password reset: ${clientURL}`);
-        
         // send email with properly constructed URL
         await sendPasswordResetEmail(user.email, `${clientURL}/reset-password/${resetToken}`);
 
-        res.status(200).json({ success: true, message: "Password reset link sent to your email" });
+        res.status(200).json({ success: true, message: "If the account exists, a reset link has been sent" });
     } catch (error) {
-        console.log("Error in forgotPassword ", error);
-        res.status(400).json({ success: false, message: error.message });
+        console.error("Password reset request failed:", error.message);
+        res.status(500).json({ success: false, message: "Unable to process password reset request" });
     }
 };
 
 export const resetPassword = async (req, res) => {
     try {
         const { token } = req.params;
-        const { password } = req.body;
+        const { password } = req.body || {};
+        if (typeof password !== "string" || password.length < minimumPasswordLength || password.length > maximumPasswordLength) {
+          return res.status(400).json({ success: false, message: "Please provide a valid password" });
+        }
         const user = await User.findOne({ resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } });
 
         if (!user) {
@@ -194,8 +197,8 @@ export const resetPassword = async (req, res) => {
 
         res.status(200).json({ success: true, message: "Password reset successfully" });
     } catch (error) {
-        console.log("Error in resetPassword ", error);
-        res.status(400).json({ success: false, message: error.message });
+        console.error("Password reset failed:", error.message);
+        res.status(500).json({ success: false, message: "Unable to reset password" });
     }
 };
 
@@ -210,7 +213,7 @@ export const checkAuth = async (req, res) => {
       }
       
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
       
       // Find user by ID
       const user = await User.findById(decoded.id).select('-password');
@@ -239,7 +242,7 @@ export const checkAuth = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie("jwt"); 
+  res.clearCookie("jwt", clearAuthCookieOptions);
   res.status(200).json({success:true, message: "Logged out successfully"});
 };
 
@@ -312,18 +315,7 @@ export const setRole = async (req, res) => {
     await user.save();
     
     // Generate new token with updated role
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    
-    res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
+    generateTokenAndSetCookie(res, user);
     
     res.status(200).json({ 
       success: true, 
@@ -363,5 +355,28 @@ export const getCurrentUser = async (req, res) => {
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const resendVerificationEmail = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: "Email is already verified" });
+    }
+
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = Date.now() + 10 * 60 * 1000;
+    await user.save();
+    await sendVerificationEmail(user.email, verificationToken);
+
+    res.status(200).json({ success: true, message: "A new verification code has been sent" });
+  } catch (error) {
+    console.error("Resending verification email failed:", error.message);
+    res.status(500).json({ success: false, message: "Unable to send verification email" });
   }
 };

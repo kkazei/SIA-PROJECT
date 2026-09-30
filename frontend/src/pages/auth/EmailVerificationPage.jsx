@@ -12,7 +12,7 @@ const EmailVerificationPage = () => {
     const inputRefs = useRef([]);
     const navigate = useNavigate();
 
-    const { error, isLoading, verifyEmail } = useAuthStore();
+    const { error, isLoading, verifyEmail, resendVerificationEmail } = useAuthStore();
 
     const handleChange = (index, value) => {
         const newCode = [...code];
@@ -70,8 +70,7 @@ const EmailVerificationPage = () => {
 
         setResendLoading(true);
         try {
-            // Call your resend code function here
-            // await resendVerificationCode();
+            await resendVerificationEmail();
             toast.success("A new verification code has been sent to your email");
             
             // Set a 60-second timeout before allowing another resend

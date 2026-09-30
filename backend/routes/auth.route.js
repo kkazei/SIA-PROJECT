@@ -1,17 +1,20 @@
 import express from "express";
-import { logout, signup, login, verifyEmail, forgotPassword, resetPassword, checkAuth, googleCallback, setRole } from "../controllers/auth.controller.js";
+import { logout, signup, login, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, checkAuth, googleCallback, setRole } from "../controllers/auth.controller.js";
 import passport from 'passport';
 import { verifyToken } from "../middleware/auth.middleware.js";
+import { authRateLimit } from "../middleware/authRateLimit.js";
 
 const router = express.Router();
 
-router.post("/signup", signup); 
+router.post("/signup", authRateLimit, signup);
 
-router.post("/login", login);
+router.post("/login", authRateLimit, login);
 
 router.post("/logout", logout);
 
 router.post("/verify-email", verifyEmail);
+
+router.post("/resend-verification", verifyToken, resendVerificationEmail);
 
 router.post("/forgot-password", forgotPassword);
 

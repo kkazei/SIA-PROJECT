@@ -1,36 +1,26 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/user.model.js';
+import { getJwtSecret } from '../config/auth.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
     // Get token from cookies or authorization header
-    const token = req.cookies.jwt || req.header('Authorization')?.replace('Bearer ', '');
-    
-    console.log('Cookies received:', req.cookies);
-    console.log('JWT token found:', token ? 'Yes' : 'No');
+    const authorization = req.header('Authorization');
+    const token = req.cookies.jwt || (authorization?.startsWith('Bearer ') ? authorization.slice(7) : null);
     
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required. No token provided.' 
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decoded);
+    const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
     
     // Find user by ID
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.sub || decoded.id).select('_id role');
     
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid token. User not found.' 
-      });
+      return res.status(401).json({ success: false, message: 'Invalid authentication' });
     }
-    
-    console.log('User found:', user._id, 'Role:', user.role);
     
     // Set user information on request object
     req.user = { 
@@ -38,10 +28,9 @@ export const verifyToken = async (req, res, next) => {
       role: user.role 
     };
     
-    console.log('User set on request:', req.user);
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
+    console.error('Authentication failed:', error.message);
     res.status(401).json({ 
       success: false, 
       message: 'Invalid or expired token' 
@@ -51,8 +40,6 @@ export const verifyToken = async (req, res, next) => {
 
 export const authorize = (role) => {
   return (req, res, next) => {
-    console.log('Checking role authorization. User role:', req.user?.role, 'Required role:', role);
-    
     if (!req.user) {
       return res.status(401).json({
         success: false,
