@@ -361,6 +361,26 @@ export const useApartmentStore = create((set, get) => ({
       throw error;
     }
   },
+
+  getPublicAvailableApartments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.get(`${API_URL}/public/available`);
+      const processedApartments = response.data.data.map(apartment => ({
+        ...apartment,
+        images: apartment.images?.map(img => processImagePath(img)) || []
+      }));
+
+      set({ apartments: processedApartments, isLoading: false });
+      return processedApartments;
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || "Error fetching available apartments"
+      });
+      throw error;
+    }
+  },
   
   // Set current apartment (for editing)
   setCurrentApartment: (apartment) => {

@@ -1,20 +1,20 @@
 {
   "name": "RentFlow",
-  "short_name": "RF",
+  "short_name": "RentFlow",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png",
+      "src": "/brand-mark.svg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "/android-chrome-512x512.png",
+      "src": "/brand-mark.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#0b1729",
+  "background_color": "#0b1729",
   "display": "standalone",
   "start_url": "."
 }

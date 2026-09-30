@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import Input from "../../components/ui/Input";
-import { Loader, Lock, Mail, User, UserPlus } from "lucide-react";
+import { Loader, Lock, Mail, User } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PasswordStrengthMeter from "../../components/ui/PasswordStrengthMeter";
@@ -39,10 +39,10 @@ const SignUpPage = () => {
             <div className="auth-layout w-full max-w-6xl">
                 <section className="auth-intro hidden lg:flex">
                     <div>
-                        <Link to="/" className="auth-brand"><span className="brand-mark">S</span> SIA Living</Link>
+                        <Link to="/" className="auth-brand"><img className="brand-mark" src="/brand-mark.svg" alt="" /> RentFlow</Link>
                         <p className="auth-kicker">Make room for what matters</p>
                         <h1>Find your next chapter, with less friction.</h1>
-                        <p className="auth-intro-copy">Join a simple apartment experience designed for real people, real homes, and smoother days.</p>
+                        <p className="auth-intro-copy">Join a simple apartment experience for real people, real homes, and smoother days.</p>
                     </div>
                     <div className="auth-stat"><span>02</span><strong>Built around you</strong><small>From first browse to move-in day.</small></div>
                 </section>
@@ -52,15 +52,11 @@ const SignUpPage = () => {
                 transition={{ duration: 0.6 }}
                 className='auth-card max-w-md w-full backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden'
             >
-                {/* Logo/Header Section */}
                 <div className="p-8 pb-0">
-                    <div className="auth-icon mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                        <UserPlus className="text-white h-8 w-8" />
-                    </div>
-                    <h2 className='auth-title text-3xl font-bold mb-1 text-center'>
-                        Create Account
-                    </h2>
-                    <p className="text-gray-400 text-center mb-6">Join our apartment community</p>
+                    <Link to="/" className="auth-mobile-brand"><img className="brand-mark" src="/brand-mark.svg" alt="" /> RentFlow</Link>
+                    <p className="auth-form-eyebrow">A smoother move starts here</p>
+                    <h2 className='auth-title text-3xl font-bold mb-1 text-center'>Create your account</h2>
+                    <p className="auth-subtitle text-center mb-6">A clear start to finding your next place.</p>
                 </div>
 
                 <div className="p-8 pt-4">
@@ -85,49 +81,18 @@ const SignUpPage = () => {
                         </motion.div>
                     )}
 
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                        <Input
-                            icon={User}
-                            type='text'
-                            placeholder='Full Name'
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                        />
-                        <Input
-                            icon={Mail}
-                            type='email'
-                            placeholder='Email Address'
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                        <Input
-                            icon={Lock}
-                            type='password'
-                            placeholder='Password'
-                            value={password}
-                            onChange={(e) => {
-                                setPassword(e.target.value);
-                                setValidationError("");
-                            }}
-                            required
-                        />
+                    <form onSubmit={handleSignUp}>
+                        <label className="auth-field-label" htmlFor="signup-name">Full name</label>
+                        <Input icon={User} id="signup-name" type='text' placeholder='Your name' autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                        <label className="auth-field-label" htmlFor="signup-email">Email address</label>
+                        <Input icon={Mail} id="signup-email" type='email' placeholder='you@example.com' autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        <label className="auth-field-label" htmlFor="signup-password">Password</label>
+                        <Input icon={Lock} id="signup-password" type='password' placeholder='At least 8 characters' autoComplete="new-password" value={password} onChange={(e) => { setPassword(e.target.value); setValidationError(""); }} required />
                         
                         <PasswordStrengthMeter password={password} />
 
-                        <Input
-                            icon={Lock}
-                            type='password'
-                            placeholder='Confirm Password'
-                            value={confirmPassword}
-                            onChange={(e) => {
-                                setConfirmPassword(e.target.value);
-                                setValidationError("");
-                            }}
-                            required
-                            aria-invalid={confirmPassword.length > 0 && password !== confirmPassword}
-                        />
+                        <label className="auth-field-label" htmlFor="signup-confirm-password">Confirm password</label>
+                        <Input icon={Lock} id="signup-confirm-password" type='password' placeholder='Repeat your password' autoComplete="new-password" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setValidationError(""); }} required aria-invalid={confirmPassword.length > 0 && password !== confirmPassword} />
                         {confirmPassword.length > 0 && password !== confirmPassword && (
                             <p className="-mt-3 text-xs text-rose-300" role="status">Passwords do not match yet.</p>
                         )}

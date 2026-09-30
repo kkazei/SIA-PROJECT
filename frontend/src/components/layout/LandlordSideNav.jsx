@@ -190,8 +190,8 @@ const LandlordSideNav = ({ onToggle }) => {
               aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
               <img 
-                src="/image/Logo.png" 
-                alt="Logo" 
+                src="/brand-mark.svg"
+                alt="RentFlow"
                 className={`transition-all duration-300 ${isExpanded ? 'w-12 h-12' : 'w-10 h-10'}`}
               />
             </button>

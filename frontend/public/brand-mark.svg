@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">RentFlow</title>
+  <desc id="desc">A doorway inside a blue rounded square</desc>
+  <rect width="64" height="64" rx="18" fill="#82c7ff"/>
+  <path d="M16 29.5 32 16l16 13.5v20a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3v-20Z" fill="#0b1729"/>
+  <path d="M27 52.5V35h10v17.5" fill="#82c7ff"/>
+  <path d="M22 31.5h20" fill="none" stroke="#f4f1e8" stroke-linecap="round" stroke-width="3"/>
+</svg>

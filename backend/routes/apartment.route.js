@@ -8,6 +8,7 @@ import {
     assignTenant,
     vacateApartment,
     getAvailableApartments,
+    getPublicAvailableApartments,
     getTenantApartment,
     upload
 } from '../controllers/apartment.controller.js';
@@ -23,6 +24,7 @@ router.put('/:id', verifyToken, authorize('landlord'), upload.array('images', 5)
 router.delete('/:id', verifyToken, authorize('landlord'), deleteApartment);
 router.post('/assign-tenant', verifyToken, authorize('landlord'), assignTenant);
 router.post('/vacate', verifyToken, authorize('landlord'), vacateApartment);
+router.get('/public/available', getPublicAvailableApartments);
 
 
 // Routes accessible to tenants

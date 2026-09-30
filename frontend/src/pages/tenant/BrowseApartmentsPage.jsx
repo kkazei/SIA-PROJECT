@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useApartmentStore } from "../../store/apartmentStore";
 import { useAuthStore } from "../../store/authStore";
 import ApplyApartmentModal from "../../components/tenant/ApplyApartmentModal";
@@ -22,7 +23,8 @@ const BrowseApartmentsPage = () => {
   const [activeModal, setActiveModal] = useState(null);
   
   const { user } = useAuthStore();
-  const { getAvailableApartments, assignTenant, checkTenantHasApartment } = useApartmentStore();
+  const navigate = useNavigate();
+  const { getAvailableApartments, getPublicAvailableApartments, assignTenant, checkTenantHasApartment } = useApartmentStore();
   
   // Handle sidebar toggle
   const handleSidebarToggle = (isCollapsed) => {
@@ -38,7 +40,9 @@ const BrowseApartmentsPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const availableApartments = await getAvailableApartments();
+        const availableApartments = user
+          ? await getAvailableApartments()
+          : await getPublicAvailableApartments();
         setApartments(availableApartments);
         
         // Set initial price range based on available apartments
@@ -48,8 +52,10 @@ const BrowseApartmentsPage = () => {
           setPriceRange([minRent, maxRent]);
         }
         
-        const hasTenantApartment = await checkTenantHasApartment();
-        setHasApartment(hasTenantApartment);
+        if (user) {
+          const hasTenantApartment = await checkTenantHasApartment();
+          setHasApartment(hasTenantApartment);
+        }
       } catch (error) {
         console.error("Error fetching apartments:", error);
       } finally {
@@ -58,7 +64,7 @@ const BrowseApartmentsPage = () => {
     };
     
     fetchData();
-  }, [getAvailableApartments, checkTenantHasApartment]);
+  }, [user, getAvailableApartments, getPublicAvailableApartments, checkTenantHasApartment]);
   
   const handleViewDetails = (apartment) => {
     setSelectedApartment(apartment);
@@ -67,6 +73,10 @@ const BrowseApartmentsPage = () => {
   };
   
   const handleApply = (apartment) => {
+    if (!user) {
+      navigate("/signup");
+      return;
+    }
     setSelectedApartment(apartment);
     setIsApplyModalOpen(true);
   };
@@ -110,12 +120,21 @@ const BrowseApartmentsPage = () => {
   });
   
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className={`browse-page flex min-h-screen bg-gray-50 ${user ? "" : "browse-page-public"}`}>
       {/* Tenant Side Navigation */}
-      <TenantSideNav onToggle={handleSidebarToggle} onModalOpen={handleModalOpen} />
+      {user && <TenantSideNav onToggle={handleSidebarToggle} onModalOpen={handleModalOpen} />}
       
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-0 lg:ml-64'}`}>
+      <div className={`flex-1 transition-all duration-300 ${user && (sidebarCollapsed ? 'ml-20' : 'ml-0 lg:ml-64')}`}>
+        {!user && (
+          <header className="browse-public-header">
+            <Link to="/" className="browse-public-brand"><img src="/brand-mark.svg" alt="" /> RentFlow</Link>
+            <div className="browse-public-actions">
+              <Link to="/login">Sign in</Link>
+              <Link className="browse-public-join" to="/signup">Create account</Link>
+            </div>
+          </header>
+        )}
         <div className="px-4 py-6 lg:px-8 overflow-x-hidden">
           <div className="max-w-full">
             {/* Page Header Section */}
@@ -125,8 +144,9 @@ const BrowseApartmentsPage = () => {
               transition={{ duration: 0.5 }}
               className="mb-6"
             >
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Browse Apartments</h1>
-              <p className="text-gray-600 mt-1">Find your perfect apartment from our available listings</p>
+              <p className="browse-kicker">Available now</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Find a place that fits.</h1>
+              <p className="text-gray-600 mt-1">Browse real listings, compare the details, and take your time.</p>
             </motion.div>
             
             {/* Search and Filter Section */}
@@ -292,7 +312,7 @@ const BrowseApartmentsPage = () => {
                                   onClick={() => handleApply(apartment)}
                                   className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg transition-colors"
                                 >
-                                  Apply Now
+                                  {user ? "Apply Now" : "Sign up to apply"}
                                 </button>
                               )}
                             </div>

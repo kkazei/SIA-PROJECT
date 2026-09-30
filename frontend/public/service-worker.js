@@ -1,166 +1,155 @@
-// Service worker version - increment to force update
-const CACHE_VERSION = 'v1.4';
-const CACHE_NAME = `rentflow-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v2';
+const STATIC_CACHE = `rentflow-static-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `rentflow-runtime-${CACHE_VERSION}`;
+const NAVIGATION_CACHE = `rentflow-navigation-${CACHE_VERSION}`;
+const IMAGE_CACHE = `rentflow-images-${CACHE_VERSION}`;
 
-// Assets that should be cached immediately
-const PRECACHE_ASSETS = [
+const APP_SHELL = [
   '/',
   '/index.html',
-  '/site.webmanifest'
+  '/site.webmanifest',
+  '/brand-mark.svg',
 ];
 
-// SPA routes that should be handled by returning index.html
-const SPA_ROUTES = [
-  '/dashboard',
-  '/landlord',
-  '/tenant',
-  '/admin',
-  '/profile',
-  '/settings',
-  '/apartments',
-  '/maintenance'
-];
+const CACHE_PREFIX = 'rentflow-';
 
-// Install event - cache core assets
-self.addEventListener('install', event => {
-  console.log('[ServiceWorker] Installing new version', CACHE_VERSION);
-  
-  // Precache critical assets
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[ServiceWorker] Precaching assets');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
-      .then(() => {
-        // Activate immediately without waiting for tabs to close
-        console.log('[ServiceWorker] Skipping waiting');
-        return self.skipWaiting();
-      })
-  );
-});
+const isSameOrigin = (url) => url.origin === self.location.origin;
 
-// Activate event - clean up old caches
-self.addEventListener('activate', event => {
-  console.log('[ServiceWorker] Activating new version', CACHE_VERSION);
-  
-  event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames
-            .filter(name => name.startsWith('rentflow-') && name !== CACHE_NAME)
-            .map(name => {
-              console.log('[ServiceWorker] Deleting old cache', name);
-              return caches.delete(name);
-            })
-        );
-      })
-      .then(() => {
-        // Take control of all clients
-        console.log('[ServiceWorker] Claiming clients');
-        return self.clients.claim();
-      })
-  );
-});
-
-// Is this a navigation to an SPA route?
-const isSpaRoute = (url) => {
-  const pathname = new URL(url).pathname;
-  return SPA_ROUTES.some(route => pathname.startsWith(route));
+const isApiRequest = (url) => {
+  const pathname = url.pathname.toLowerCase();
+  return pathname.startsWith('/api/') || pathname.startsWith('/auth/') || pathname.includes('/login') || pathname.includes('/signup') || pathname.includes('/logout') || pathname.includes('/refresh') || pathname.includes('/token') || pathname.includes('/check-auth') || pathname.includes('/verify-email') || pathname.includes('/forgot-password') || pathname.includes('/reset-password') || pathname.includes('/google');
 };
 
-// Fetch event - handle requests
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
-  
-  // Skip cross-origin requests
-  if (url.origin !== self.location.origin) return;
-  
-  // Handle SPA routes by serving index.html
-  if (isSpaRoute(url.href) || (event.request.mode === 'navigate' && url.pathname !== '/')) {
-    console.log('[ServiceWorker] Handling SPA route', url.pathname);
-    
-    event.respondWith(
-      // Try network first for navigation
-      fetch(event.request)
-        .catch(() => {
-          console.log('[ServiceWorker] Navigation fetch failed, serving from cache');
-          return caches.match('/index.html');
-        })
-    );
-    return;
+const isNavigationRequest = (request, url) => {
+  const acceptHeader = request.headers.get('accept') || '';
+  return request.mode === 'navigate' || (acceptHeader.includes('text/html') && !isApiRequest(url));
+};
+
+const isStaticAssetRequest = (request, url) => {
+  const destination = request.destination || '';
+  const pathname = url.pathname;
+
+  return ['script', 'style', 'font', 'worker', 'manifest'].includes(destination) || /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$/i.test(pathname);
+};
+
+const isImageRequest = (request, url) => {
+  const destination = request.destination || '';
+  const pathname = url.pathname;
+
+  return destination === 'image' || /\.(?:png|jpe?g|gif|webp|svg|ico)$/i.test(pathname);
+};
+
+const shouldBypassCache = (request, url) => {
+  if (request.method !== 'GET') return true;
+  if (!isSameOrigin(url)) return true;
+  if (request.cache === 'only-if-cached') return true;
+  if (request.mode === 'navigate' && url.pathname === '/') return false;
+
+  return isApiRequest(url) || request.headers.has('authorization') || request.credentials === 'include';
+};
+
+const cacheResponse = async (cacheName, request, response) => {
+  if (!response || response.status === 0 || response.type === 'opaque') return;
+  if (response.status >= 400) return;
+
+  const cache = await caches.open(cacheName);
+  await cache.put(request, response.clone());
+};
+
+const handleStaticAsset = async (request) => {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
   }
-  
-  // For API requests, always go to network first
-  if (url.pathname.startsWith('/api/')) {
-    console.log('[ServiceWorker] API request', url.pathname);
-    
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          console.log('[ServiceWorker] API fetch failed, trying cache');
-          return caches.match(event.request);
-        })
-    );
-    return;
+
+  const networkResponse = await fetch(request);
+  if (networkResponse && networkResponse.ok) {
+    const cacheName = isImageRequest(request, new URL(request.url)) ? IMAGE_CACHE : RUNTIME_CACHE;
+    await cacheResponse(cacheName, request, networkResponse);
   }
-  
-  // For static assets (JS, CSS, images), use cache-first strategy
-  event.respondWith(
-    caches.match(event.request)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          console.log('[ServiceWorker] Serving from cache', url.pathname);
-          return cachedResponse;
-        }
-        
-        // Not in cache, get from network
-        console.log('[ServiceWorker] Fetching from network', url.pathname);
-        return fetch(event.request)
-          .then(response => {
-            // Don't cache if response is not valid
-            if (!response || response.status !== 200) {
-              return response;
-            }
-            
-            // Clone the response to cache it
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-              
-            return response;
-          })
-          .catch(error => {
-            console.error('[ServiceWorker] Fetch failed:', error);
-            
-            // For HTML pages, return the offline page
-            if (event.request.headers.get('Accept').includes('text/html')) {
-              return caches.match('/index.html');
-            }
-            
-            // Otherwise just propagate the error
-            throw error;
-          });
-      })
+
+  return networkResponse;
+};
+
+const handleNavigationRequest = async (request) => {
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      await cacheResponse(NAVIGATION_CACHE, new URL(request.url).pathname === '/' ? '/' : '/index.html', networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    const cachedFallback = await caches.match('/index.html');
+    if (cachedFallback) {
+      return cachedFallback;
+    }
+
+    return Response.error();
+  }
+};
+
+self.addEventListener('install', (event) => {
+  console.log('[ServiceWorker] Installing new version', CACHE_VERSION);
+
+  event.waitUntil(
+    (async () => {
+      const staticCache = await caches.open(STATIC_CACHE);
+      await staticCache.addAll(APP_SHELL);
+      await self.skipWaiting();
+    })()
   );
 });
 
-// Listen for messages from the client
-self.addEventListener('message', event => {
+self.addEventListener('activate', (event) => {
+  console.log('[ServiceWorker] Activating new version', CACHE_VERSION);
+
+  event.waitUntil(
+    (async () => {
+      const cacheNames = await caches.keys();
+      const activeCacheNames = new Set([STATIC_CACHE, RUNTIME_CACHE, NAVIGATION_CACHE, IMAGE_CACHE]);
+
+      await Promise.all(
+        cacheNames
+          .filter((name) => name.startsWith(CACHE_PREFIX) && !activeCacheNames.has(name))
+          .map(async (name) => {
+            console.log('[ServiceWorker] Deleting old cache', name);
+            await caches.delete(name);
+          })
+      );
+
+      await self.clients.claim();
+    })()
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  if (shouldBypassCache(event.request, url)) {
+    return;
+  }
+
+  if (isNavigationRequest(event.request, url)) {
+    event.respondWith(handleNavigationRequest(event.request));
+    return;
+  }
+
+  if (isStaticAssetRequest(event.request, url)) {
+    event.respondWith(handleStaticAsset(event.request));
+    return;
+  }
+
+  event.respondWith(fetch(event.request).catch(() => Response.error()));
+});
+
+self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('[ServiceWorker] Skip waiting message received');
     self.skipWaiting();
   }
 });
 
-// Log any errors that occurred during service worker execution
-self.addEventListener('error', event => {
+self.addEventListener('error', (event) => {
   console.error('[ServiceWorker] Error:', event.error);
 });
 

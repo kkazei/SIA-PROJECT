@@ -75,9 +75,7 @@ const NoApartmentSideNavBar = ({ userName, onBrowseClick, onApplicationsClick, o
               className="focus:outline-none transition-transform hover:scale-110 hidden lg:block"
               aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
-              <div className="p-2 bg-blue-900 rounded-lg shadow-md hover:bg-blue-800 transition-all duration-200">
-                <FaHome className="text-white" />
-              </div>
+              <img src="/brand-mark.svg" alt="RentFlow" className="h-10 w-10 rounded-lg shadow-md" />
             </button>
             <AnimatePresence>
               {isExpanded && (

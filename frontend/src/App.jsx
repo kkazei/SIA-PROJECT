@@ -129,6 +129,7 @@ function App() {
                 <Routes>
                     {/* Landing page - eagerly loaded */}
                     <Route path='/' element={<LandingPage />} />
+                    <Route path='/browse-apartments' element={<BrowseApartmentsPage />} />
                     
                     {/* Dashboard for authenticated users */}
                     <Route

@@ -14,6 +14,7 @@ import LandlordSideNav from '../../components/layout/LandlordSideNav';
 import { formatDate } from "../../components/utils/date";
 import ApplicationModal from './ApplicationModal'; // Import the modal
 import ApartmentDetails from '../../components/apartments/ApartmentDetails';
+import { ArrowUpRight, Building2, ClipboardList, Mail, Megaphone, Plus } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -232,6 +233,10 @@ const DashboardPage = () => {
     // Calculate total income and expenses for the stats cards
     const totalIncome = chartData.datasets[0].data.reduce((sum, value) => sum + value, 0);
     const totalExpenses = chartData.datasets[1].data.reduce((sum, value) => sum + value, 0);
+    const occupiedApartments = apartments.filter(apt => apt.status === 'occupied').length;
+    const availableApartments = apartments.filter(apt => apt.status === 'available').length;
+    const occupancyRate = apartments.length ? Math.round((occupiedApartments / apartments.length) * 100) : 0;
+    const formatCurrency = (value) => `₱${value.toLocaleString()}`;
 
     return (
         <div className="dashboard-shell landlord-dashboard flex flex-col lg:flex-row">
@@ -245,106 +250,58 @@ const DashboardPage = () => {
                     isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
                 }`}
             >
-                <div
-                    className="bg-white shadow-md rounded-lg p-4 lg:p-6 mt-16 lg:mt-0" // Adjust margin-top for mobile view
-                >
-                    <h2 className="text-xl lg:text-2xl font-bold text-gray-800">
-                        Welcome, {user?.name || 'Landlord'}
-                    </h2>
-                    <p className="text-gray-600">{formatDate(new Date())}</p>
+                <div className="landlord-welcome mt-16 lg:mt-0">
+                    <div>
+                        <p className="dashboard-kicker">Landlord workspace</p>
+                        <h1>Good morning, {user?.name?.split(' ')[0] || 'Landlord'}.</h1>
+                        <p className="welcome-date">{formatDate(new Date())} <span aria-hidden="true">/</span> {apartments.length} properties under your care</p>
+                    </div>
+                    <button onClick={() => setRoomModalOpen(true)} className="landlord-primary-action">
+                        <Plus size={17} strokeWidth={2.5} /> Add property
+                    </button>
                 </div>
 
-                
-                
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
-                    <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
-                        <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
-                        <div className='grid grid-cols-2 gap-2 lg:gap-4 mt-4'>
-                            <button 
-                                onClick={() => setApplicationModalOpen(true)} // Open modal
-                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/application.png" alt="Tenants" className="w-8 h-8 lg:w-12 lg:h-12"/> 
-                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Application</span> 
-                            </button>
-                            <button 
-                                onClick={() => setRoomModalOpen(true)}
-                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/rename.png" alt="Rooms" className="w-8 h-8 lg:w-12 lg:h-12"/> 
-                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Rooms</span> 
-                            </button>
-                            <button 
-                                onClick={navigateToInquiriesPage}
-                                className='p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full'>
-                                <img src="/image/envelope.png" alt="Inquiries" className="w-8 h-8 lg:w-12 lg:h-12"/>
-                                <span className='mt-2 lg:mt-3 text-sm lg:text-lg font-semibold'>Inquiries</span> 
-                            </button>
-                            <button 
-                                onClick={() => setAnnouncementModalOpen(true)}
-                                className="p-4 lg:p-6 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-200 text-white rounded-lg shadow-md flex flex-col items-center justify-center w-full">
-                                <img src="/image/announcement.png" alt="Announcements" className="w-8 h-8 lg:w-12 lg:h-12"/> 
-                                <span className="mt-2 lg:mt-3 text-sm lg:text-lg font-semibold">Announcements</span> 
-                            </button>
+                <div className="landlord-stats" aria-label="Property summary">
+                    <div className="landlord-stat landlord-stat-accent"><span>Occupancy</span><strong>{occupancyRate}%</strong><small>{occupiedApartments} of {apartments.length} units occupied</small></div>
+                    <div className="landlord-stat"><span>Available units</span><strong>{availableApartments}</strong><small>Ready to be listed</small></div>
+                    <div className="landlord-stat"><span>Collected income</span><strong>{formatCurrency(totalIncome)}</strong><small>This year</small></div>
+                    <div className="landlord-stat"><span>Maintenance spend</span><strong>{formatCurrency(totalExpenses)}</strong><small>Completed requests</small></div>
+                </div>
+
+                <div className="landlord-dashboard-grid">
+                    <section className="landlord-panel landlord-actions-panel">
+                        <div className="panel-heading"><div><p className="dashboard-kicker">Shortcuts</p><h2>What needs your attention?</h2></div><ArrowUpRight size={18} /></div>
+                        <div className="landlord-actions-list">
+                            <button onClick={() => setApplicationModalOpen(true)}><span className="action-icon"><ClipboardList size={18} /></span><span><strong>Review applications</strong><small>Manage incoming tenant requests</small></span><ArrowUpRight size={16} /></button>
+                            <button onClick={() => setRoomModalOpen(true)}><span className="action-icon"><Building2 size={18} /></span><span><strong>Manage rooms</strong><small>Add or update a property listing</small></span><ArrowUpRight size={16} /></button>
+                            <button onClick={navigateToInquiriesPage}><span className="action-icon"><Mail size={18} /></span><span><strong>Open inquiries</strong><small>Keep conversations moving</small></span><ArrowUpRight size={16} /></button>
+                            <button onClick={() => setAnnouncementModalOpen(true)}><span className="action-icon"><Megaphone size={18} /></span><span><strong>Post announcement</strong><small>Share an update with tenants</small></span><ArrowUpRight size={16} /></button>
                         </div>
-                    </div>
+                    </section>
 
-                    <div className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'>
-                        <h3 className="text-lg lg:text-xl font-bold text-white">Overview of {new Date().getFullYear()}</h3>
-                        <div className='mt-4 bg-gray-100 p-2 lg:p-4 rounded-lg shadow-inner'>
-                            <p className='text-gray-700 text-center'>Income and Expenses</p>
-                            <div className='h-40 lg:h-60'>
-                                <Bar data={chartData} options={options} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6">
-                    <div className='bg-blue-900 transition duration-200 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-sm lg:text-lg font-bold'>
-                            {apartments.filter(apt => apt.status === 'available').length}
-                        </h4>
-                        <p className='text-xs lg:text-base'>Vacant</p>
-                    </div>
-                    <div className='bg-green-600 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-sm lg:text-lg font-bold'>
-                            {apartments.filter(apt => apt.status === 'occupied').length}
-                        </h4>
-                        <p className='text-xs lg:text-base'>Occupied</p>
-                    </div>
-                    <div className='bg-green-500 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-sm lg:text-lg font-bold'>
-                            ₱{totalIncome.toLocaleString()}
-                        </h4>
-                        <p className='text-xs lg:text-base'>Total Income</p>
-                    </div>
-                    <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
-                        <h4 className='text-sm lg:text-lg font-bold'>₱{totalExpenses.toLocaleString()}</h4>
-                        <p className='text-xs lg:text-base'>Total Expenses</p>
-                    </div>
+                    <section className="landlord-panel landlord-chart-panel">
+                        <div className="panel-heading"><div><p className="dashboard-kicker">Cash flow</p><h2>Income & expenses</h2></div><span className="panel-period">{new Date().getFullYear()}</span></div>
+                        <div className="landlord-chart"><Bar data={chartData} options={options} /></div>
+                    </section>
                 </div>
 
-                <div className='bg-gray-900 shadow-md rounded-lg p-6 mt-6'>
-                    <h3 className='text-xl font-bold text-white'>My Apartments</h3>
+                <section className="landlord-panel landlord-apartments-panel">
+                    <div className="panel-heading"><div><p className="dashboard-kicker">Your portfolio</p><h2>Properties</h2></div><span className="panel-count">{apartments.length} total</span></div>
                     {isLoading ? (
-                        <p className='text-white'>Loading your apartments...</p>
+                        <p className='landlord-empty-state'>Loading your apartments...</p>
                     ) : error ? (
-                        <p className='text-red-500'>{error}</p>
+                        <p className='landlord-error'>{error}</p>
                     ) : apartments.length === 0 ? (
-                        <div className="text-center py-10">
-                            <p className="text-white">You haven't added any apartments yet.</p>
-                            <button 
-                                onClick={() => setRoomModalOpen(true)}
-                                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-                            >
+                        <div className="landlord-empty-state"><Building2 size={30} /><p>You haven't added any apartments yet.</p><button onClick={() => setRoomModalOpen(true)}>
                                 Add Your First Apartment
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                        <div className="landlord-apartment-grid">
                             {apartments.map((apartment) => (
-                                <div key={apartment._id} className="bg-gray-800 rounded-lg overflow-hidden shadow-md">
+                                <article key={apartment._id} className="landlord-apartment-card">
                                     {/* Apartment Image */}
-                                    <div className="h-48 overflow-hidden bg-gray-700">
+                                    <div className="apartment-image">
                                         {apartment.images && apartment.images.length > 0 ? (
                                             <img
                                                 key={apartment.images[0]} // Add key to force re-render when URL changes
@@ -369,10 +326,10 @@ const DashboardPage = () => {
                                     </div>
                                     
                                     {/* Apartment Info */}
-                                    <div className="p-4">
+                                    <div className="apartment-body">
                                         <div className="flex justify-between items-center mb-2">
-                                            <h4 className="text-lg font-bold text-white">{apartment.room}</h4>
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
+                                            <h3>{apartment.room}</h3>
+                                            <span className={`apartment-status ${
                                                 apartment.status === 'occupied' 
                                                     ? 'bg-yellow-500 bg-opacity-20 text-yellow-300 border border-yellow-500' 
                                                     : 'bg-green-500 bg-opacity-20 text-green-300 border border-green-500'
@@ -381,11 +338,11 @@ const DashboardPage = () => {
                                             </span>
                                         </div>
                                         
-                                        <p className="text-green-400 font-semibold mb-2">₱{apartment.rent.toLocaleString()}/month</p>
+                                        <p className="apartment-rent">{formatCurrency(apartment.rent)}/month</p>
                                         
-                                        <p className="text-gray-400 text-sm mb-3 line-clamp-2">{apartment.description}</p>
+                                        <p className="apartment-description">{apartment.description}</p>
                                         
-                                        <div className="flex justify-between text-sm text-gray-400">
+                                        <div className="apartment-meta">
                                             <span>{apartment.bedrooms} {apartment.bedrooms === 1 ? 'Bedroom' : 'Bedrooms'}</span>
                                             <span>{apartment.bathrooms} {apartment.bathrooms === 1 ? 'Bathroom' : 'Bathrooms'}</span>
                                         </div>
@@ -393,7 +350,7 @@ const DashboardPage = () => {
                                         {/* Add View Details Button */}
                                         <button 
                                             onClick={() => handleViewApartmentDetails(apartment)}
-                                            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md transition-colors text-sm font-medium"
+                                            className="apartment-details-button"
                                         >
                                             View Apartment Details
                                         </button>
@@ -433,11 +390,11 @@ const DashboardPage = () => {
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </article>
                             ))}
                         </div>
                     )}
-                </div>
+                </section>
                 
                 {/* Apartment Details Modal */}
                 {isDetailsModalOpen && selectedApartment && (

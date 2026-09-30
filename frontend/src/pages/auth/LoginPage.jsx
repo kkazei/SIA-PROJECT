@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, Loader, User } from "lucide-react";
+import { Mail, Lock, Loader } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Input from "../../components/ui/Input";
 import { useAuthStore } from "../../store/authStore";
@@ -38,10 +38,10 @@ const handleLogin = async (e) => {
             <div className="auth-layout w-full max-w-6xl">
                 <section className="auth-intro hidden lg:flex">
                     <div>
-                        <Link to="/" className="auth-brand"><span className="brand-mark">S</span> SIA Living</Link>
+                        <Link to="/" className="auth-brand"><img className="brand-mark" src="/brand-mark.svg" alt="" /> RentFlow</Link>
                         <p className="auth-kicker">A better way to find home</p>
                         <h1>Come back to a place that feels like yours.</h1>
-                        <p className="auth-intro-copy">Keep your apartment search, applications, payments, and conversations in one calm, connected space.</p>
+                        <p className="auth-intro-copy">Your apartment search, applications, payments, and conversations in one calm, connected space.</p>
                     </div>
                     <div className="auth-stat"><span>01</span><strong>One home base</strong><small>Everything you need, close at hand.</small></div>
                 </section>
@@ -53,13 +53,10 @@ const handleLogin = async (e) => {
             >
                 {/* Logo/Header Section */}
                 <div className="p-8 pb-0">
-                    <div className="auth-icon mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                        <User className="text-white h-8 w-8" />
-                    </div>
-                    <h2 className="auth-title text-3xl font-bold mb-1 text-center">
-                        Welcome Back
-                    </h2>
-                    <p className="text-gray-400 text-center mb-6">Sign in to your account</p>
+                    <Link to="/" className="auth-mobile-brand"><img className="brand-mark" src="/brand-mark.svg" alt="" /> RentFlow</Link>
+                    <p className="auth-form-eyebrow">Your home base</p>
+                    <h2 className="auth-title text-3xl font-bold mb-1 text-center">Welcome back</h2>
+                    <p className="auth-subtitle text-center mb-6">Sign in to continue where you left off.</p>
                 </div>
 
                 <div className="p-8 pt-4">
@@ -74,23 +71,11 @@ const handleLogin = async (e) => {
                     )}
 
                     <form onSubmit={handleLogin}>
-                        <Input
-                            icon={Mail}
-                            type="email"
-                            placeholder="Email Address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mb-4"
-                        />
+                        <label className="auth-field-label" htmlFor="login-email">Email address</label>
+                        <Input icon={Mail} id="login-email" type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
-                        <Input
-                            icon={Lock}
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mb-2"
-                        />
+                        <label className="auth-field-label" htmlFor="login-password">Password</label>
+                        <Input icon={Lock} id="login-password" type="password" placeholder="Your password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
 
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center">

@@ -581,6 +581,26 @@ export const getAvailableApartments = async (req, res) => {
     }
 };
 
+export const getPublicAvailableApartments = async (req, res) => {
+    try {
+        const apartments = await Apartment.find({ status: 'available' })
+            .select('-landlord_id -tenant_id -paymentInfo')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: apartments.length,
+            data: apartments
+        });
+    } catch (error) {
+        console.error("Error fetching public apartments:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
 export const getTenantApartment = async (req, res) => {
     try {
         // Check if user is a tenant

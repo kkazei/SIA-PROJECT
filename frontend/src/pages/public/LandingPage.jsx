@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Building2, ChevronLeft, ChevronRight, Download, Menu, MoveUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Download, Menu, MoveUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
@@ -76,7 +76,7 @@ const LandingPage = () => {
             <div className="landing-grain" aria-hidden="true" />
             <nav className="landing-nav" aria-label="Primary navigation">
                 <Link to="/" className="landing-brand" aria-label="RentFlow home">
-                    <span className="brand-mark"><Building2 size={18} strokeWidth={1.8} /></span>
+                    <img className="brand-mark" src="/brand-mark.svg" alt="" />
                     <span>RentFlow</span>
                 </Link>
                 <div className="landing-nav-links">
@@ -113,7 +113,7 @@ const LandingPage = () => {
                         RentFlow brings homes, people, and the everyday details of renting into one calm, clear space.
                     </motion.p>
                     <motion.div className="hero-actions" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.24, ease }}>
-                        <Link className="primary-action" to={isAuthenticated ? getDashboardUrl() : "/signup"}>
+                        <Link className="primary-action" to={isAuthenticated ? getDashboardUrl() : "/browse-apartments"}>
                             {isAuthenticated ? "Open your dashboard" : "Start exploring"}<MoveUpRight size={18} />
                         </Link>
                         {isInstallable && (
@@ -135,7 +135,7 @@ const LandingPage = () => {
                                 loading={currentImageIndex === 0 ? "eager" : "lazy"}
                                 onError={(event) => {
                                     event.currentTarget.onerror = null;
-                                    event.currentTarget.src = "/image/Logo.png";
+                                    event.currentTarget.src = "/brand-mark.svg";
                                 }}
                                 initial={{ opacity: 0, scale: 1.04 }}
                                 animate={{ opacity: 1, scale: 1 }}
