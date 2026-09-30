@@ -400,7 +400,7 @@ const TenantDashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className={`p-4 lg:p-8 w-full transition-all duration-300 ${
+        className={`tenant-dashboard-content p-4 lg:p-8 w-full transition-all duration-300 ${
           isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
         }`}
       >
@@ -464,7 +464,7 @@ const TenantDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white shadow-md rounded-lg p-4 lg:p-6"
+          className="tenant-welcome bg-white shadow-md rounded-lg p-4 lg:p-6"
         >
           <div className="flex items-start justify-between">
             <div>
@@ -486,12 +486,12 @@ const TenantDashboard = () => {
         </motion.div>
 
         {/* Quick Actions Box - Updated to match landlord dashboard style */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
+        <div className='tenant-overview-grid grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-4 lg:mt-6'>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'
+            className='tenant-quick-panel bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'
           >
             <h3 className="text-lg lg:text-xl font-bold text-white">Quick Actions</h3>
             <div className='grid grid-cols-2 gap-2 lg:gap-4 mt-4'>
@@ -534,7 +534,7 @@ const TenantDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'
+            className='tenant-apartment-panel bg-gray-900 shadow-md rounded-lg p-4 lg:p-6'
           >
             <h3 className="text-lg lg:text-xl font-bold text-white">Your Apartment</h3>
             <div className="mt-4 flex flex-col md:flex-row gap-4">
@@ -595,7 +595,7 @@ const TenantDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6"
+          className="tenant-status-grid grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 mt-4 lg:mt-6"
         >
           <div className='bg-blue-900 text-white p-2 lg:p-4 rounded-lg text-center shadow-md'>
             <h4 className='text-sm lg:text-lg font-bold'>
@@ -637,7 +637,7 @@ const TenantDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className='bg-gray-900 shadow-md rounded-lg p-4 lg:p-6 mt-4 lg:mt-6'
+          className='tenant-payment-panel bg-gray-900 shadow-md rounded-lg p-4 lg:p-6 mt-4 lg:mt-6'
         >
           <h3 className='text-lg lg:text-xl font-bold text-white'>Payment</h3>
           

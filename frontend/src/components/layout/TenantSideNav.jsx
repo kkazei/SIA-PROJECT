@@ -124,7 +124,7 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
     <>
       {/* Mobile Toggle Button */}
       <button
-        className="fixed z-50 top-4 left-4 bg-blue-900 text-white p-3 rounded-full lg:hidden shadow-md hover:bg-blue-800 transition-all duration-300"
+        className="tenant-nav-toggle fixed z-50 top-4 left-4 bg-blue-900 text-white p-3 rounded-full lg:hidden shadow-md hover:bg-blue-800 transition-all duration-300"
         onClick={toggleSidebarVisibility}
         aria-label={isSidebarVisible ? "Close navigation" : "Open navigation"}
       >
@@ -139,7 +139,7 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 lg:hidden"
+            className="tenant-nav-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 lg:hidden"
             onClick={toggleSidebarVisibility}
           ></motion.div>
         )}
@@ -150,7 +150,7 @@ const TenantSideNav = ({ onToggle, onModalOpen }) => {
         variants={sidebarVariants}
         initial={false}
         animate={isSidebarVisible || !collapsed ? "expanded" : "collapsed"}
-        className={`fixed top-0 left-0 h-screen z-50 bg-gray-900 border-r border-gray-800 shadow-md transition-transform duration-300 ${
+        className={`tenant-nav-shell fixed top-0 left-0 h-screen z-50 bg-gray-900 border-r border-gray-800 shadow-md transition-transform duration-300 ${
           isSidebarVisible ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

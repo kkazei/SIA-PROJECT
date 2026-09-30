@@ -1,51 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import {
-  FaHome,
-  FaUsers,
-  FaBullhorn,
-  FaSignOutAlt,
-  FaClipboardList,
-  FaHammer,
-  FaMailBulk,
-  FaEnvelope  // Add FaEnvelope icon
-} from 'react-icons/fa';
+import { Archive, Bell, Building2, ChevronLeft, ClipboardList, Hammer, Home, LogOut, Menu, MessageSquare, Users, X } from 'lucide-react';
 
 const LandlordSideNav = ({ onToggle }) => {
-  // Change this to false for expanded by default on desktop
   const [collapsed, setCollapsed] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  // For mobile visibility
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
 
-  // Set initial state based on screen size
   useEffect(() => {
-    // Only collapse by default on small screens
     const handleResize = () => {
       setCollapsed(window.innerWidth < 1024);
     };
     
-    // Set initial state
     handleResize();
-    
-    // Update on resize
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close mobile sidebar when route changes
   useEffect(() => {
     setIsSidebarVisible(false);
   }, [location]);
 
-  // Notify parent component about sidebar state changes
   useEffect(() => {
     if (onToggle) {
-      // For desktop, consider it expanded if either manually expanded or hovering
       const isEffectivelyExpanded = !collapsed || (isHovering && window.innerWidth >= 1024);
       onToggle(!isEffectivelyExpanded);
     }
@@ -56,16 +37,13 @@ const LandlordSideNav = ({ onToggle }) => {
     navigate('/login');
   };
 
-  const toggleSidebar = () => {
-    const newCollapsedState = !collapsed;
-    setCollapsed(newCollapsedState);
-  };
+  const toggleSidebar = () => setCollapsed((isCollapsed) => !isCollapsed);
 
   const toggleSidebarVisibility = () => {
-    const newVisibilityState = !isSidebarVisible;
-    setIsSidebarVisible(newVisibilityState);
-    // Expand sidebar when opened in mobile view
-    if (newVisibilityState) setCollapsed(false);
+    setIsSidebarVisible((isVisible) => {
+      if (!isVisible) setCollapsed(false);
+      return !isVisible;
+    });
   };
   
   const handleMouseEnter = () => {
@@ -80,41 +58,28 @@ const LandlordSideNav = ({ onToggle }) => {
     }
   };
 
-  const navItems = [
+  const navGroups = [
     {
-      path: '/dashboard',
-      name: 'Dashboard',
-      icon: <FaHome size={20} />
+      label: 'Workspace',
+      items: [
+        { path: '/dashboard', name: 'Dashboard', icon: Home },
+        { path: '/landlord/tenants', name: 'Tenants', icon: Users },
+        { path: '/landlord/applications', name: 'Applications', icon: ClipboardList },
+      ],
     },
     {
-      path: '/landlord/tenants',
-      name: 'Tenants',
-      icon: <FaUsers size={20} />
+      label: 'Stay in touch',
+      items: [
+        { path: '/landlord/messages', name: 'Messages', icon: MessageSquare },
+        { path: '/landlord/announcements', name: 'Announcements', icon: Bell },
+      ],
     },
     {
-      path: '/landlord/applications',
-      name: 'Applications',
-      icon: <FaClipboardList size={20} />
-    },
-    {
-      path: '/landlord/messages',  // Add messages path
-      name: 'Messages',
-      icon: <FaEnvelope size={20} />
-    },
-    {
-      path: '/landlord/announcements',
-      name: 'Announcements',
-      icon: <FaBullhorn size={20} />
-    },
-    {
-      path: '/maintenance',
-      name: 'Maintenance',
-      icon: <FaHammer size={20} />
-    },
-    {
-      path: '/archive',
-      name: 'Archive',
-      icon: <FaMailBulk size={20} />
+      label: 'Property care',
+      items: [
+        { path: '/maintenance', name: 'Maintenance', icon: Hammer },
+        { path: '/archive', name: 'Archive', icon: Archive },
+      ],
     },
   ];
 
@@ -123,189 +88,51 @@ const LandlordSideNav = ({ onToggle }) => {
 
   return (
     <>
-      {/* Enhanced Toggle Button with Dynamic Movement Animation */}
-      <button
-        className={`
-          fixed z-50 lg:hidden
-          flex flex-col justify-center items-center
-          w-12 h-12 bg-gray-900 rounded-full shadow-lg
-          transition-all duration-700 ease-in-out
-          ${isSidebarVisible 
-            ? 'top-4 right-4 transform translate-x-0 rotate-90' 
-            : 'top-4 left-4 transform translate-x-0 rotate-0'
-          }
-          hover:scale-110 hover:bg-gray-800
-        `}
-        onClick={toggleSidebarVisibility}
-        aria-label={isSidebarVisible ? "Close navigation" : "Open navigation"}
-        style={{
-          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
-        }}
-      >
-        {/* Improved animated hamburger icon that transforms to X */}
-        <span className={`
-          block bg-white w-6 h-0.5 rounded-full 
-          transform transition-all duration-500 ease-in-out
-          ${isSidebarVisible ? 'rotate-45 translate-y-1.5 w-5' : 'mb-1.5 rotate-0 w-6'}
-        `}></span>
-        <span className={`
-          block bg-white w-6 h-0.5 rounded-full 
-          transition-all duration-500 ease-in-out
-          ${isSidebarVisible ? 'opacity-0 scale-0 w-1' : 'opacity-100 scale-100 w-6'}
-        `}></span>
-        <span className={`
-          block bg-white w-6 h-0.5 rounded-full 
-          transform transition-all duration-500 ease-in-out
-          ${isSidebarVisible ? '-rotate-45 -translate-y-1.5 w-5' : 'mt-1.5 rotate-0 w-6'}
-        `}></span>
+      <button className="landlord-mobile-nav-toggle" onClick={toggleSidebarVisibility} aria-label={isSidebarVisible ? 'Close navigation' : 'Open navigation'} aria-expanded={isSidebarVisible}>
+        {isSidebarVisible ? <X size={21} /> : <Menu size={21} />}
       </button>
 
-      {/* Overlay for mobile - closes sidebar when clicking outside */}
-      {isSidebarVisible && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={toggleSidebarVisibility}
-        ></div>
-      )}
+      {isSidebarVisible && <button className="landlord-nav-overlay" onClick={toggleSidebarVisibility} aria-label="Close navigation" />}
 
-      {/* Main Sidebar */}
-      <div
+      <aside
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`
-          fixed top-0 left-0 h-screen z-40
-          bg-gray-900 text-white shadow-xl
-          transition-all duration-300 ease-in-out overflow-hidden
-          ${isSidebarVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${isExpanded ? 'w-64' : 'w-20'}
-        `}
+        className={`landlord-nav-shell ${isSidebarVisible ? 'is-mobile-visible' : ''} ${isExpanded ? 'is-expanded' : 'is-collapsed'}`}
       >
-        {/* Sidebar Header - integrated close functionality for mobile */}
-        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Logo button that also toggles sidebar on desktop */}
-            <button
-              onClick={window.innerWidth >= 1024 ? toggleSidebar : toggleSidebarVisibility}
-              className="focus:outline-none transition-transform hover:scale-105"
-              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              <img 
-                src="/brand-mark.svg"
-                alt="RentFlow"
-                className={`transition-all duration-300 ${isExpanded ? 'w-12 h-12' : 'w-10 h-10'}`}
-              />
-            </button>
-            
-            {/* Brand name - smoothly fades and scales */}
-            <div 
-              className={`
-                overflow-hidden transition-all duration-300 ease-in-out 
-                ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
-              `}
-            >
-              <span className="text-xl font-bold whitespace-nowrap">RentFlow</span>
-            </div>
+        <div className="landlord-nav-brand-row">
+          <button className="landlord-nav-brand" onClick={window.innerWidth >= 1024 ? toggleSidebar : toggleSidebarVisibility} aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}>
+            <img src="/brand-mark.svg" alt="" />
+            <span>RentFlow</span>
+          </button>
+          {isExpanded && <span className="landlord-nav-role">LANDLORD</span>}
+          {isExpanded && <button className="landlord-nav-collapse" onClick={toggleSidebar} aria-label="Collapse sidebar" title="Collapse sidebar"><ChevronLeft size={17} /></button>}
+        </div>
+
+        <div className="landlord-nav-profile">
+          {user?.avatar ? <img src={user.avatar} alt="" referrerPolicy="no-referrer" /> : <span>{user?.name?.[0]?.toUpperCase() || 'L'}</span>}
+          <div className="landlord-nav-profile-copy">
+            <strong>{user?.name || 'Landlord'}</strong>
+            <small>{user?.email || 'landlord@example.com'}</small>
           </div>
         </div>
 
-        {/* User Profile - smoothly collapses */}
-        <div 
-          className={`
-            border-b border-gray-700 transition-all duration-300 ease-in-out
-            ${isExpanded ? 'h-auto py-4 px-4' : 'h-0 py-0 overflow-hidden'}
-          `}
-        >
-          {user && (
-            <div className="flex items-center space-x-3 transition-opacity duration-300">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt="User Avatar"
-                  className="w-10 h-10 rounded-full border-2 border-gray-700 object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold">
-                  {user.name ? user.name[0].toUpperCase() : 'L'}
-                </div>
-              )}
-              <div>
-                <p className="font-semibold">{user.name || 'Landlord'}</p>
-                <p className="text-xs text-gray-400">{user.email || 'landlord@example.com'}</p>
-              </div>
+        <nav className="landlord-nav-menu" aria-label="Landlord navigation">
+          {navGroups.map((group) => (
+            <div className="landlord-nav-group" key={group.label}>
+              {isExpanded && <p>{group.label}</p>}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return <NavLink key={item.path} to={item.path} title={!isExpanded ? item.name : undefined} className={({ isActive }) => `landlord-nav-link ${isActive ? 'is-active' : ''}`} onClick={() => window.innerWidth < 1024 && setIsSidebarVisible(false)}><Icon size={18} strokeWidth={1.9} /><span>{item.name}</span></NavLink>;
+              })}
             </div>
-          )}
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="py-4 transition-all duration-300">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) => `
-                    flex items-center py-3 px-4 hover:bg-gray-800 
-                    transition-all duration-200 ease-in-out
-                    ${isActive ? 'bg-gray-800 border-l-4 border-blue-500' : 'border-l-4 border-transparent'}
-                  `}
-                  onClick={() => {
-                    // Close sidebar on mobile when a link is clicked
-                    if (window.innerWidth < 1024) {
-                      setIsSidebarVisible(false);
-                    }
-                  }}
-                >
-                  <div className={`
-                    transition-all duration-300 ease-in-out
-                    ${isExpanded ? 'mr-3' : 'mx-auto'}
-                  `}>
-                    {item.icon}
-                  </div>
-                  <span className={`
-                    transition-all duration-300 ease-in-out whitespace-nowrap
-                    ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
-                  `}>
-                    {item.name}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
-            
-            {/* Logout Button */}
-            <li className="mt-6">
-              <button
-                onClick={() => {
-                  handleLogout();
-                  // Also close the sidebar on mobile
-                  if (window.innerWidth < 1024) {
-                    setIsSidebarVisible(false);
-                  }
-                }}
-                className={`
-                  flex items-center w-full py-3 px-4
-                  text-red-400 hover:text-white hover:bg-red-700  
-                  transition-all duration-200 ease-in-out
-                  border-l-4 border-transparent
-                `}
-              >
-                <div className={`
-                  transition-all duration-300 ease-in-out
-                  ${isExpanded ? 'mr-3' : 'mx-auto'}
-                `}>
-                  <FaSignOutAlt size={20} />
-                </div>
-                <span className={`
-                  transition-all duration-300 ease-in-out whitespace-nowrap
-                  ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}
-                `}>
-                  Logout
-                </span>
-              </button>
-            </li>
-          </ul>
+          ))}
         </nav>
-      </div>
+
+        <div className="landlord-nav-footer">
+          <div className="landlord-nav-context"><Building2 size={15} /><span>Renting, made calmer.</span></div>
+          <button className="landlord-nav-logout" onClick={handleLogout} title={!isExpanded ? 'Log out' : undefined}><LogOut size={18} /><span>Log out</span></button>
+        </div>
+      </aside>
     </>
   );
 };
