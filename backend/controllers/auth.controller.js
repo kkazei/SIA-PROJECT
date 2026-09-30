@@ -309,6 +309,13 @@ export const setRole = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    if (!user.isVerified && !user.googleId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Verify your email before selecting a role'
+      });
+    }
     
     // Update user role
     user.role = role;

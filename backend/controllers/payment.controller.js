@@ -56,6 +56,15 @@ export const uploadAndCreatePayment = async (req, res) => {
     
     // Get data from request body
     const { tenant_id, apartment_id, amount, reference_number, tenant_fullname } = req.body;
+
+    if (req.user.role !== 'tenant' || req.user.id !== tenant_id) {
+      return res.status(403).json({ success: false, message: 'Only the tenant account owner can submit this payment' });
+    }
+
+    const assignedApartment = await Apartment.exists({ _id: apartment_id, tenant_id: req.user.id });
+    if (!assignedApartment) {
+      return res.status(403).json({ success: false, message: 'You can only submit payment for your assigned apartment' });
+    }
     
     // Log received data for debugging
     console.log('Payment data received:', {
@@ -122,7 +131,15 @@ export const uploadAndCreatePayment = async (req, res) => {
 // Get all payments
 export const getAllPayments = async (req, res) => {
   try {
-    const payments = await Payment.find().sort({ createdAt: -1 });
+    let filter = {};
+    if (req.user.role === 'landlord') {
+      const apartments = await Apartment.find({ landlord_id: req.user.id }).select('_id');
+      filter.apartment_id = { $in: apartments.map((apartment) => apartment._id) };
+    } else if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You are not authorized to access payments' });
+    }
+
+    const payments = await Payment.find(filter).sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
@@ -143,6 +160,16 @@ export const getAllPayments = async (req, res) => {
 export const getTenantPayments = async (req, res) => {
   try {
     const { tenant_id } = req.params;
+    if (req.user.role !== 'admin' && req.user.role !== 'landlord' && req.user.id !== tenant_id) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to access these payments' });
+    }
+
+    if (req.user.role === 'landlord') {
+      const ownsApartment = await Apartment.exists({ landlord_id: req.user.id, tenant_id });
+      if (!ownsApartment) {
+        return res.status(403).json({ success: false, message: 'You can only access payments for your properties' });
+      }
+    }
     const payments = await Payment.find({ tenant_id }).sort({ createdAt: -1 });
     
     res.status(200).json({
@@ -171,6 +198,13 @@ export const getPaymentById = async (req, res) => {
         message: 'Payment not found'
       });
     }
+
+    if (req.user.role !== 'admin' && payment.tenant_id.toString() !== req.user.id) {
+      const ownsApartment = await Apartment.exists({ landlord_id: req.user.id, _id: payment.apartment_id });
+      if (!ownsApartment) {
+        return res.status(403).json({ success: false, message: 'You are not authorized to access this payment' });
+      }
+    }
     
     res.status(200).json({
       success: true,
@@ -198,11 +232,7 @@ export const updatePaymentStatus = async (req, res) => {
       });
     }
     
-    const payment = await Payment.findByIdAndUpdate(
-      req.params.id,
-      { status, admin_remarks },
-      { new: true, runValidators: true }
-    );
+    const payment = await Payment.findById(req.params.id);
     
     if (!payment) {
       return res.status(404).json({
@@ -210,6 +240,17 @@ export const updatePaymentStatus = async (req, res) => {
         message: 'Payment not found'
       });
     }
+
+    if (req.user.role !== 'admin') {
+      const ownsApartment = await Apartment.exists({ landlord_id: req.user.id, _id: payment.apartment_id });
+      if (!ownsApartment) {
+        return res.status(403).json({ success: false, message: 'You are not authorized to update this payment' });
+      }
+    }
+
+    payment.status = status;
+    payment.admin_remarks = admin_remarks;
+    await payment.save();
     
     // If payment is approved, update the due date (extend by 1 month)
     if (status === 'approved') {

@@ -68,11 +68,7 @@ setRole: async (role) => {
 	try {
 	  const response = await axios.post(`${API_URL}/set-role`, { role });
 	  
-	  // Explicitly ensure isVerified is true in the local user object
-	  const updatedUser = {
-		...response.data.user,
-		isVerified: true
-	  };
+	  const updatedUser = response.data.user;
 	  
 	  // Update the store with the updated user
 	  set({

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { FaUserAlt, FaHome } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
+import { getRolePath } from '../../utils/roleRouting';
 
 const RoleSelection = () => {
   const [selectedRole, setSelectedRole] = useState('');
@@ -13,7 +14,7 @@ const RoleSelection = () => {
   // If user already has a role, redirect to dashboard
   useEffect(() => {
     if (user && user.role && user.role !== 'unset') {
-      navigate('/');
+      navigate(getRolePath(user.role), { replace: true });
     }
   }, [user, navigate]);
 
@@ -24,14 +25,7 @@ const RoleSelection = () => {
       // Call the setRole function from auth store
       const result = await setRole(selectedRole);
       
-      // Always set bypass flag to ensure verification is skipped after role selection
-      localStorage.setItem('bypassVerification', 'true');
-      
-      // Wait a moment to ensure all state updates are processed
-      setTimeout(() => {
-        // After setting role, directly navigate to home with replace to prevent back navigation
-        navigate('/', { replace: true });
-      }, 300);
+      navigate(getRolePath(result.role), { replace: true });
     } catch (err) {
       console.error('Error setting role:', err);
     }
@@ -39,8 +33,8 @@ const RoleSelection = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-        <Loader className="w-8 h-8 text-green-400 animate-spin" />
+      <div className="auth-page min-h-screen flex items-center justify-center">
+        <Loader className="w-8 h-8 text-blue-300 animate-spin" />
       </div>
     );
   }
@@ -48,22 +42,22 @@ const RoleSelection = () => {
   // If user already has a role, don't show this page
   if (user.role && user.role !== 'unset') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-        <Loader className="w-8 h-8 text-green-400 animate-spin" />
+      <div className="auth-page min-h-screen flex items-center justify-center">
+        <Loader className="w-8 h-8 text-blue-300 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="auth-page min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className='max-w-md w-full bg-gray-800 bg-opacity-60 backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-700'
+        className='auth-card max-w-md w-full backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden'
       >
         <div className="p-8 pb-4">
-          <h2 className="text-3xl font-bold mb-1 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text">
+          <h2 className="auth-title text-3xl font-bold mb-1 text-center">
             Select Your Role
           </h2>
           <p className="text-gray-400 text-center mb-6">
@@ -85,15 +79,15 @@ const RoleSelection = () => {
               <motion.div 
                 className={`cursor-pointer p-4 rounded-lg flex flex-col items-center ${
                   selectedRole === 'tenant' 
-                    ? 'bg-green-600 bg-opacity-20 border-2 border-green-500' 
+                    ? 'bg-blue-400/15 border-2 border-blue-300' 
                     : 'bg-gray-700 bg-opacity-50 border border-gray-600 hover:bg-gray-700'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedRole('tenant')}
               >
-                <FaUserAlt className={`text-4xl mb-3 ${selectedRole === 'tenant' ? 'text-green-400' : 'text-gray-300'}`} />
-                <h3 className={`text-lg font-medium ${selectedRole === 'tenant' ? 'text-green-400' : 'text-gray-200'}`}>
+                <FaUserAlt className={`text-4xl mb-3 ${selectedRole === 'tenant' ? 'text-blue-300' : 'text-gray-300'}`} />
+                <h3 className={`text-lg font-medium ${selectedRole === 'tenant' ? 'text-blue-300' : 'text-gray-200'}`}>
                   Tenant
                 </h3>
                 <p className="text-sm text-gray-400 text-center mt-2">
@@ -104,15 +98,15 @@ const RoleSelection = () => {
               <motion.div 
                 className={`cursor-pointer p-4 rounded-lg flex flex-col items-center ${
                   selectedRole === 'landlord' 
-                    ? 'bg-green-600 bg-opacity-20 border-2 border-green-500' 
+                    ? 'bg-blue-400/15 border-2 border-blue-300' 
                     : 'bg-gray-700 bg-opacity-50 border border-gray-600 hover:bg-gray-700'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedRole('landlord')}
               >
-                <FaHome className={`text-4xl mb-3 ${selectedRole === 'landlord' ? 'text-green-400' : 'text-gray-300'}`} />
-                <h3 className={`text-lg font-medium ${selectedRole === 'landlord' ? 'text-green-400' : 'text-gray-200'}`}>
+                <FaHome className={`text-4xl mb-3 ${selectedRole === 'landlord' ? 'text-blue-300' : 'text-gray-300'}`} />
+                <h3 className={`text-lg font-medium ${selectedRole === 'landlord' ? 'text-blue-300' : 'text-gray-200'}`}>
                   Landlord
                 </h3>
                 <p className="text-sm text-gray-400 text-center mt-2">
@@ -130,7 +124,7 @@ const RoleSelection = () => {
                 className={`w-full py-3 px-4 font-bold rounded-lg shadow-lg transition-all duration-200 ${
                   !selectedRole 
                     ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900'
+                    : 'auth-submit text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-slate-950'
                 }`}
               >
                 {isLoading ? (
@@ -143,7 +137,7 @@ const RoleSelection = () => {
           </div>
         </div>
         
-        <div className="px-8 py-4 bg-gray-900 bg-opacity-70 mt-6">
+        <div className="auth-footer px-8 py-4 mt-6">
           <p className="text-xs text-center text-gray-500">
             You can change your role later in account settings if needed
           </p>

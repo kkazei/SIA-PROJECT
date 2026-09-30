@@ -42,7 +42,7 @@ const DashboardPage = () => {
             {
                 label: 'Income',
                 data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                backgroundColor: 'rgba(59, 130, 246, 0.82)',
                 borderRadius: 5,
                 hidden: visibleDataset === 'Expenses',
             },
@@ -234,14 +234,14 @@ const DashboardPage = () => {
     const totalExpenses = chartData.datasets[1].data.reduce((sum, value) => sum + value, 0);
 
     return (
-        <div className="flex flex-col lg:flex-row">
+        <div className="dashboard-shell landlord-dashboard flex flex-col lg:flex-row">
             <LandlordSideNav onToggle={setSidebarCollapsed} />
             <motion.div
                 initial={{ opacity: 0, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.5 }}
-                className={`p-4 lg:p-6 bg-blue-50 bg-gradient-to-r min-h-screen w-full transition-all duration-300 ${
+                className={`dashboard-content p-4 lg:p-6 min-h-screen w-full transition-all duration-300 ${
                     isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
                 }`}
             >

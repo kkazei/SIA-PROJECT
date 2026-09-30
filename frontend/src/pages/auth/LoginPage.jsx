@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Input from "../../components/ui/Input";
 import { useAuthStore } from "../../store/authStore";
 import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
+import { getRolePath } from '../../utils/roleRouting';
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
@@ -25,7 +26,7 @@ const handleLogin = async (e) => {
 	  } else if (result.needsRoleSelection) {
 		navigate('/role-selection');
 	  } else {
-		navigate('/'); // Or whatever your main app route is
+        navigate(getRolePath(useAuthStore.getState().user?.role), { replace: true });
 	  }
 	} catch (error) {
 	  console.error('Login error:', error);
@@ -33,19 +34,29 @@ const handleLogin = async (e) => {
   };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="auth-page min-h-screen flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+            <div className="auth-layout w-full max-w-6xl">
+                <section className="auth-intro hidden lg:flex">
+                    <div>
+                        <Link to="/" className="auth-brand"><span className="brand-mark">S</span> SIA Living</Link>
+                        <p className="auth-kicker">A better way to find home</p>
+                        <h1>Come back to a place that feels like yours.</h1>
+                        <p className="auth-intro-copy">Keep your apartment search, applications, payments, and conversations in one calm, connected space.</p>
+                    </div>
+                    <div className="auth-stat"><span>01</span><strong>One home base</strong><small>Everything you need, close at hand.</small></div>
+                </section>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="max-w-md w-full bg-gray-800 bg-opacity-60 backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-700"
+                className="auth-card max-w-md w-full backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden"
             >
                 {/* Logo/Header Section */}
                 <div className="p-8 pb-0">
-                    <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                    <div className="auth-icon mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-lg">
                         <User className="text-white h-8 w-8" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-1 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text">
+                    <h2 className="auth-title text-3xl font-bold mb-1 text-center">
                         Welcome Back
                     </h2>
                     <p className="text-gray-400 text-center mb-6">Sign in to your account</p>
@@ -87,13 +98,13 @@ const handleLogin = async (e) => {
                                     id="remember_me"
                                     name="remember_me"
                                     type="checkbox"
-                                    className="h-4 w-4 text-green-500 focus:ring-green-500 border-gray-600 rounded bg-gray-700"
+                                            className="h-4 w-4 text-blue-400 focus:ring-blue-400 border-gray-600 rounded bg-gray-700"
                                 />
                                 <label htmlFor="remember_me" className="ml-2 block text-sm text-gray-400">
                                     Remember me
                                 </label>
                             </div>
-                            <Link to="/forgot-password" className="text-sm text-green-400 hover:text-green-300 transition-colors">
+                            <Link to="/forgot-password" className="auth-link text-sm transition-colors">
                                 Forgot password?
                             </Link>
                         </div>
@@ -101,7 +112,7 @@ const handleLogin = async (e) => {
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200"
+                            className="auth-submit w-full py-3 px-4 text-white font-bold rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-slate-950 transition-all duration-200"
                             type="submit"
                             disabled={isLoading}
                         >
@@ -119,7 +130,7 @@ const handleLogin = async (e) => {
                                 <div className="w-full border-t border-gray-700"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-gray-800 text-gray-400">Or continue with</span>
+                                <span className="auth-or px-2 text-gray-400">Or continue with</span>
                             </div>
                         </div>
 
@@ -128,15 +139,16 @@ const handleLogin = async (e) => {
                         </div>
                     </div>
                 </div>
-                <div className="px-8 py-4 bg-gray-900 bg-opacity-70 flex justify-center">
+                <div className="auth-footer px-8 py-4 flex justify-center">
                     <p className="text-sm text-gray-400">
                         Don't have an account?{" "}
-                        <Link to="/signup" className="text-green-400 hover:text-green-300 font-medium">
+                        <Link to="/signup" className="auth-link font-medium">
                             Create an account
                         </Link>
                     </p>
                 </div>
             </motion.div>
+            </div>
         </div>
     );
 };

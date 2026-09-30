@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useAuthStore } from "../../store/authStore";
 import toast from "react-hot-toast";
 import { MailCheck, Loader } from "lucide-react";
+import { getRolePath } from "../../utils/roleRouting";
 
 const EmailVerificationPage = () => {
     const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -57,7 +58,7 @@ const EmailVerificationPage = () => {
                 navigate("/role-selection");
                 toast.success("Email verified successfully. Please select your role.");
             } else {
-                navigate("/");
+                navigate(getRolePath(response.user?.role), { replace: true });
                 toast.success("Email verified successfully");
             }
         } catch (error) {
@@ -99,19 +100,19 @@ const EmailVerificationPage = () => {
     }, [code]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 to-gray-800">
+        <div className="auth-page min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className='max-w-md w-full bg-gray-800 bg-opacity-60 backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-700'
+                className='auth-card max-w-md w-full backdrop-filter backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden'
             >
                 {/* Logo/Header Section */}
                 <div className="p-8 pb-0">
-                    <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                    <div className="auth-icon mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-lg">
                         <MailCheck className="text-white h-8 w-8" />
                     </div>
-                    <h2 className='text-3xl font-bold mb-1 text-center bg-gradient-to-r from-green-400 to-emerald-500 text-transparent bg-clip-text'>
+                    <h2 className='auth-title text-3xl font-bold mb-1 text-center'>
                         Verify Your Email
                     </h2>
                     <p className="text-gray-400 text-center mb-6">Enter the 6-digit code sent to your email</p>
@@ -142,7 +143,7 @@ const EmailVerificationPage = () => {
                                     value={digit}
                                     onChange={(e) => handleChange(index, e.target.value)}
                                     onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className='w-full h-14 text-center text-2xl font-bold bg-gray-700 text-white border-2 border-gray-600 rounded-lg focus:border-green-500 focus:outline-none'
+                                    className='w-full h-14 text-center text-2xl font-bold bg-slate-950/40 text-white border-2 border-white/15 rounded-xl focus:border-blue-300 focus:outline-none'
                                 />
                             ))}
                         </div>
@@ -152,10 +153,7 @@ const EmailVerificationPage = () => {
                             whileTap={{ scale: 0.98 }}
                             type='submit'
                             disabled={isLoading || code.some((digit) => !digit)}
-                            className='w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white 
-                            font-bold rounded-lg shadow-lg hover:from-green-600
-                            hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
-                            focus:ring-offset-gray-900 transition-all duration-200 disabled:opacity-50'
+                            className='auth-submit w-full py-3 px-4 text-white font-bold rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-slate-950 transition-all duration-200 disabled:opacity-50'
                         >
                             {isLoading ? (
                                 <Loader className='w-5 h-5 animate-spin mx-auto' />
@@ -169,7 +167,7 @@ const EmailVerificationPage = () => {
                         <button
                             onClick={handleResendCode}
                             disabled={resendLoading || resendTimeout > 0}
-                            className="text-green-400 hover:text-green-300 transition-colors text-sm font-medium focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="auth-link transition-colors text-sm font-medium focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {resendLoading ? (
                                 <span className="flex items-center justify-center">
@@ -185,10 +183,10 @@ const EmailVerificationPage = () => {
                     </div>
                 </div>
 
-                <div className="px-8 py-4 bg-gray-900 bg-opacity-70 flex justify-center">
+                <div className="auth-footer px-8 py-4 flex justify-center">
                     <p className="text-sm text-gray-400">
                         Wrong email?{" "}
-                        <Link to="/signup" className="text-green-400 hover:text-green-300 font-medium">
+                        <Link to="/signup" className="auth-link font-medium">
                             Go back to signup
                         </Link>
                     </p>

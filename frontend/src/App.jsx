@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import LandingPage from './pages/public/LandingPage.jsx'
 import { useAuthStore } from './store/authStore';
 import { SocketProvider } from './context/SocketContext';
+import { getRolePath } from './utils/roleRouting';
 
 // Lazy load authentication pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -41,7 +42,7 @@ const LandlordRoute = ({ children }) => {
     const { user } = useAuthStore();
     
     if (user.role !== 'landlord') {
-        return <Navigate to='/' replace />;
+        return <Navigate to='/unauthorized' replace />;
     }
     
     return children;
@@ -51,7 +52,7 @@ const TenantRoute = ({ children }) => {
     const { user } = useAuthStore();
     
     if (user.role !== 'tenant') {
-        return <Navigate to='/' replace />;
+        return <Navigate to='/unauthorized' replace />;
     }
     
     return children;
@@ -61,7 +62,7 @@ const AdminRoute = ({ children }) => {
     const { user } = useAuthStore();
     
     if (user.role !== 'admin') {
-        return <Navigate to='/' replace />;
+        return <Navigate to='/unauthorized' replace />;
     }
     
     return children;
@@ -78,7 +79,7 @@ const RedirectAuthenticatedUser = ({ children }) => {
         } else if (user.role === 'tenant') {
             return <Navigate to='/tenant/dashboard' replace />;
         }
-        return <Navigate to='/' replace />;
+        return <Navigate to={getRolePath(user.role)} replace />;
     }
 
     return children;
@@ -97,12 +98,8 @@ const DashboardRouter = () => {
       }
       
       // Route based on role
-      if (user?.role === 'landlord') {
-        navigate('/landlord/dashboard', { replace: true });
-      } else if (user?.role === 'tenant') {
-        navigate('/tenant/dashboard', { replace: true });
-      } else if (user?.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
+            if (user?.role) {
+                navigate(getRolePath(user.role), { replace: true });
       }
     }, [user, isAuthenticated, navigate]);
     
@@ -328,7 +325,14 @@ function App() {
                     
                     {/* OAuth routes */}
                     <Route path="/oauth-success" element={<OAuthSuccess />} />
-                    <Route path="/role-selection" element={<RoleSelection />} />
+                    <Route
+                        path="/role-selection"
+                        element={
+                            <ProtectedRoute allowUnassigned>
+                                <RoleSelection />
+                            </ProtectedRoute>
+                        }
+                    />
                     
                     {/* catch all routes */}
                     <Route path='*' element={<Navigate to='/' replace />} />

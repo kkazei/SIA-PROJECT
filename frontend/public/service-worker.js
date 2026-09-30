@@ -1,5 +1,5 @@
 // Service worker version - increment to force update
-const CACHE_VERSION = 'v1.2';
+const CACHE_VERSION = 'v1.4';
 const CACHE_NAME = `rentflow-${CACHE_VERSION}`;
 
 // Assets that should be cached immediately

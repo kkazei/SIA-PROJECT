@@ -1,4 +1,5 @@
 import express from 'express';
+import { verifyToken } from '../middleware/auth.middleware.js';
 import { 
   uploadAndCreatePayment, 
   getAllPayments, 
@@ -9,6 +10,8 @@ import {
 } from '../controllers/payment.controller.js';
 
 const router = express.Router();
+
+router.use(verifyToken);
 
 // Test route
 router.get('/test', (req, res) => {

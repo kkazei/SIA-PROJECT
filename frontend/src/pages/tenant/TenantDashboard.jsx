@@ -388,7 +388,7 @@ const TenantDashboard = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row bg-gradient-to-br from-blue-50 via-indigo-50 to-white min-h-screen">
+    <div className="dashboard-shell tenant-dashboard flex flex-col lg:flex-row min-h-screen">
       <TenantSideNav 
         onToggle={setSidebarCollapsed} 
         onModalOpen={handleModalOpen}

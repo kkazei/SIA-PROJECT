@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+const ProtectedRoute = ({ children, allowedRoles = [], allowUnassigned = false }) => {
   const { isAuthenticated, user, isCheckingAuth } = useAuthStore();
 
   if (isCheckingAuth) {
@@ -13,14 +13,12 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const bypassVerification = localStorage.getItem('bypassVerification') === 'true';
-  if (bypassVerification) {
-    localStorage.removeItem('bypassVerification');
+  if (!user.googleId && !user.isVerified) {
+    return <Navigate to="/verify-email" replace />;
   }
 
-  const isVerified = user.googleId || user.isVerified || bypassVerification;
-  if (!isVerified) {
-    return <Navigate to="/verify-email" replace />;
+  if (!user.role || user.role === 'unset') {
+    return allowUnassigned ? children : <Navigate to="/role-selection" replace />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
