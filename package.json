@@ -27,7 +27,6 @@
     "express-session": "^1.18.1",
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
-    "mailtrap": "^4.10.0",
     "mongoose": "^8.9.6",
     "mongoose-paginate-v2": "^1.9.0",
     "multer": "^1.4.5-lts.1",
