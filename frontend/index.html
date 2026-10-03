@@ -15,6 +15,52 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (async () => {
+        const isLocalDevelopment =
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.hostname === '::1';
+
+        if (!isLocalDevelopment || !('serviceWorker' in navigator)) {
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = '/src/main.jsx';
+          document.body.appendChild(script);
+          return;
+        }
+
+        const cleanupKey = 'rentflow-service-worker-cleaned';
+
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames
+                .filter((cacheName) => cacheName.startsWith('rentflow-'))
+                .map((cacheName) => caches.delete(cacheName)),
+            );
+          }
+
+          if (!sessionStorage.getItem(cleanupKey)) {
+            sessionStorage.setItem(cleanupKey, 'true');
+            location.reload();
+            return;
+          }
+
+          sessionStorage.removeItem(cleanupKey);
+        } catch (error) {
+          console.error('[ServiceWorker] Development cleanup failed:', error);
+        }
+
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/src/main.jsx';
+        document.body.appendChild(script);
+      })();
+    </script>
   </body>
 </html>

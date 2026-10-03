@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `rentflow-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `rentflow-runtime-${CACHE_VERSION}`;
 const NAVIGATION_CACHE = `rentflow-navigation-${CACHE_VERSION}`;
@@ -14,6 +14,18 @@ const APP_SHELL = [
 const CACHE_PREFIX = 'rentflow-';
 
 const isSameOrigin = (url) => url.origin === self.location.origin;
+
+const isDevelopmentRequest = (url) => {
+  const pathname = url.pathname;
+
+  return (
+    pathname.startsWith('/@vite/') ||
+    pathname.startsWith('/@react-refresh') ||
+    pathname.startsWith('/src/') ||
+    pathname.startsWith('/node_modules/') ||
+    pathname === '/__vite_ping'
+  );
+};
 
 const isApiRequest = (url) => {
   const pathname = url.pathname.toLowerCase();
@@ -125,7 +137,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  if (shouldBypassCache(event.request, url)) {
+  if (shouldBypassCache(event.request, url) || isDevelopmentRequest(url)) {
     return;
   }
 
